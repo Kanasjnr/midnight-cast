@@ -1,0 +1,44 @@
+{
+  "name": "@midnight-ntwrk/midnight-cast",
+  "version": "0.1.0",
+  "description": "Read-only developer CLI for Midnight: network health, indexer queries, error decoding",
+  "type": "module",
+  "bin": {
+    "mn": "./dist/cli.js",
+    "midnight-cast": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "src/data"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc && node scripts/copy-data.mjs",
+    "dev": "tsx src/cli.ts",
+    "test": "vitest run",
+    "test:integration": "INTEGRATION=1 vitest run test/integration.test.ts",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "midnight",
+    "cli",
+    "blockchain",
+    "indexer"
+  ],
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@iarna/toml": "^2.2.5",
+    "commander": "^13.1.0",
+    "graphql-ws": "^6.0.4",
+    "ws": "^8.18.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "@types/ws": "^8.18.0",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2",
+    "vitest": "^3.0.9"
+  }
+}
