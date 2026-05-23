@@ -3,6 +3,7 @@ import { Command } from "commander";
 import { emit, type GlobalOptions } from "./output.js";
 import { configInitCommand, configShowCommand } from "./commands/config-cmd.js";
 import { decodeCommand } from "./commands/decode.js";
+import { rpcCommand } from "./commands/rpc.js";
 import { pingCommand } from "./commands/ping.js";
 import { tipCommand } from "./commands/tip.js";
 import { blockLatestCommand } from "./commands/block.js";
@@ -78,11 +79,77 @@ config
     );
   });
 
-program
-  .command("decode <code>")
-  .description("Decode ledger Custom error code")
+const decode = program
+  .command("decode")
+  .description("Decode errors (ledger, pallet, 1010, jsonrpc)");
+
+decode
+  .command("ledger <code>")
+  .description("Ledger Custom(N) / LedgerApiError code (0–255)")
   .action(async (code: string, _opts, cmd) => {
-    await run(async () => decodeCommand(code, globalOpts(cmd)), cmd);
+    await run(
+      async () => decodeCommand(["ledger", code], globalOpts(cmd)),
+      cmd,
+    );
+  });
+
+decode
+  .command("pallet <index> <variant>")
+  .description("Pallet DispatchError::Module { index, error }")
+  .action(async (index: string, variant: string, _opts, cmd) => {
+    await run(
+      async () => decodeCommand(["pallet", index, variant], globalOpts(cmd)),
+      cmd,
+    );
+  });
+
+decode
+  .command("1010")
+  .description("Explain Substrate 1010 Invalid Transaction envelope")
+  .action(async (_opts, cmd) => {
+    await run(async () => decodeCommand(["1010"], globalOpts(cmd)), cmd);
+  });
+
+decode
+  .command("jsonrpc <code>")
+  .description("JSON-RPC error code (e.g. -32602)")
+  .action(async (code: string, _opts, cmd) => {
+    await run(
+      async () => decodeCommand(["jsonrpc", code], globalOpts(cmd)),
+      cmd,
+    );
+  });
+
+decode
+  .command("[code]")
+  .description("Shorthand: ledger code or 1010")
+  .action(async (code: string | undefined, _opts, cmd) => {
+    if (!code) {
+      await run(
+        async () => decodeCommand([], globalOpts(cmd)),
+        cmd,
+      );
+      return;
+    }
+    await run(async () => decodeCommand([code], globalOpts(cmd)), cmd);
+  });
+
+program
+  .command("rpc <method> [params]")
+  .description("Call a JSON-RPC method on the node (params as JSON array)")
+  .action(async (method: string, params: string | undefined, _opts, cmd) => {
+    const o = cmd.optsWithGlobals();
+    await run(
+      async () =>
+        rpcCommand(
+          method,
+          params,
+          undefined,
+          resolveFlags(cmd),
+          globalOpts(cmd),
+        ),
+      cmd,
+    );
   });
 
 program
