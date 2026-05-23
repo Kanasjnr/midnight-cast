@@ -98,8 +98,14 @@ cast send      →  (use wallet / Lace — not mn)
 ```bash
 npm install
 npm run build
+
+# Run locally (pick one):
+npm link                    # then: mn decode 170
+npm run mn -- decode 170    # no global install
+node dist/cli.js decode 170
+npm run dev -- decode 170    # TypeScript via tsx (no build)
+
 npm test
-npm run dev -- decode 170
 
 # Live preprod (optional)
 npm run build && INTEGRATION=1 npm run test:integration
