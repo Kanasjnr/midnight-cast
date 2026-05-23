@@ -1,0 +1,29 @@
+import { describe, expect, it } from "vitest";
+import { rpcCommand } from "../src/commands/rpc.js";
+
+describe("rpcCommand", () => {
+  it("rejects invalid params JSON", async () => {
+    const result = await rpcCommand(
+      "chain_getHeader",
+      "not-json",
+      "preprod",
+      {},
+      { json: true },
+    );
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain("Invalid JSON params");
+  });
+
+  it("calls chain_getHeader on preprod", async () => {
+    const result = await rpcCommand(
+      "chain_getHeader",
+      "[]",
+      "preprod",
+      {},
+      { json: true },
+    );
+    expect(result.ok).toBe(true);
+    const data = result.data as { result: { number: string } };
+    expect(data.result.number).toMatch(/^0x/i);
+  });
+});

@@ -34,10 +34,13 @@ mn tip preprod
 
 If RPC and indexer heights diverge (`|delta|` ≥ threshold), fix sync before debugging submissions.
 
-**Custom 170**
+**Custom 170 / 1010**
 
 ```bash
-mn decode 170
+mn decode 170              # ledger Custom(N)
+mn decode 1010             # Substrate envelope → find inner N
+mn decode pallet 5 3       # DispatchError::Module
+mn rpc chain_getHeader     # raw JSON-RPC
 mn tip preprod
 ```
 
@@ -68,7 +71,12 @@ mn decode 170
 | `mn ping [network]` | RPC + indexer (+ proof server) health |
 | `mn tip [network]` | RPC vs indexer height; exit 1 if lag ≥ threshold |
 | `mn block latest [network]` | Latest header from RPC |
-| `mn decode <code>` | Ledger `Custom(N)` → name + fix hint |
+| `mn decode <code>` | Ledger `Custom(N)` (shorthand) or `1010` |
+| `mn decode ledger <code>` | Ledger error by number, hex, or name |
+| `mn decode pallet <index> <variant>` | Pallet dispatch error |
+| `mn decode 1010` | Substrate Invalid Transaction guide |
+| `mn decode jsonrpc <code>` | JSON-RPC errors (e.g. `-32602`) |
+| `mn rpc <method> [params]` | Call node JSON-RPC (`params` = JSON array) |
 | `mn dust-event <id>` | One DUST ledger event (WS) |
 | `mn dust-events [--from N] [--limit N]` | Recent DUST events (WS) |
 | `mn explain dust` | Static DUST / tDUST help |
@@ -79,6 +87,7 @@ Global: `--json` for scripts/CI.
 
 ```
 cast block     →  mn block latest
+cast rpc       →  mn rpc
 cast logs      →  mn dust-events
 cast 4byte     →  mn decode
 cast send      →  (use wallet / Lace — not mn)
