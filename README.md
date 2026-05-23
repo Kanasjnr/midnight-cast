@@ -1,0 +1,101 @@
+# midnight-cast (`mn`)
+
+Read-only developer CLI for Midnight — network health, indexer queries, and ledger error decoding. Think **Foundry `cast`** for Midnight, not a wallet or app scaffold.
+
+## Install
+
+```bash
+npm i -g @midnight-ntwrk/midnight-cast
+# or
+npx @midnight-ntwrk/midnight-cast ping preprod
+```
+
+Requires **Node.js 22+**.
+
+## Config (once)
+
+```bash
+mn config init
+# writes ~/.config/midnight-cast/config.toml (network: preprod by default)
+
+mn config show
+```
+
+Override with `--network`, `MN_NETWORK`, or per-command flags (`--rpc`, `--indexer-http`, `--indexer-ws`).
+
+## Typical flows
+
+**Start of day**
+
+```bash
+mn ping preprod
+mn tip preprod
+```
+
+If RPC and indexer heights diverge (`|delta|` ≥ threshold), fix sync before debugging submissions.
+
+**Custom 170**
+
+```bash
+mn decode 170
+mn tip preprod
+```
+
+**DUST / sync debugging**
+
+```bash
+mn dust-event 565975 --network preprod
+mn dust-events --from 565900 --limit 10 --network preprod
+```
+
+DUST commands use the indexer **WebSocket** API (`dustLedgerEvents` subscription). v4 has no HTTP query for dust events.
+
+**New teammate**
+
+```bash
+mn config init
+mn ping preprod
+mn tip preprod
+mn decode 170
+```
+
+## Commands
+
+| Command | Purpose |
+|---------|---------|
+| `mn config init` | Write config TOML |
+| `mn config show` | Resolved endpoints |
+| `mn ping [network]` | RPC + indexer (+ proof server) health |
+| `mn tip [network]` | RPC vs indexer height; exit 1 if lag ≥ threshold |
+| `mn block latest [network]` | Latest header from RPC |
+| `mn decode <code>` | Ledger `Custom(N)` → name + fix hint |
+| `mn dust-event <id>` | One DUST ledger event (WS) |
+| `mn dust-events [--from N] [--limit N]` | Recent DUST events (WS) |
+| `mn explain dust` | Static DUST / tDUST help |
+
+Global: `--json` for scripts/CI.
+
+## Cast ↔ mn
+
+```
+cast block     →  mn block latest
+cast logs      →  mn dust-events
+cast 4byte     →  mn decode
+cast send      →  (use wallet / Lace — not mn)
+```
+
+## Development
+
+```bash
+npm install
+npm run build
+npm test
+npm run dev -- decode 170
+
+# Live preprod (optional)
+npm run build && INTEGRATION=1 npm run test:integration
+```
+
+## License
+
+Apache-2.0
