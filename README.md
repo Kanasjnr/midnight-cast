@@ -10,7 +10,7 @@ npm i -g @midnight-ntwrk/midnight-cast
 npx @midnight-ntwrk/midnight-cast ping preprod
 ```
 
-Requires **Node.js 22+**.
+Requires **Node.js 20+** (22+ recommended).
 
 ## Config (once)
 

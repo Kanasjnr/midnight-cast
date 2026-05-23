@@ -3,16 +3,28 @@
   "version": "0.1.0",
   "description": "Read-only developer CLI for Midnight: network health, indexer queries, error decoding",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kanasjnr/midnight-cast.git"
+  },
+  "homepage": "https://github.com/Kanasjnr/midnight-cast#readme",
+  "bugs": {
+    "url": "https://github.com/Kanasjnr/midnight-cast/issues"
+  },
   "bin": {
     "mn": "./dist/cli.js",
     "midnight-cast": "./dist/cli.js"
   },
   "files": [
     "dist",
-    "src/data"
+    "README.md",
+    "LICENSE"
   ],
   "engines": {
-    "node": ">=22"
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "build": "tsc && node scripts/copy-data.mjs",
