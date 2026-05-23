@@ -39,7 +39,7 @@ If RPC and indexer heights diverge (`|delta|` ≥ threshold), fix sync before de
 ```bash
 mn decode 170              # ledger Custom(N)
 mn decode 1010             # Substrate envelope → find inner N
-mn decode pallet 5 3       # DispatchError::Module
+mn tx <hash> --network preprod   # indexed tx result + dust events
 mn rpc chain_getHeader     # raw JSON-RPC
 mn tip preprod
 ```
@@ -77,6 +77,7 @@ mn decode 170
 | `mn decode 1010` | Substrate Invalid Transaction guide |
 | `mn decode jsonrpc <code>` | JSON-RPC errors (e.g. `-32602`) |
 | `mn rpc <method> [params]` | Call node JSON-RPC (`params` = JSON array) |
+| `mn tx <hash>` | Transaction status, fees, segments, dust events |
 | `mn dust-event <id>` | One DUST ledger event (WS) |
 | `mn dust-events [--from N] [--limit N]` | Recent DUST events (WS) |
 | `mn explain dust` | Static DUST / tDUST help |

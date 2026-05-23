@@ -9,6 +9,7 @@ import { tipCommand } from "./commands/tip.js";
 import { blockLatestCommand } from "./commands/block.js";
 import { dustEventCommand, dustEventsCommand } from "./commands/dust.js";
 import { explainCommand } from "./commands/explain.js";
+import { txCommand } from "./commands/tx.js";
 import type { ResolveFlags } from "./config.js";
 
 const program = new Command();
@@ -192,6 +193,25 @@ block
     await run(
       async () =>
         blockLatestCommand(network, resolveFlags(cmd), globalOpts(cmd)),
+      cmd,
+    );
+  });
+
+program
+  .command("tx <hashOrId>")
+  .description("Look up a transaction by hash or identifier (indexer)")
+  .option("--by <kind>", "Lookup by hash or identifier", "hash")
+  .action(async (hashOrId: string, opts, cmd) => {
+    const by = opts.by === "identifier" ? "identifier" : "hash";
+    const o = cmd.optsWithGlobals();
+    await run(
+      async () =>
+        txCommand(
+          hashOrId,
+          o.network,
+          { ...resolveFlags(cmd), by },
+          globalOpts(cmd),
+        ),
       cmd,
     );
   });

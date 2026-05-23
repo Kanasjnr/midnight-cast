@@ -41,6 +41,24 @@ describe.skipIf(!integration)("integration (live preprod)", () => {
     const parsed = JSON.parse(stdout) as { data: { name: string } };
     expect(parsed.data.name).toBe("InvalidDustSpendProof");
   });
+
+  it("mn tx by hash on preprod", async () => {
+    const hash =
+      "e5c86fcd43eb9707e8f23d940e59a6c12ca7ad3ca7e9d2f1232843cc62de1b8c";
+    const { stdout, code } = await runMn([
+      "tx",
+      hash,
+      "--network",
+      "preprod",
+      "--json",
+    ]);
+    expect(code).toBe(0);
+    const parsed = JSON.parse(stdout) as {
+      data: { id: number; status: string };
+    };
+    expect(parsed.data.id).toBe(232830);
+    expect(parsed.data.status).toBeDefined();
+  });
 });
 
 describe("integration placeholder", () => {
