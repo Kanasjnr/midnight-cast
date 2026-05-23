@@ -59,6 +59,20 @@ describe.skipIf(!integration)("integration (live preprod)", () => {
     expect(parsed.data.id).toBe(232830);
     expect(parsed.data.status).toBeDefined();
   });
+
+  it("mn versions preprod", async () => {
+    const { stdout, code } = await runMn([
+      "versions",
+      "preprod",
+      "--json",
+    ]);
+    expect(code).toBe(0);
+    const parsed = JSON.parse(stdout) as {
+      data: { allOk: boolean; live: { nodeVersion: string } };
+    };
+    expect(parsed.data.live.nodeVersion).toMatch(/^0\.22\./);
+    expect(parsed.data.allOk).toBe(true);
+  });
 });
 
 describe("integration placeholder", () => {

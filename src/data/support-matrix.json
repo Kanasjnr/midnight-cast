@@ -1,0 +1,36 @@
+{
+  "docUrl": "https://docs.midnight.network/relnotes/support-matrix",
+  "updated": "2026-03",
+  "networks": {
+    "preview": {
+      "node": "0.22.5",
+      "ledger": "8.0.3",
+      "indexer": "4.0.2",
+      "indexerApi": "v4",
+      "proofServer": "8.0.3",
+      "onChainRuntime": "3.0.0"
+    },
+    "preprod": {
+      "node": "0.22.2",
+      "ledger": "8.0.3",
+      "indexer": "4.0.1",
+      "indexerApi": "v4",
+      "proofServer": "8.0.3",
+      "onChainRuntime": "3.0.0"
+    },
+    "mainnet": {
+      "node": "0.22.1",
+      "ledger": "8.0.3",
+      "indexer": "4.0.1",
+      "indexerApi": "v4",
+      "proofServer": "8.0.3",
+      "onChainRuntime": "3.0.0"
+    }
+  },
+  "localPackages": [
+    "@midnight-ntwrk/ledger-v8",
+    "@midnight-ntwrk/midnight-js-network-id",
+    "@midnight-ntwrk/midnight-js-contracts",
+    "@midnight-ntwrk/wallet-sdk-facade"
+  ]
+}

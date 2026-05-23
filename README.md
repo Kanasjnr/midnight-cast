@@ -30,6 +30,7 @@ Override with `--network`, `MN_NETWORK`, or per-command flags (`--rpc`, `--index
 ```bash
 mn ping preprod
 mn tip preprod
+mn versions preprod
 ```
 
 If RPC and indexer heights diverge (`|delta|` ≥ threshold), fix sync before debugging submissions.
@@ -78,6 +79,7 @@ mn decode 170
 | `mn decode jsonrpc <code>` | JSON-RPC errors (e.g. `-32602`) |
 | `mn rpc <method> [params]` | Call node JSON-RPC (`params` = JSON array) |
 | `mn tx <hash>` | Transaction status, fees, segments, dust events |
+| `mn versions [network]` | Live node/indexer vs support matrix (`matrix` alias) |
 | `mn dust-event <id>` | One DUST ledger event (WS) |
 | `mn dust-events [--from N] [--limit N]` | Recent DUST events (WS) |
 | `mn explain dust` | Static DUST / tDUST help |

@@ -10,6 +10,7 @@ import { blockLatestCommand } from "./commands/block.js";
 import { dustEventCommand, dustEventsCommand } from "./commands/dust.js";
 import { explainCommand } from "./commands/explain.js";
 import { txCommand } from "./commands/tx.js";
+import { versionsCommand } from "./commands/versions.js";
 import type { ResolveFlags } from "./config.js";
 
 const program = new Command();
@@ -196,6 +197,35 @@ block
       cmd,
     );
   });
+
+function registerVersions(alias: string, description: string): void {
+  program
+    .command(alias + " [network]")
+    .description(description)
+    .option("--fail-on-mismatch", "Exit 1 when live node/api checks fail (CI)")
+    .option("--no-local", "Skip reading package.json in current directory")
+    .action(async (network: string | undefined, opts, cmd) => {
+      await run(
+        async () =>
+          versionsCommand(
+            network,
+            {
+              ...resolveFlags(cmd),
+              failOnMismatch: opts.failOnMismatch,
+              local: opts.local,
+            },
+            globalOpts(cmd),
+          ),
+        cmd,
+      );
+    });
+}
+
+registerVersions(
+  "versions",
+  "Compare live node/indexer versions to support matrix",
+);
+registerVersions("matrix", "Alias for versions");
 
 program
   .command("tx <hashOrId>")
