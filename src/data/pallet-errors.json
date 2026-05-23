@@ -1,0 +1,221 @@
+{
+  "docUrl": "https://docs.midnight.network/nodes/error-codes",
+  "pallets": {
+    "5": {
+      "name": "pallet_midnight",
+      "description": "Core Midnight ledger pallet",
+      "variants": {
+        "0": {
+          "name": "NewStateOutOfBounds",
+          "description": "New ledger state is out of acceptable bounds",
+          "fix": "Internal node/state bounds issue; check node logs and sync status"
+        },
+        "1": {
+          "name": "Deserialization",
+          "description": "Wraps DeserializationError (codes 0–11)",
+          "fix": "Run: mn decode ledger <inner code from Custom(N)>"
+        },
+        "2": {
+          "name": "Serialization",
+          "description": "Wraps SerializationError (codes 50–63)",
+          "fix": "Run: mn decode ledger <inner code>"
+        },
+        "3": {
+          "name": "Transaction",
+          "description": "Wraps TransactionError (codes 100–210)",
+          "fix": "Run: mn decode ledger <inner Custom(N) code>"
+        },
+        "4": {
+          "name": "LedgerCacheError",
+          "description": "Ledger cache poisoned (code 150)",
+          "fix": "Run: mn decode ledger 150"
+        },
+        "5": {
+          "name": "NoLedgerState",
+          "description": "No ledger state (code 151)",
+          "fix": "Run: mn decode ledger 151"
+        },
+        "6": {
+          "name": "LedgerStateScaleDecodingError",
+          "description": "SCALE decode failure (code 152)",
+          "fix": "Run: mn decode ledger 152"
+        },
+        "7": {
+          "name": "ContractCallCostError",
+          "description": "Cost calculation failure (code 153)",
+          "fix": "Run: mn decode ledger 153"
+        },
+        "8": {
+          "name": "BlockLimitExceededError",
+          "description": "Block limit exceeded (code 154)",
+          "fix": "Run: mn decode ledger 154"
+        },
+        "9": {
+          "name": "FeeCalculationError",
+          "description": "Fee calculation failure (code 155)",
+          "fix": "Run: mn decode ledger 155"
+        },
+        "10": {
+          "name": "HostApiError",
+          "description": "Host API error (code 255)",
+          "fix": "Run: mn decode ledger 255"
+        },
+        "11": {
+          "name": "NetworkIdNotString",
+          "description": "Network ID not a valid string",
+          "fix": "Verify networkId encoding matches the target network"
+        },
+        "12": {
+          "name": "GetTransactionContextError",
+          "description": "Transaction context retrieval error (code 165)",
+          "fix": "Run: mn decode ledger 165"
+        }
+      }
+    },
+    "6": {
+      "name": "pallet_midnight_system",
+      "description": "System transaction pallet",
+      "variants": {
+        "0": {
+          "name": "LedgerApiError",
+          "description": "Wraps full LedgerApiError",
+          "fix": "Run: mn decode ledger <Custom(N)> from the transaction error"
+        },
+        "1": {
+          "name": "SystemTransactionNotAllowedForGovernance",
+          "description": "Governance-disallowed system transaction",
+          "fix": "This system transaction is not permitted under current governance rules"
+        }
+      }
+    },
+    "13": {
+      "name": "pallet_cnight_observation",
+      "description": "cNIGHT bridge observation",
+      "variants": {
+        "0": {
+          "name": "MaxCardanoAddrLengthExceeded",
+          "description": "Cardano wallet address too long",
+          "fix": "Use a valid-length Cardano reward address"
+        },
+        "1": {
+          "name": "MaxRegistrationsExceeded",
+          "description": "Too many registrations",
+          "fix": "Reduce registrations or wait for capacity"
+        },
+        "2": {
+          "name": "LedgerApiError",
+          "description": "Wraps LedgerApiError",
+          "fix": "Run: mn decode ledger <Custom(N)>"
+        },
+        "3": {
+          "name": "InherentAlreadyExecuted",
+          "description": "Only one inherent call per block",
+          "fix": "Internal block production issue"
+        },
+        "4": {
+          "name": "CardanoPositionRegression",
+          "description": "Next Cardano position does not advance",
+          "fix": "Bridge observation sync issue; check Cardano-side progress"
+        },
+        "5": {
+          "name": "TooManyUtxos",
+          "description": "UTXO count exceeds capacity",
+          "fix": "Reduce UTXO batch size in observation payload"
+        }
+      }
+    },
+    "44": {
+      "name": "pallet_federated_authority",
+      "description": "Governance authority",
+      "variants": {
+        "0": {
+          "name": "MotionAlreadyApproved",
+          "description": "Authority already approved this motion",
+          "fix": "Motion already has this approval"
+        },
+        "1": {
+          "name": "MotionApprovalMissing",
+          "description": "Approver not in the approval list",
+          "fix": "Use an authorized approver identity"
+        },
+        "2": {
+          "name": "MotionApprovalExceedsBounds",
+          "description": "Exceeds maximum authority bodies",
+          "fix": "Reduce approval count to within bounds"
+        },
+        "3": {
+          "name": "MotionNotFound",
+          "description": "Motion does not exist",
+          "fix": "Verify motion ID"
+        },
+        "4": {
+          "name": "MotionNotEnded",
+          "description": "Motion voting not yet complete",
+          "fix": "Wait for voting period to end"
+        },
+        "5": {
+          "name": "MotionHasEnded",
+          "description": "Motion ended; no more changes allowed",
+          "fix": "Submit a new motion instead"
+        },
+        "6": {
+          "name": "MotionTooEarlyToClose",
+          "description": "Approval period has not ended yet",
+          "fix": "Wait until the approval period closes"
+        },
+        "7": {
+          "name": "MotionAlreadyExists",
+          "description": "Motion already exists",
+          "fix": "Use a different motion identifier"
+        },
+        "8": {
+          "name": "MotionExpired",
+          "description": "Motion expired without enough approvals",
+          "fix": "Create a new motion and gather approvals"
+        },
+        "9": {
+          "name": "MotionWeightBoundTooLow",
+          "description": "Weight bound too low for the call",
+          "fix": "Increase motion weight bound"
+        }
+      }
+    },
+    "45": {
+      "name": "pallet_federated_authority_observation",
+      "description": "Authority observation",
+      "variants": {
+        "0": {
+          "name": "EmptyMembers",
+          "description": "Membership set is empty",
+          "fix": "Configure non-empty member set"
+        },
+        "1": {
+          "name": "DuplicatedMembers",
+          "description": "Duplicate members in the set",
+          "fix": "Remove duplicate members"
+        },
+        "2": {
+          "name": "InherentAlreadyExecuted",
+          "description": "Only one inherent call per block",
+          "fix": "Internal block production issue"
+        }
+      }
+    },
+    "50": {
+      "name": "pallet_system_parameters",
+      "description": "System parameters",
+      "variants": {
+        "0": {
+          "name": "UrlTooLong",
+          "description": "URL exceeds maximum allowed length",
+          "fix": "Shorten the URL parameter"
+        }
+      }
+    },
+    "51": {
+      "name": "pallet_throttle",
+      "description": "Transaction throttling",
+      "variants": {}
+    }
+  }
+}

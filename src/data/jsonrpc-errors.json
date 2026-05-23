@@ -1,0 +1,15 @@
+{
+  "docUrl": "https://docs.midnight.network/nodes/error-codes",
+  "codes": {
+    "-32602": {
+      "name": "INVALID_PARAMS",
+      "description": "Invalid method parameter(s)",
+      "fix": "Check contract address, block hash, account, or other RPC argument format"
+    },
+    "-32603": {
+      "name": "INTERNAL_ERROR",
+      "description": "Internal JSON-RPC error",
+      "fix": "Node internal failure; retry or check node logs"
+    }
+  }
+}
