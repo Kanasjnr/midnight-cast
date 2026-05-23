@@ -5,9 +5,9 @@ Read-only developer CLI for Midnight — network health, indexer queries, and le
 ## Install
 
 ```bash
-npm i -g @midnight-ntwrk/midnight-cast
+npm i -g midnight-cast
 # or
-npx @midnight-ntwrk/midnight-cast ping preprod
+npx midnight-cast ping preprod
 ```
 
 Requires **Node.js 20+** (22+ recommended).

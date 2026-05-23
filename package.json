@@ -1,5 +1,5 @@
 {
-  "name": "@midnight-ntwrk/midnight-cast",
+  "name": "midnight-cast",
   "version": "0.1.0",
   "description": "Read-only developer CLI for Midnight: network health, indexer queries, error decoding",
   "type": "module",
@@ -12,8 +12,8 @@
     "url": "https://github.com/Kanasjnr/midnight-cast/issues"
   },
   "bin": {
-    "mn": "./dist/cli.js",
-    "midnight-cast": "./dist/cli.js"
+    "mn": "dist/cli.js",
+    "midnight-cast": "dist/cli.js"
   },
   "files": [
     "dist",
@@ -22,9 +22,6 @@
   ],
   "engines": {
     "node": ">=20"
-  },
-  "publishConfig": {
-    "access": "public"
   },
   "scripts": {
     "build": "tsc && node scripts/copy-data.mjs",
