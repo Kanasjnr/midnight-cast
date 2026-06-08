@@ -1,6 +1,11 @@
 import { loadDataJson } from "../lib/data-path.js";
+import { parseRawErrorMessage } from "../lib/error-parse.js";
 import type { EmitResult, GlobalOptions } from "../output.js";
 import { fail, success } from "../output.js";
+
+export interface DecodeOptions extends GlobalOptions {
+  raw?: string;
+}
 
 interface ErrorCodeEntry {
   name: string;
@@ -10,6 +15,9 @@ interface ErrorCodeEntry {
 
 interface ErrorCodesFile {
   docUrl: string;
+  ledger?: string;
+  updated?: string;
+  source?: string;
   codes: Record<string, ErrorCodeEntry>;
 }
 
@@ -75,7 +83,7 @@ function findLedgerByName(name: string, data: ErrorCodesFile): string | null {
   return null;
 }
 
-function decodeLedger(input: string, options: GlobalOptions): EmitResult {
+function decodeLedger(input: string, options: DecodeOptions): EmitResult {
   const data = loadDataJson<ErrorCodesFile>("error-codes.json");
   const numericKey = parseLedgerCodeInput(input);
   let code: string | null = numericKey;
@@ -96,17 +104,25 @@ function decodeLedger(input: string, options: GlobalOptions): EmitResult {
     description: entry.description,
     fix: entry.fix,
     docUrl: data.docUrl,
+    ledger: data.ledger,
+    mapUpdated: data.updated,
   };
 
   if (options.json) {
     return success(payload);
   }
 
+  const meta =
+    data.ledger && data.updated
+      ? `Map:    ledger ${data.ledger} (updated ${data.updated})`
+      : undefined;
+
   const text = [
     `Kind:   ledger (Custom ${code})`,
     `Name:   ${entry.name}`,
     `Desc:   ${entry.description}`,
     `Fix:    ${entry.fix}`,
+    ...(meta ? [meta] : []),
     `Docs:   ${data.docUrl}`,
   ].join("\n");
 
@@ -140,7 +156,7 @@ function findPalletVariant(
 function decodePallet(
   indexArg: string,
   variantArg: string,
-  options: GlobalOptions,
+  options: DecodeOptions,
 ): EmitResult {
   const data = loadDataJson<PalletErrorsFile>("pallet-errors.json");
   const palletIndex = findPalletIndex(data.pallets, indexArg);
@@ -187,7 +203,7 @@ function decodePallet(
   return success(text);
 }
 
-function decodeJsonRpc(codeArg: string, options: GlobalOptions): EmitResult {
+function decodeJsonRpc(codeArg: string, options: DecodeOptions): EmitResult {
   const data = loadDataJson<JsonRpcErrorsFile>("jsonrpc-errors.json");
   const key = codeArg.startsWith("-") ? codeArg : `-${codeArg}`;
   const entry = data.codes[key] ?? data.codes[codeArg];
@@ -220,7 +236,7 @@ function decodeJsonRpc(codeArg: string, options: GlobalOptions): EmitResult {
   return success(text);
 }
 
-function decode1010(options: GlobalOptions): EmitResult {
+function decode1010(options: DecodeOptions): EmitResult {
   if (options.json) {
     return success(SUBSTRATE_1010);
   }
@@ -239,13 +255,64 @@ function decode1010(options: GlobalOptions): EmitResult {
   return success(text);
 }
 
+function decodeRaw(raw: string, options: DecodeOptions): EmitResult {
+  const parsed = parseRawErrorMessage(raw);
+  const parts: EmitResult[] = [];
+  const sections: string[] = [`Parsed: ${raw}`, ""];
+
+  if (parsed.substrate1010) {
+    const r = decode1010(options);
+    if (r.ok) parts.push(r);
+    if (!options.json && typeof r.data === "string") {
+      sections.push(r.data, "");
+    }
+  }
+
+  if (parsed.ledgerCode) {
+    const r = decodeLedger(parsed.ledgerCode, options);
+    if (r.ok) parts.push(r);
+    if (!options.json && typeof r.data === "string") {
+      sections.push(r.data, "");
+    }
+  }
+
+  if (parsed.palletIndex && parsed.palletVariant) {
+    const r = decodePallet(parsed.palletIndex, parsed.palletVariant, options);
+    if (r.ok) parts.push(r);
+    if (!options.json && typeof r.data === "string") {
+      sections.push(r.data, "");
+    }
+  }
+
+  if (parts.length === 0) {
+    return fail(
+      "Could not extract 1010, Custom(N), or pallet index/error from message. " +
+        "Try: mn decode ledger <N> or mn decode 1010",
+    );
+  }
+
+  if (options.json) {
+    return success({
+      raw,
+      parsed,
+      decodings: parts.map((p) => p.data),
+    });
+  }
+
+  return success(sections.join("\n").trimEnd());
+}
+
 export function decodeCommand(
   args: string[],
-  options: GlobalOptions,
+  options: DecodeOptions,
 ): EmitResult {
+  if (options.raw) {
+    return decodeRaw(options.raw, options);
+  }
+
   if (args.length === 0) {
     return fail(
-      "Usage: mn decode <code> | decode ledger <code> | decode pallet <index> <variant> | decode 1010 | decode jsonrpc <code>",
+      "Usage: mn decode <code> | decode --raw \"<error>\" | decode ledger <code> | decode pallet <index> <variant> | decode 1010 | decode jsonrpc <code>",
     );
   }
 

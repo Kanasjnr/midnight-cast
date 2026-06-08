@@ -1,5 +1,8 @@
 {
   "docUrl": "https://docs.midnight.network/nodes/error-codes",
+  "ledger": "8.0.3",
+  "updated": "2026-06",
+  "source": "https://docs.midnight.network/nodes/error-codes",
   "codes": {
     "0": {
       "name": "NetworkId",
