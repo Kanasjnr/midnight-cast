@@ -39,12 +39,47 @@ export interface VersionCheck {
 export interface VersionsReport {
   network: string;
   matrixUpdated: string;
+  matrixStale: boolean;
+  matrixWarning?: string;
   docUrl: string;
   expected: MatrixNetwork;
   live: LiveVersions;
   checks: VersionCheck[];
   localPackages?: Record<string, string>;
   allOk: boolean;
+}
+
+const MATRIX_STALE_DAYS = 45;
+
+export function parseMatrixUpdated(updated: string): Date | null {
+  const trimmed = updated.trim();
+  if (/^\d{4}-\d{2}$/.test(trimmed)) {
+    const [year, month] = trimmed.split("-").map(Number);
+    return new Date(Date.UTC(year!, month! - 1, 1));
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return new Date(`${trimmed}T00:00:00Z`);
+  }
+  return null;
+}
+
+export function isMatrixStale(
+  updated: string,
+  maxAgeDays = MATRIX_STALE_DAYS,
+): boolean {
+  const parsed = parseMatrixUpdated(updated);
+  if (!parsed) return false;
+  const ageMs = Date.now() - parsed.getTime();
+  return ageMs > maxAgeDays * 24 * 60 * 60 * 1000;
+}
+
+export function matrixStalenessWarning(updated: string): string | undefined {
+  if (!isMatrixStale(updated)) return undefined;
+  return (
+    `Bundled support matrix is stale (updated ${updated}). ` +
+    `Live network versions may differ — refresh from ${loadSupportMatrix().docUrl} ` +
+    `or expect possible false mismatches.`
+  );
 }
 
 export function loadSupportMatrix(): SupportMatrixFile {
@@ -149,6 +184,13 @@ export function formatVersionsHuman(report: VersionsReport): string {
   const lines = [
     `Network:  ${report.network}`,
     `Matrix:   ${report.docUrl} (updated ${report.matrixUpdated})`,
+  ];
+
+  if (report.matrixWarning) {
+    lines.push(`Warning:  ${report.matrixWarning}`);
+  }
+
+  lines.push(
     "",
     "Expected (support matrix):",
     `  node:           ${report.expected.node}`,
@@ -165,7 +207,7 @@ export function formatVersionsHuman(report: VersionsReport): string {
     `  indexer protocol: ${report.live.indexerProtocolVersion}`,
     "",
     "Checks:",
-  ];
+  );
 
   for (const check of report.checks) {
     const mark = check.ok ? "OK" : "MISMATCH";

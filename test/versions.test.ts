@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   buildVersionChecks,
   detectIndexerApi,
+  isMatrixStale,
+  parseMatrixUpdated,
   parseNodeVersion,
   versionMatches,
   fetchLiveVersions,
@@ -16,6 +18,20 @@ describe("versions helpers", () => {
     expect(versionMatches("0.22.2", "0.22.2")).toBe(true);
     expect(versionMatches("0.22.2", "0.22.2-71fc6804")).toBe(true);
     expect(versionMatches("0.22.2", "0.22.5")).toBe(false);
+  });
+
+  it("parses matrix updated date", () => {
+    expect(parseMatrixUpdated("2026-06")?.toISOString()).toBe(
+      "2026-06-01T00:00:00.000Z",
+    );
+    expect(parseMatrixUpdated("2026-06-15")?.toISOString()).toBe(
+      "2026-06-15T00:00:00.000Z",
+    );
+  });
+
+  it("detects stale matrix by age", () => {
+    expect(isMatrixStale("2026-06", 45)).toBe(false);
+    expect(isMatrixStale("2024-01", 45)).toBe(true);
   });
 
   it("detects indexer API from URL", () => {

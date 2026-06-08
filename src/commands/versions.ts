@@ -2,7 +2,9 @@ import {
   buildVersionChecks,
   fetchLiveVersions,
   formatVersionsHuman,
+  isMatrixStale,
   loadSupportMatrix,
+  matrixStalenessWarning,
   readLocalMidnightPackages,
   type VersionsReport,
 } from "../lib/versions.js";
@@ -41,9 +43,12 @@ export async function versionsCommand(
   const checks = buildVersionChecks(expected, live);
   const allOk = checks.every((c) => c.ok);
 
+  const matrixStale = isMatrixStale(matrix.updated);
   const report: VersionsReport = {
     network: endpoints.network,
     matrixUpdated: matrix.updated,
+    matrixStale,
+    matrixWarning: matrixStalenessWarning(matrix.updated),
     docUrl: matrix.docUrl,
     expected,
     live,
