@@ -272,10 +272,5 @@ export function decodeCommand(
     return decodeJsonRpc(rest[0], options);
   }
 
-  // Backward compatible: mn decode 170, mn decode 1010
-  if (head === "1010" || head === "substrate") {
-    return decode1010(options);
-  }
-
   return decodeLedger(head, options);
 }
