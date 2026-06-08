@@ -86,10 +86,40 @@ describe("decodeCommand", () => {
     });
     expect(result.ok).toBe(true);
     const data = result.data as {
-      parsed: { ledgerCode: string };
+      parsed: { ledgerCodes: string[] };
       decodings: unknown[];
     };
-    expect(data.parsed.ledgerCode).toBe("170");
+    expect(data.parsed.ledgerCodes).toContain("170");
     expect(data.decodings.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("decodes --raw json-rpc error", () => {
+    const result = decodeCommand([], {
+      json: true,
+      raw: '{"error":{"code":-32602,"message":"Invalid params"}}',
+    });
+    expect(result.ok).toBe(true);
+    const data = result.data as { decodings: Array<{ kind: string }> };
+    expect(data.decodings.some((d) => d.kind === "jsonrpc")).toBe(true);
+  });
+
+  it("decodes --raw ledger error name", () => {
+    const result = decodeCommand([], {
+      json: true,
+      raw: "segment failed: InvalidDustSpendProof",
+    });
+    expect(result.ok).toBe(true);
+    const data = result.data as { decodings: Array<{ code: number }> };
+    expect(data.decodings.some((d) => d.code === 170)).toBe(true);
+  });
+
+  it("decodes --raw bare ledger code", () => {
+    const result = decodeCommand([], {
+      json: true,
+      raw: "186",
+    });
+    expect(result.ok).toBe(true);
+    const data = result.data as { decodings: Array<{ code: number }> };
+    expect(data.decodings[0]?.code).toBe(186);
   });
 });

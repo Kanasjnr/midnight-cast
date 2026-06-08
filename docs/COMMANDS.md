@@ -165,7 +165,13 @@ mn decode raw "1010: Invalid Transaction: Custom error: 186"
 mn decode raw "DispatchError::Module { index: 5, error: 3 }"
 ```
 
-Extracts 1010 envelope, `Custom(N)` ledger code, and pallet index/error when present; decodes each in one output.
+Auto-detects and decodes everything it can find in one paste:
+
+- Substrate **1010** / Invalid Transaction envelope
+- **Custom(N)** / `Custom(N)` / hex (`0xaa`) / bare numbers (0–255)
+- Known **ledger error names** (e.g. `InvalidDustSpendProof`)
+- **DispatchError::Module** pallet index + error
+- **JSON-RPC** codes (e.g. `"code": -32602` or RPC error text)
 
 ### Shorthand
 

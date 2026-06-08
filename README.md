@@ -62,7 +62,7 @@ mn versions preprod --fail-on-mismatch  # CI; scans all @midnight-ntwrk/* in pac
 | `mn` bug or something not working | [GitHub Issues](https://github.com/Kanasjnr/midnight-cast/issues) |
 | New command or feature idea | [GitHub Issues](https://github.com/Kanasjnr/midnight-cast/issues) (feature request) |
 
-`mn decode` covers documented ledger `Custom(N)` codes (map stamped with ledger version). Paste a full wallet/node error with `mn decode --raw "…"`. For codes not in the map or protocol questions — Discord + [Midnight docs](https://docs.midnight.network/) are the right place.
+`mn decode --raw "…"` auto-detects 1010 envelopes, `Custom(N)`, ledger error names, pallet module errors, and JSON-RPC codes in one paste. Map is stamped with ledger version. For codes not in the map or protocol questions — Discord + [Midnight docs](https://docs.midnight.network/) are the right place.
 
 **Note:** `mn` may clash with `midnight-wallet-cli` on some machines (both install a `mn` binary). Use `npx midnight-cast` or `midnight-cast` if needed.
 

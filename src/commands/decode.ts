@@ -1,5 +1,8 @@
 import { loadDataJson } from "../lib/data-path.js";
-import { parseRawErrorMessage } from "../lib/error-parse.js";
+import {
+  findLedgerCodesByName,
+  parseRawErrorMessage,
+} from "../lib/error-parse.js";
 import type { EmitResult, GlobalOptions } from "../output.js";
 import { fail, success } from "../output.js";
 
@@ -255,48 +258,89 @@ function decode1010(options: DecodeOptions): EmitResult {
   return success(text);
 }
 
+function appendDecodeResult(
+  parts: EmitResult[],
+  sections: string[],
+  result: EmitResult,
+  json: boolean | undefined,
+): void {
+  if (!result.ok) return;
+  parts.push(result);
+  if (!json && typeof result.data === "string") {
+    sections.push(result.data, "");
+  }
+}
+
 function decodeRaw(raw: string, options: DecodeOptions): EmitResult {
   const parsed = parseRawErrorMessage(raw);
+  const ledgerData = loadDataJson<ErrorCodesFile>("error-codes.json");
+  const nameCodes = findLedgerCodesByName(
+    raw,
+    Object.fromEntries(
+      Object.entries(ledgerData.codes).map(([code, entry]) => [code, entry.name]),
+    ),
+  );
+  const ledgerCodes = [
+    ...new Set([...parsed.ledgerCodes, ...nameCodes]),
+  ];
+
   const parts: EmitResult[] = [];
   const sections: string[] = [`Parsed: ${raw}`, ""];
+  const failures: string[] = [];
 
   if (parsed.substrate1010) {
-    const r = decode1010(options);
-    if (r.ok) parts.push(r);
-    if (!options.json && typeof r.data === "string") {
-      sections.push(r.data, "");
-    }
+    appendDecodeResult(parts, sections, decode1010(options), options.json);
   }
 
-  if (parsed.ledgerCode) {
-    const r = decodeLedger(parsed.ledgerCode, options);
-    if (r.ok) parts.push(r);
-    if (!options.json && typeof r.data === "string") {
-      sections.push(r.data, "");
-    }
+  for (const code of ledgerCodes) {
+    const r = decodeLedger(code, options);
+    if (r.ok) appendDecodeResult(parts, sections, r, options.json);
+    else if (r.error) failures.push(r.error);
   }
 
-  if (parsed.palletIndex && parsed.palletVariant) {
-    const r = decodePallet(parsed.palletIndex, parsed.palletVariant, options);
-    if (r.ok) parts.push(r);
-    if (!options.json && typeof r.data === "string") {
-      sections.push(r.data, "");
+  for (const pallet of parsed.palletModules) {
+    const r = decodePallet(pallet.index, pallet.variant, options);
+    if (r.ok) appendDecodeResult(parts, sections, r, options.json);
+    else if (r.error) failures.push(r.error);
+  }
+
+  for (const code of parsed.jsonRpcCodes) {
+    const r = decodeJsonRpc(code, options);
+    if (r.ok) appendDecodeResult(parts, sections, r, options.json);
+    else if (r.error) failures.push(r.error);
+  }
+
+  if (parts.length === 0) {
+    const fallbackLedger = decodeLedger(raw.trim(), options);
+    if (fallbackLedger.ok) {
+      appendDecodeResult(parts, sections, fallbackLedger, options.json);
+    } else if (fallbackLedger.error) {
+      failures.push(fallbackLedger.error);
     }
   }
 
   if (parts.length === 0) {
     return fail(
-      "Could not extract 1010, Custom(N), or pallet index/error from message. " +
-        "Try: mn decode ledger <N> or mn decode 1010",
+      failures[0] ??
+        "Could not extract a known error from message. " +
+          "Paste 1010/Custom(N)/pallet/RPC text, or run: mn decode ledger <N>",
     );
   }
 
   if (options.json) {
     return success({
       raw,
-      parsed,
+      parsed: { ...parsed, ledgerCodes, ledgerNames: nameCodes },
       decodings: parts.map((p) => p.data),
+      ...(failures.length > 0 ? { warnings: failures } : {}),
     });
+  }
+
+  if (failures.length > 0) {
+    sections.push(
+      "Note:",
+      ...failures.map((f) => `  - ${f}`),
+    );
   }
 
   return success(sections.join("\n").trimEnd());
