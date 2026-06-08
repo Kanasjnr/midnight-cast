@@ -167,14 +167,16 @@ export function readLocalMidnightPackages(
       dependencies?: Record<string, string>;
       devDependencies?: Record<string, string>;
     };
-    const matrix = loadSupportMatrix();
-    const names = matrix.localPackages ?? [];
     const all = { ...pkg.dependencies, ...pkg.devDependencies };
     const found: Record<string, string> = {};
-    for (const name of names) {
-      if (all[name]) found[name] = all[name]!;
+    for (const [name, version] of Object.entries(all)) {
+      if (name.startsWith("@midnight-ntwrk/")) {
+        found[name] = version;
+      }
     }
-    return Object.keys(found).length > 0 ? found : undefined;
+    return Object.keys(found).length > 0
+      ? Object.fromEntries(Object.entries(found).sort(([a], [b]) => a.localeCompare(b)))
+      : undefined;
   } catch {
     return undefined;
   }
