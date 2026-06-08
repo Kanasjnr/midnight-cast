@@ -1,17 +1,17 @@
 {
   "docUrl": "https://docs.midnight.network/relnotes/support-matrix",
-  "updated": "2026-03",
+  "updated": "2026-06",
   "networks": {
     "preview": {
-      "node": "0.22.5",
-      "ledger": "8.0.3",
-      "indexer": "4.0.2",
+      "node": "1.0.0",
+      "ledger": "8.1.0",
+      "indexer": "4.3.3",
       "indexerApi": "v4",
       "proofServer": "8.0.3",
       "onChainRuntime": "3.0.0"
     },
     "preprod": {
-      "node": "0.22.2",
+      "node": "0.22.5",
       "ledger": "8.0.3",
       "indexer": "4.0.1",
       "indexerApi": "v4",
@@ -19,7 +19,7 @@
       "onChainRuntime": "3.0.0"
     },
     "mainnet": {
-      "node": "0.22.1",
+      "node": "0.22.5",
       "ledger": "8.0.3",
       "indexer": "4.0.1",
       "indexerApi": "v4",
