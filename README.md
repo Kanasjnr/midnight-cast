@@ -15,7 +15,7 @@ Requires **Node.js 20+** (22+ recommended).
 |------|----------|
 | Health | `ping`, `tip`, `versions` |
 | Chain | `block latest`, `rpc` |
-| Errors | `decode` (ledger, pallet, 1010, jsonrpc) |
+| Errors | `decode` (ledger, pallet, 1010, jsonrpc, `--raw`) |
 | Indexer | `tx`, `dust-event`, `dust-events` |
 | Config | `config init`, `config show` |
 
@@ -46,11 +46,12 @@ When something breaks, run in order:
 ## Common one-liners
 
 ```bash
+mn decode --raw "1010: Invalid Transaction: Custom error: 186"
 mn decode 1010                          # Substrate envelope → find inner N
-mn tx <hash> --network preprod          # tx status, fees, segments
+mn tx <hash> --network preprod          # tx status, fees, segments (+ decode hint on fail)
 mn dust-events --from 565900 --limit 10 --network preprod
 mn rpc chain_getHeader --json
-mn versions preprod --fail-on-mismatch  # CI
+mn versions preprod --fail-on-mismatch  # CI; scans all @midnight-ntwrk/* in package.json
 ```
 
 ## Community & support
@@ -61,7 +62,9 @@ mn versions preprod --fail-on-mismatch  # CI
 | `mn` bug or something not working | [GitHub Issues](https://github.com/Kanasjnr/midnight-cast/issues) |
 | New command or feature idea | [GitHub Issues](https://github.com/Kanasjnr/midnight-cast/issues) (feature request) |
 
-`mn decode` covers documented ledger `Custom(N)` codes. For errors not in the map, newer codes, or protocol questions — Discord + [Midnight docs](https://docs.midnight.network/) are the right place.
+`mn decode` covers documented ledger `Custom(N)` codes (map stamped with ledger version). Paste a full wallet/node error with `mn decode --raw "…"`. For codes not in the map or protocol questions — Discord + [Midnight docs](https://docs.midnight.network/) are the right place.
+
+**Note:** `mn` may clash with `midnight-wallet-cli` on some machines (both install a `mn` binary). Use `npx midnight-cast` or `midnight-cast` if needed.
 
 ## Documentation
 

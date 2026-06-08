@@ -101,6 +101,10 @@ mn versions preprod --no-local
 
 **Live checks:** node `system_version`, indexer API path (`v4`), RPC `specVersion` vs indexer `protocolVersion`.
 
+**Local deps:** reads every `@midnight-ntwrk/*` package from `package.json` (not a fixed shortlist).
+
+**Staleness:** warns when the bundled support matrix is older than 45 days (possible false mismatches).
+
 ---
 
 ## `mn block latest [network]`
@@ -145,11 +149,23 @@ mn tx abc123... --by identifier
 
 **Shows:** status, fees, segment results, contract action types, DUST/zswap event ids, block height.
 
+When a segment failed, output notes that indexer v4 does not expose the failure reason and suggests `mn decode --raw` with the wallet/node error string.
+
 ---
 
 ## `mn decode`
 
 Decode Midnight / Substrate errors. No network required.
+
+### Paste full error (`--raw`)
+
+```bash
+mn decode --raw "1010: Invalid Transaction: Custom error: 186"
+mn decode raw "1010: Invalid Transaction: Custom error: 186"
+mn decode raw "DispatchError::Module { index: 5, error: 3 }"
+```
+
+Extracts 1010 envelope, `Custom(N)` ledger code, and pallet index/error when present; decodes each in one output.
 
 ### Shorthand
 
@@ -172,7 +188,8 @@ mn decode jsonrpc -32602
 
 | Form | Purpose |
 |------|---------|
-| `ledger <code>` | `Custom(N)` / LedgerApiError (0–255) |
+| `--raw <message>` | Parse full error string (1010, Custom N, pallet) |
+| `ledger <code>` | `Custom(N)` / LedgerApiError (0–255); shows map ledger version |
 | `pallet <index> <variant>` | `DispatchError::Module` |
 | `1010` | Substrate Invalid Transaction envelope guide |
 | `jsonrpc <code>` | JSON-RPC errors (e.g. `-32602`) |

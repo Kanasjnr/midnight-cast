@@ -132,19 +132,28 @@ decode
   });
 
 decode
-  .command("[code]")
+  .command("raw <message>")
+  .description("Parse full error string (1010, Custom N, pallet index/error)")
+  .action(async (message: string, _opts, cmd) => {
+    const opts = { ...decodeOpts(cmd), raw: message };
+    await run(async () => decodeCommand([], opts), cmd);
+  });
+
+decode
+  .command("[code]", { isDefault: true })
   .description("Shorthand: ledger code or 1010")
-  .action(async (code: string | undefined, _opts, cmd) => {
-    const opts = decodeOpts(cmd);
+  .argument("[code]", "ledger code or 1010")
+  .action(async function (this: Command, code?: string) {
+    const opts = decodeOpts(this);
     if (opts.raw) {
-      await run(async () => decodeCommand([], opts), cmd);
+      await run(async () => decodeCommand([], opts), this);
       return;
     }
     if (!code) {
-      await run(async () => decodeCommand([], opts), cmd);
+      await run(async () => decodeCommand([], opts), this);
       return;
     }
-    await run(async () => decodeCommand([code], opts), cmd);
+    await run(async () => decodeCommand([code], opts), this);
   });
 
 program

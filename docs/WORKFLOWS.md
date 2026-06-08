@@ -79,7 +79,7 @@ If stack looks healthy:
 mn tx <your-tx-hash> --network preprod
 ```
 
-Check segment failures and DUST events on that transaction.
+Check segment failures and DUST events on that transaction. If a segment shows `fail`, the indexer does not include the reason — use `mn decode --raw` with the error from your wallet or node logs.
 
 ---
 
@@ -87,22 +87,18 @@ Check segment failures and DUST events on that transaction.
 
 1010 is a **Substrate envelope**, not the Midnight-specific code.
 
+**Fast path** — paste the full error:
+
+```bash
+mn decode --raw "1010: Invalid Transaction: Custom error: 186"
+```
+
+**Manual path:**
+
 ```bash
 mn decode 1010
-```
-
-Look for `Custom error: N` in the full error message, then:
-
-```bash
-mn decode N
-# or
-mn decode ledger N
-```
-
-If you see `DispatchError::Module { index, error }`:
-
-```bash
-mn decode pallet <index> <error>
+mn decode N          # after you find Custom error: N
+mn decode pallet <index> <error>   # if DispatchError::Module
 ```
 
 If there is **no** inner `Custom(N)`, the rejection was upstream (nonce, fee, mortality, size) — not ledger logic.
