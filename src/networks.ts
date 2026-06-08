@@ -19,7 +19,7 @@ export const BUILTIN_NETWORKS: Record<string, NetworkEndpoints> = {
     rpcWs: "wss://rpc.preview.midnight.network",
     indexerHttp: indexerHttp("preview"),
     indexerWs: indexerWs("preview"),
-    proofServer: "https://lace-proof-pub.preview.midnight.network",
+    proofServer: "https://proof-server.preview.midnight.network",
   },
   preprod: {
     networkId: "preprod",
@@ -27,7 +27,7 @@ export const BUILTIN_NETWORKS: Record<string, NetworkEndpoints> = {
     rpcWs: "wss://rpc.preprod.midnight.network",
     indexerHttp: indexerHttp("preprod"),
     indexerWs: indexerWs("preprod"),
-    proofServer: "https://lace-proof-pub.preprod.midnight.network",
+    proofServer: "https://proof-server.preprod.midnight.network",
   },
   mainnet: {
     networkId: "mainnet",
@@ -35,7 +35,7 @@ export const BUILTIN_NETWORKS: Record<string, NetworkEndpoints> = {
     rpcWs: "wss://rpc.mainnet.midnight.network",
     indexerHttp: indexerHttp("mainnet"),
     indexerWs: indexerWs("mainnet"),
-    proofServer: "https://lace-proof-pub.mainnet.midnight.network",
+    proofServer: "https://proof-server.mainnet.midnight.network",
   },
   local: {
     networkId: "local",
