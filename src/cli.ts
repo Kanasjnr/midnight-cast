@@ -2,7 +2,7 @@
 import { Command } from "commander";
 import { emit, type GlobalOptions } from "./output.js";
 import { configInitCommand, configShowCommand } from "./commands/config-cmd.js";
-import { decodeCommand } from "./commands/decode.js";
+import { decodeCommand, type DecodeOptions } from "./commands/decode.js";
 import { rpcCommand } from "./commands/rpc.js";
 import { pingCommand } from "./commands/ping.js";
 import { tipCommand } from "./commands/tip.js";
@@ -28,6 +28,11 @@ program
 function globalOpts(cmd: Command): GlobalOptions {
   const o = cmd.optsWithGlobals();
   return { json: o.json };
+}
+
+function decodeOpts(cmd: Command): DecodeOptions {
+  const o = cmd.optsWithGlobals();
+  return { json: o.json, raw: o.raw };
 }
 
 function resolveFlags(cmd: Command): ResolveFlags {
@@ -83,14 +88,18 @@ config
 
 const decode = program
   .command("decode")
-  .description("Decode errors (ledger, pallet, 1010, jsonrpc)");
+  .description("Decode errors (ledger, pallet, 1010, jsonrpc)")
+  .option(
+    "--raw <message>",
+    "Parse full error string (1010, Custom N, pallet index/error)",
+  );
 
 decode
   .command("ledger <code>")
   .description("Ledger Custom(N) / LedgerApiError code (0–255)")
   .action(async (code: string, _opts, cmd) => {
     await run(
-      async () => decodeCommand(["ledger", code], globalOpts(cmd)),
+      async () => decodeCommand(["ledger", code], decodeOpts(cmd)),
       cmd,
     );
   });
@@ -100,7 +109,7 @@ decode
   .description("Pallet DispatchError::Module { index, error }")
   .action(async (index: string, variant: string, _opts, cmd) => {
     await run(
-      async () => decodeCommand(["pallet", index, variant], globalOpts(cmd)),
+      async () => decodeCommand(["pallet", index, variant], decodeOpts(cmd)),
       cmd,
     );
   });
@@ -109,7 +118,7 @@ decode
   .command("1010")
   .description("Explain Substrate 1010 Invalid Transaction envelope")
   .action(async (_opts, cmd) => {
-    await run(async () => decodeCommand(["1010"], globalOpts(cmd)), cmd);
+    await run(async () => decodeCommand(["1010"], decodeOpts(cmd)), cmd);
   });
 
 decode
@@ -117,7 +126,7 @@ decode
   .description("JSON-RPC error code (e.g. -32602)")
   .action(async (code: string, _opts, cmd) => {
     await run(
-      async () => decodeCommand(["jsonrpc", code], globalOpts(cmd)),
+      async () => decodeCommand(["jsonrpc", code], decodeOpts(cmd)),
       cmd,
     );
   });
@@ -126,14 +135,16 @@ decode
   .command("[code]")
   .description("Shorthand: ledger code or 1010")
   .action(async (code: string | undefined, _opts, cmd) => {
-    if (!code) {
-      await run(
-        async () => decodeCommand([], globalOpts(cmd)),
-        cmd,
-      );
+    const opts = decodeOpts(cmd);
+    if (opts.raw) {
+      await run(async () => decodeCommand([], opts), cmd);
       return;
     }
-    await run(async () => decodeCommand([code], globalOpts(cmd)), cmd);
+    if (!code) {
+      await run(async () => decodeCommand([], opts), cmd);
+      return;
+    }
+    await run(async () => decodeCommand([code], opts), cmd);
   });
 
 program

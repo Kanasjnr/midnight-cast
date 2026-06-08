@@ -78,4 +78,18 @@ describe("decodeCommand", () => {
     const result = decodeCommand(["999"], { json: true });
     expect(result.ok).toBe(false);
   });
+
+  it("decodes --raw error string", () => {
+    const result = decodeCommand([], {
+      json: true,
+      raw: "1010: Invalid Transaction: Custom error: 170",
+    });
+    expect(result.ok).toBe(true);
+    const data = result.data as {
+      parsed: { ledgerCode: string };
+      decodings: unknown[];
+    };
+    expect(data.parsed.ledgerCode).toBe("170");
+    expect(data.decodings.length).toBeGreaterThanOrEqual(2);
+  });
 });
