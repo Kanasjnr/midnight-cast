@@ -189,6 +189,14 @@ export function formatTransactionHuman(tx: TransactionSummary): string {
       .map((s) => `${s.id}:${s.success ? "ok" : "fail"}`)
       .join(", ");
     lines.push(`Segments: ${seg}`);
+
+    const failed = tx.segments.filter((s) => !s.success);
+    if (failed.length > 0) {
+      lines.push(
+        "Failure:  indexer v4 exposes segment success only (no failure reason)",
+        `Hint:     paste wallet/node error → mn decode --raw "<error>"`,
+      );
+    }
   }
 
   if (tx.contractActions.length) {
