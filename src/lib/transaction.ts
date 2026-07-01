@@ -209,6 +209,9 @@ export function formatTransactionHuman(tx: TransactionSummary): string {
     lines.push(
       `DUST:     ${tx.dustLedgerEvents.map((e) => `${e.id}:${e.typename}`).join(", ")}`,
     );
+    for (const e of tx.dustLedgerEvents) {
+      lines.push(`          → mn dust-event ${e.id}`);
+    }
   }
 
   if (tx.zswapLedgerEvents.length) {

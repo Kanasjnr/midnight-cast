@@ -42,7 +42,11 @@ export async function dustEventCommand(
     });
 
     if (events.length === 0) {
-      return fail(`Event ${eventId} not found`);
+      const from = Math.max(0, eventId - 10);
+      return fail(
+        `Event ${eventId} not found via WS subscription. ` +
+          `Try browsing recent events: mn dust-events --from ${from} --limit 10`,
+      );
     }
 
     return {
