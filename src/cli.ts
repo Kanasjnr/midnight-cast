@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import { emit, type GlobalOptions } from "./output.js";
 import { configInitCommand, configShowCommand } from "./commands/config-cmd.js";
@@ -15,9 +18,15 @@ import type { ResolveFlags } from "./config.js";
 
 const program = new Command();
 
+function cliVersion(): string {
+  const path = join(dirname(fileURLToPath(import.meta.url)), "..", "package.json");
+  return (JSON.parse(readFileSync(path, "utf8")) as { version: string }).version;
+}
+
 program
   .name("mn")
   .description("Read-only developer CLI for Midnight")
+  .version(cliVersion(), "-V, --version", "Show CLI version")
   .option("--json", "JSON output")
   .option("--network <name>", "Network (preview|preprod|mainnet|local)")
   .option("--rpc <url>", "Override RPC URL")
