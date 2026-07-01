@@ -43,6 +43,18 @@ describe("parseRawErrorMessage", () => {
     );
     expect(parsed.ledgerCodes).toEqual(["170"]);
   });
+
+  it("does not extract ledger code from tx hash prefix", () => {
+    const parsed = parseRawErrorMessage(
+      "tx 0xe5c86fcd43eb9707e8f23d940e59a6c12ca7ad3ca7e9d2f1232843cc62de1b8c failed",
+    );
+    expect(parsed.ledgerCodes).toEqual([]);
+  });
+
+  it("does not treat Invalid Transaction alone as 1010", () => {
+    const parsed = parseRawErrorMessage("Invalid Transaction");
+    expect(parsed.substrate1010).toBe(false);
+  });
 });
 
 describe("findLedgerCodesByName", () => {

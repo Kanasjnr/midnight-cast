@@ -41,14 +41,8 @@ function addPalletModule(modules: PalletModuleError[], index: string, variant: s
   }
 }
 
-export function parseRawErrorMessage(raw: string): ParsedRawError {
-  const ledgerCodes: string[] = [];
-  const palletModules: PalletModuleError[] = [];
-  const jsonRpcCodes: string[] = [];
-
-  const substrate1010 =
-    /\b1010\b/.test(raw) || /Invalid\s+Transaction/i.test(raw);
-
+function extractCustomLedgerCodes(raw: string): string[] {
+  const codes: string[] = [];
   const customPatterns = [
     /Custom(?:\s+error)?[\s:(]+(\d{1,3})\b/gi,
     /LedgerApiError[\s:(]+(\d{1,3})\b/gi,
@@ -56,19 +50,39 @@ export function parseRawErrorMessage(raw: string): ParsedRawError {
   ];
   for (const pattern of customPatterns) {
     for (const match of raw.matchAll(pattern)) {
-      if (match[1]) addLedgerCode(ledgerCodes, match[1]);
+      if (match[1]) addLedgerCode(codes, match[1]);
     }
   }
+  return codes;
+}
 
-  const hexPattern = /\b0x([0-9a-fA-F]{1,2})\b/g;
+function extractStandaloneHexCodes(raw: string): string[] {
+  const codes: string[] = [];
+  const hexPattern = /(?<![0-9a-fA-F])0x([0-9a-fA-F]{1,2})(?![0-9a-fA-F])/gi;
   for (const match of raw.matchAll(hexPattern)) {
-    if (match[1]) addLedgerCode(ledgerCodes, String(parseInt(match[1], 16)));
+    if (match[1]) addLedgerCode(codes, String(parseInt(match[1], 16)));
   }
+  return codes;
+}
 
-  const codeHintPattern =
-    /\b(?:ledger|custom|error|code)\s*[=:#]?\s*(\d{1,3})\b/gi;
-  for (const match of raw.matchAll(codeHintPattern)) {
-    if (match[1]) addLedgerCode(ledgerCodes, match[1]);
+export function parseRawErrorMessage(raw: string): ParsedRawError {
+  const palletModules: PalletModuleError[] = [];
+  const jsonRpcCodes: string[] = [];
+
+  const customLedgerCodes = extractCustomLedgerCodes(raw);
+  const ledgerCodes = [...customLedgerCodes];
+
+  const substrate1010 =
+    /\b1010\b/.test(raw) ||
+    (/Invalid\s+Transaction/i.test(raw) && customLedgerCodes.length > 0);
+
+  if (ledgerCodes.length === 0) {
+    ledgerCodes.push(...extractStandaloneHexCodes(raw));
+    const hintPattern =
+      /\b(?:ledger|custom)\s*[=:#]?\s*(\d{1,3})\b/gi;
+    for (const match of raw.matchAll(hintPattern)) {
+      if (match[1]) addLedgerCode(ledgerCodes, match[1]);
+    }
   }
 
   const indexFirstPatterns = [
