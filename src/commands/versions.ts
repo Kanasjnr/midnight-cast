@@ -1,6 +1,7 @@
 import {
   buildVersionChecks,
   buildLocalPackageChecks,
+  buildNetworkMismatchWarning,
   fetchLiveVersions,
   formatVersionsHuman,
   isMatrixStale,
@@ -52,11 +53,17 @@ export async function versionsCommand(
     (localPackageChecks?.every((c) => c.ok) ?? true);
 
   const matrixStale = isMatrixStale(matrix.updated);
+  const networkWarning = buildNetworkMismatchWarning(
+    endpoints.network,
+    matrix,
+    live.nodeVersion,
+  );
   const report: VersionsReport = {
     network: endpoints.network,
     matrixUpdated: matrix.updated,
     matrixStale,
     matrixWarning: matrixStalenessWarning(matrix.updated, matrix.docUrl),
+    networkWarning,
     docUrl: matrix.docUrl,
     expected,
     live,

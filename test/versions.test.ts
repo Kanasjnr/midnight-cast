@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildVersionChecks,
   buildLocalPackageChecks,
+  buildNetworkMismatchWarning,
   detectIndexerApi,
   isMatrixStale,
   parseMatrixUpdated,
@@ -67,6 +68,37 @@ describe("versions helpers", () => {
         "https://indexer.preprod.midnight.network/api/v4/graphql",
       ),
     ).toBe("v4");
+  });
+
+  it("warns when live node version mismatches selected network", () => {
+    const matrix = {
+      docUrl: "https://example.com",
+      updated: "2026-06",
+      networks: {
+        preprod: {
+          node: "0.22.5",
+          ledger: "8.0.3",
+          indexer: "4.0.1",
+          indexerApi: "v4",
+          proofServer: "8.0.3",
+          onChainRuntime: "3.0.0",
+        },
+        preview: {
+          node: "0.22.2",
+          ledger: "8.1.0",
+          indexer: "4.0.1",
+          indexerApi: "v4",
+          proofServer: "8.1.0",
+          onChainRuntime: "3.0.0",
+        },
+      },
+    };
+    expect(
+      buildNetworkMismatchWarning("preprod", matrix, "0.22.2"),
+    ).toContain("preview");
+    expect(
+      buildNetworkMismatchWarning("preprod", matrix, "0.22.5"),
+    ).toBeUndefined();
   });
 
   it("builds checks with protocolVersion alignment", () => {

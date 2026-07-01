@@ -42,6 +42,7 @@ export interface VersionsReport {
   matrixUpdated: string;
   matrixStale: boolean;
   matrixWarning?: string;
+  networkWarning?: string;
   docUrl: string;
   expected: MatrixNetwork;
   live: LiveVersions;
@@ -165,6 +166,35 @@ export function buildVersionChecks(
   return checks;
 }
 
+export function buildNetworkMismatchWarning(
+  selectedNetwork: string,
+  matrix: SupportMatrixFile,
+  liveNodeVersion: string,
+): string | undefined {
+  const expected = matrix.networks[selectedNetwork];
+  if (!expected) return undefined;
+  if (versionMatches(expected.node, liveNodeVersion)) return undefined;
+
+  const otherMatches = Object.entries(matrix.networks)
+    .filter(
+      ([name, row]) =>
+        name !== selectedNetwork && versionMatches(row.node, liveNodeVersion),
+    )
+    .map(([name]) => name);
+
+  if (otherMatches.length > 0) {
+    return (
+      `Live node ${liveNodeVersion} does not match "${selectedNetwork}" matrix ` +
+      `(expected ${expected.node}). Endpoints may point to ${otherMatches.join(" or ")}.`
+    );
+  }
+
+  return (
+    `Live node ${liveNodeVersion} does not match "${selectedNetwork}" matrix ` +
+    `(expected ${expected.node}). Check --network and endpoint URLs.`
+  );
+}
+
 export function normalizePackageVersion(spec: string): string {
   return spec.replace(/^[\^~>=<]+/, "").split("-")[0] ?? spec;
 }
@@ -236,6 +266,10 @@ export function formatVersionsHuman(report: VersionsReport): string {
 
   if (report.matrixWarning) {
     lines.push(`Warning:  ${report.matrixWarning}`);
+  }
+
+  if (report.networkWarning) {
+    lines.push(`Warning:  ${report.networkWarning}`);
   }
 
   lines.push(
