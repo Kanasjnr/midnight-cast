@@ -12,6 +12,7 @@ export interface MatrixNetwork {
   indexerApi: string;
   proofServer: string;
   onChainRuntime: string;
+  packages?: Record<string, string>;
 }
 
 export interface SupportMatrixFile {
@@ -46,6 +47,7 @@ export interface VersionsReport {
   live: LiveVersions;
   checks: VersionCheck[];
   localPackages?: Record<string, string>;
+  localPackageChecks?: VersionCheck[];
   allOk: boolean;
 }
 
@@ -163,6 +165,43 @@ export function buildVersionChecks(
   return checks;
 }
 
+export function normalizePackageVersion(spec: string): string {
+  return spec.replace(/^[\^~>=<]+/, "").split("-")[0] ?? spec;
+}
+
+export function buildLocalPackageChecks(
+  expected: MatrixNetwork,
+  localPackages: Record<string, string>,
+): VersionCheck[] {
+  const pins = expected.packages ?? {};
+  const checks: VersionCheck[] = [];
+
+  for (const [name, expectedVersion] of Object.entries(pins)) {
+    const liveSpec = localPackages[name];
+    if (!liveSpec) continue;
+    const live = normalizePackageVersion(liveSpec);
+    checks.push({
+      label: `pkg:${name}`,
+      expected: expectedVersion,
+      live,
+      ok: versionMatches(expectedVersion, live),
+    });
+  }
+
+  for (const [name, liveSpec] of Object.entries(localPackages)) {
+    if (pins[name]) continue;
+    checks.push({
+      label: `pkg:${name}`,
+      expected: "(no matrix pin)",
+      live: normalizePackageVersion(liveSpec),
+      ok: true,
+      note: "listed only",
+    });
+  }
+
+  return checks.sort((a, b) => a.label.localeCompare(b.label));
+}
+
 export function readLocalMidnightPackages(
   cwd = process.cwd(),
 ): Record<string, string> | undefined {
@@ -226,15 +265,24 @@ export function formatVersionsHuman(report: VersionsReport): string {
     );
   }
 
-  if (report.localPackages) {
+  if (report.localPackageChecks?.length) {
+    lines.push("", "Local package checks (@midnight-ntwrk vs matrix):");
+    for (const check of report.localPackageChecks) {
+      const mark = check.ok ? "OK" : "MISMATCH";
+      const note = check.note ? ` (${check.note})` : "";
+      lines.push(
+        `  ${check.label}: expected=${check.expected} live=${check.live} → ${mark}${note}`,
+      );
+    }
+  } else if (report.localPackages) {
     lines.push("", "Local package.json (@midnight-ntwrk):");
     for (const [name, version] of Object.entries(report.localPackages)) {
       lines.push(`  ${name}: ${version}`);
     }
     lines.push(
       "",
-      "Compare local deps to matrix manually:",
-      `  ledger target: ${report.expected.ledger}`,
+      "No matrix package pins for this network — compare manually to:",
+      `  ledger: ${report.expected.ledger}`,
     );
   }
 

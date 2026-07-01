@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildVersionChecks,
+  buildLocalPackageChecks,
   detectIndexerApi,
   isMatrixStale,
   parseMatrixUpdated,
@@ -32,6 +33,32 @@ describe("versions helpers", () => {
   it("detects stale matrix by age", () => {
     expect(isMatrixStale("2026-06", 45)).toBe(false);
     expect(isMatrixStale("2024-01", 45)).toBe(true);
+  });
+
+  it("builds local package checks against matrix pins", () => {
+    const checks = buildLocalPackageChecks(
+      {
+        node: "0.22.5",
+        ledger: "8.0.3",
+        indexer: "4.0.1",
+        indexerApi: "v4",
+        proofServer: "8.0.3",
+        onChainRuntime: "3.0.0",
+        packages: {
+          "@midnight-ntwrk/ledger-v8": "8.0.3",
+          "@midnight-ntwrk/compact-runtime": "0.16.0",
+        },
+      },
+      {
+        "@midnight-ntwrk/ledger-v8": "^8.0.3",
+        "@midnight-ntwrk/compact-runtime": "0.15.0",
+        "@midnight-ntwrk/wallet-sdk-facade": "3.0.0",
+      },
+    );
+    const ledger = checks.find((c) => c.label.includes("ledger-v8"));
+    const compact = checks.find((c) => c.label.includes("compact-runtime"));
+    expect(ledger?.ok).toBe(true);
+    expect(compact?.ok).toBe(false);
   });
 
   it("detects indexer API from URL", () => {

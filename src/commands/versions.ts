@@ -1,5 +1,6 @@
 import {
   buildVersionChecks,
+  buildLocalPackageChecks,
   fetchLiveVersions,
   formatVersionsHuman,
   isMatrixStale,
@@ -41,7 +42,14 @@ export async function versionsCommand(
   }
 
   const checks = buildVersionChecks(expected, live);
-  const allOk = checks.every((c) => c.ok);
+  const localPackages =
+    flags.local !== false ? readLocalMidnightPackages() : undefined;
+  const localPackageChecks = localPackages
+    ? buildLocalPackageChecks(expected, localPackages)
+    : undefined;
+  const allOk =
+    checks.every((c) => c.ok) &&
+    (localPackageChecks?.every((c) => c.ok) ?? true);
 
   const matrixStale = isMatrixStale(matrix.updated);
   const report: VersionsReport = {
@@ -53,8 +61,8 @@ export async function versionsCommand(
     expected,
     live,
     checks,
-    localPackages:
-      flags.local !== false ? readLocalMidnightPackages() : undefined,
+    localPackages,
+    localPackageChecks,
     allOk,
   };
 
