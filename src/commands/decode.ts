@@ -3,11 +3,13 @@ import {
   findLedgerCodesByName,
   parseRawErrorMessage,
 } from "../lib/error-parse.js";
+import { loadSupportMatrix } from "../lib/versions.js";
 import type { EmitResult, GlobalOptions } from "../output.js";
 import { fail, success } from "../output.js";
 
 export interface DecodeOptions extends GlobalOptions {
   raw?: string;
+  network?: string;
 }
 
 interface ErrorCodeEntry {
@@ -63,6 +65,26 @@ const SUBSTRATE_1010 = {
   ledgerDocUrl: "https://docs.midnight.network/nodes/error-codes",
 };
 
+const TRANSCRIPT_LEDGER_CODES = ["179", "180", "181"] as const;
+
+function transcriptVersionHint(code: string): string | undefined {
+  if (!TRANSCRIPT_LEDGER_CODES.includes(code as (typeof TRANSCRIPT_LEDGER_CODES)[number])) {
+    return undefined;
+  }
+  return (
+    "Related proof/transcript codes: 179 UnsupportedProofVersion, " +
+    "180 GuaranteedTranscriptVersion, 181 FallibleTranscriptVersion"
+  );
+}
+
+function palletTransactionHint(variantName: string): string | undefined {
+  if (variantName !== "Transaction") return undefined;
+  return (
+    "Pallet Transaction wraps an inner Custom(N) ledger error — " +
+    "find Custom error: N in the full message, then: mn decode ledger N"
+  );
+}
+
 function parseLedgerCodeInput(input: string): string | null {
   const trimmed = input.trim();
   if (/^\d+$/.test(trimmed)) {
@@ -86,6 +108,24 @@ function findLedgerByName(name: string, data: ErrorCodesFile): string | null {
   return null;
 }
 
+function ledgerMapMeta(options: DecodeOptions, data: ErrorCodesFile): string | undefined {
+  if (!data.updated) return undefined;
+
+  if (options.network) {
+    const matrix = loadSupportMatrix();
+    const row = matrix.networks[options.network];
+    if (row?.ledger) {
+      return `Map:    ledger ${row.ledger} (${options.network}, updated ${data.updated})`;
+    }
+  }
+
+  if (data.ledger) {
+    return `Map:    ledger ${data.ledger} (preprod/mainnet default, updated ${data.updated})`;
+  }
+
+  return undefined;
+}
+
 function decodeLedger(input: string, options: DecodeOptions): EmitResult {
   const data = loadDataJson<ErrorCodesFile>("error-codes.json");
   const numericKey = parseLedgerCodeInput(input);
@@ -100,6 +140,8 @@ function decodeLedger(input: string, options: DecodeOptions): EmitResult {
   }
 
   const entry = data.codes[code]!;
+  const ledgerMeta = ledgerMapMeta(options, data);
+  const transcriptHint = transcriptVersionHint(code);
   const payload = {
     kind: "ledger" as const,
     code: parseInt(code, 10),
@@ -107,24 +149,26 @@ function decodeLedger(input: string, options: DecodeOptions): EmitResult {
     description: entry.description,
     fix: entry.fix,
     docUrl: data.docUrl,
-    ledger: data.ledger,
+    network: options.network,
+    ledger: options.network
+      ? loadSupportMatrix().networks[options.network ?? ""]?.ledger
+      : data.ledger,
     mapUpdated: data.updated,
+    ...(transcriptHint ? { relatedHint: transcriptHint } : {}),
   };
 
   if (options.json) {
     return success(payload);
   }
 
-  const meta =
-    data.ledger && data.updated
-      ? `Map:    ledger ${data.ledger} (updated ${data.updated})`
-      : undefined;
+  const meta = ledgerMeta;
 
   const text = [
     `Kind:   ledger (Custom ${code})`,
     `Name:   ${entry.name}`,
     `Desc:   ${entry.description}`,
     `Fix:    ${entry.fix}`,
+    ...(transcriptHint ? [`Hint:   ${transcriptHint}`] : []),
     ...(meta ? [meta] : []),
     `Docs:   ${data.docUrl}`,
   ].join("\n");
@@ -178,6 +222,7 @@ function decodePallet(
   }
 
   const variant = pallet.variants[variantKey]!;
+  const innerHint = palletTransactionHint(variant.name);
   const payload = {
     kind: "pallet" as const,
     palletIndex: parseInt(palletIndex, 10),
@@ -188,6 +233,7 @@ function decodePallet(
     description: variant.description,
     fix: variant.fix,
     docUrl: data.docUrl,
+    ...(innerHint ? { innerHint } : {}),
   };
 
   if (options.json) {
@@ -200,6 +246,7 @@ function decodePallet(
     `Variant: ${variantKey} (${variant.name})`,
     `Desc:    ${variant.description}`,
     `Fix:     ${variant.fix}`,
+    ...(innerHint ? [`Hint:    ${innerHint}`] : []),
     `Docs:    ${data.docUrl}`,
   ].join("\n");
 

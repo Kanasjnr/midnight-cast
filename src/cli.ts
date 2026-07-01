@@ -8,8 +8,9 @@ import { configInitCommand, configShowCommand } from "./commands/config-cmd.js";
 import { decodeCommand, type DecodeOptions } from "./commands/decode.js";
 import { rpcCommand } from "./commands/rpc.js";
 import { pingCommand } from "./commands/ping.js";
+import { healthCommand } from "./commands/health.js";
 import { tipCommand } from "./commands/tip.js";
-import { blockLatestCommand } from "./commands/block.js";
+import { blockAtHeightCommand, blockLatestCommand } from "./commands/block.js";
 import { dustEventCommand, dustEventsCommand } from "./commands/dust.js";
 import { explainCommand } from "./commands/explain.js";
 import { txCommand } from "./commands/tx.js";
@@ -41,7 +42,7 @@ function globalOpts(cmd: Command): GlobalOptions {
 
 function decodeOpts(cmd: Command): DecodeOptions {
   const o = cmd.optsWithGlobals();
-  return { json: o.json, raw: o.raw };
+  return { json: o.json, raw: o.raw, network: o.network };
 }
 
 function resolveFlags(cmd: Command): ResolveFlags {
@@ -194,6 +195,29 @@ program
   });
 
 program
+  .command("health [network]")
+  .description("Aggregate service ping, sync tip, and version checks")
+  .option("--threshold <n>", "Lag threshold in blocks", "100")
+  .option("--fail-on-lag", "Treat indexer lag as unhealthy (CI)")
+  .option("--fail-on-mismatch", "Treat version mismatches as unhealthy (CI)")
+  .action(async (network: string | undefined, opts, cmd) => {
+    await run(
+      async () =>
+        healthCommand(
+          network,
+          {
+            ...resolveFlags(cmd),
+            threshold: parseInt(opts.threshold, 10),
+            failOnLag: opts.failOnLag,
+            failOnMismatch: opts.failOnMismatch,
+          },
+          globalOpts(cmd),
+        ),
+      cmd,
+    );
+  });
+
+program
   .command("tip [network]")
   .description("Compare RPC vs indexer block height")
   .option("--threshold <n>", "Lag threshold in blocks", "100")
@@ -223,6 +247,22 @@ block
     await run(
       async () =>
         blockLatestCommand(network, resolveFlags(cmd), globalOpts(cmd)),
+      cmd,
+    );
+  });
+
+block
+  .command("<height> [network]")
+  .description("Block header at height")
+  .action(async (height: string, network: string | undefined, _opts, cmd) => {
+    await run(
+      async () =>
+        blockAtHeightCommand(
+          height,
+          network,
+          resolveFlags(cmd),
+          globalOpts(cmd),
+        ),
       cmd,
     );
   });

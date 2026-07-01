@@ -1,4 +1,10 @@
+import { jsonRpc } from "../clients/rpc.js";
 import { getTransaction, formatTransactionHuman } from "../lib/transaction.js";
+import {
+  buildNetworkMismatchWarning,
+  loadSupportMatrix,
+  parseNodeVersion,
+} from "../lib/versions.js";
 import { resolveNetwork, type ResolveFlags } from "../config.js";
 import type { EmitResult, GlobalOptions } from "../output.js";
 import { fail } from "../output.js";
@@ -30,10 +36,51 @@ export async function txCommand(
     }
 
     if (options.json) {
-      return { ok: true, data: { network: endpoints.network, ...tx } };
+      let networkWarning: string | undefined;
+      try {
+        const systemVersion = await jsonRpc<string>(
+          endpoints.rpc,
+          "system_version",
+          [],
+        );
+        networkWarning = buildNetworkMismatchWarning(
+          endpoints.network,
+          loadSupportMatrix(),
+          parseNodeVersion(systemVersion),
+        );
+      } catch {
+        // optional warning only
+      }
+      return {
+        ok: true,
+        data: {
+          network: endpoints.network,
+          ...(networkWarning ? { networkWarning } : {}),
+          ...tx,
+        },
+      };
     }
 
-    return { ok: true, data: formatTransactionHuman(tx) };
+    let human = formatTransactionHuman(tx);
+    try {
+      const systemVersion = await jsonRpc<string>(
+        endpoints.rpc,
+        "system_version",
+        [],
+      );
+      const networkWarning = buildNetworkMismatchWarning(
+        endpoints.network,
+        loadSupportMatrix(),
+        parseNodeVersion(systemVersion),
+      );
+      if (networkWarning) {
+        human += `\n\nWarning:  ${networkWarning}`;
+      }
+    } catch {
+      // optional warning only
+    }
+
+    return { ok: true, data: human };
   } catch (err) {
     return fail(err instanceof Error ? err.message : "Indexer unreachable");
   }

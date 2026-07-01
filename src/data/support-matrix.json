@@ -8,7 +8,13 @@
       "indexer": "4.3.3",
       "indexerApi": "v4",
       "proofServer": "8.0.3",
-      "onChainRuntime": "3.0.0"
+      "onChainRuntime": "3.0.0",
+      "packages": {
+        "@midnight-ntwrk/ledger-v8": "8.1.0",
+        "@midnight-ntwrk/compact-runtime": "0.16.0",
+        "@midnight-ntwrk/onchain-runtime-v3": "3.0.0",
+        "@midnight-ntwrk/midnight-js-indexer": "4.3.3"
+      }
     },
     "preprod": {
       "node": "0.22.5",
@@ -16,7 +22,13 @@
       "indexer": "4.0.1",
       "indexerApi": "v4",
       "proofServer": "8.0.3",
-      "onChainRuntime": "3.0.0"
+      "onChainRuntime": "3.0.0",
+      "packages": {
+        "@midnight-ntwrk/ledger-v8": "8.0.3",
+        "@midnight-ntwrk/compact-runtime": "0.16.0",
+        "@midnight-ntwrk/onchain-runtime-v3": "3.0.0",
+        "@midnight-ntwrk/midnight-js-indexer": "4.0.1"
+      }
     },
     "mainnet": {
       "node": "0.22.5",
@@ -24,7 +36,13 @@
       "indexer": "4.0.1",
       "indexerApi": "v4",
       "proofServer": "8.0.3",
-      "onChainRuntime": "3.0.0"
+      "onChainRuntime": "3.0.0",
+      "packages": {
+        "@midnight-ntwrk/ledger-v8": "8.0.3",
+        "@midnight-ntwrk/compact-runtime": "0.16.0",
+        "@midnight-ntwrk/onchain-runtime-v3": "3.0.0",
+        "@midnight-ntwrk/midnight-js-indexer": "4.0.1"
+      }
     }
   }
 }

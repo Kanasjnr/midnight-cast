@@ -11,6 +11,23 @@ interface ServiceResult {
   detail?: string;
 }
 
+export async function runServiceChecks(endpoints: {
+  rpc: string;
+  indexerHttp: string;
+  proofServer?: string;
+}): Promise<ServiceResult[]> {
+  const results: ServiceResult[] = [
+    await checkRpc(endpoints.rpc),
+    await checkIndexer(endpoints.indexerHttp),
+  ];
+
+  if (endpoints.proofServer) {
+    results.push(await checkProofServer(endpoints.proofServer));
+  }
+
+  return results;
+}
+
 async function checkRpc(rpcUrl: string): Promise<ServiceResult> {
   const start = Date.now();
   try {
@@ -100,14 +117,7 @@ export async function pingCommand(
     return fail(err instanceof Error ? err.message : String(err));
   }
 
-  const results: ServiceResult[] = [
-    await checkRpc(endpoints.rpc),
-    await checkIndexer(endpoints.indexerHttp),
-  ];
-
-  if (endpoints.proofServer) {
-    results.push(await checkProofServer(endpoints.proofServer));
-  }
+  const results = await runServiceChecks(endpoints);
 
   const requiredOk = results
     .filter((r) => r.service === "rpc" || r.service === "indexer")

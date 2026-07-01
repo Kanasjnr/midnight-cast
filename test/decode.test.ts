@@ -3,12 +3,13 @@ import { decodeCommand } from "../src/commands/decode.js";
 
 describe("decodeCommand", () => {
   it("decodes numeric ledger code 170", () => {
-    const result = decodeCommand(["170"], { json: true });
+    const result = decodeCommand(["170"], { json: true, network: "preview" });
     expect(result.ok).toBe(true);
-    const data = result.data as { kind: string; code: number; name: string };
+    const data = result.data as { kind: string; code: number; name: string; ledger: string };
     expect(data.kind).toBe("ledger");
     expect(data.code).toBe(170);
     expect(data.name).toBe("InvalidDustSpendProof");
+    expect(data.ledger).toBe("8.1.0");
   });
 
   it("decodes hex ledger code 0xAA", () => {
@@ -63,8 +64,17 @@ describe("decodeCommand", () => {
       { json: true },
     );
     expect(result.ok).toBe(true);
-    const data = result.data as { variant: number };
+    const data = result.data as { variant: number; innerHint?: string };
     expect(data.variant).toBe(3);
+    expect(data.innerHint).toContain("Custom(N)");
+  });
+
+  it("groups transcript version codes 179-181", () => {
+    const result = decodeCommand(["179"], { json: true });
+    expect(result.ok).toBe(true);
+    const data = result.data as { relatedHint?: string };
+    expect(data.relatedHint).toContain("180");
+    expect(data.relatedHint).toContain("181");
   });
 
   it("decodes jsonrpc -32602", () => {
