@@ -64,8 +64,17 @@ describe("decodeCommand", () => {
       { json: true },
     );
     expect(result.ok).toBe(true);
-    const data = result.data as { variant: number };
+    const data = result.data as { variant: number; innerHint?: string };
     expect(data.variant).toBe(3);
+    expect(data.innerHint).toContain("Custom(N)");
+  });
+
+  it("groups transcript version codes 179-181", () => {
+    const result = decodeCommand(["179"], { json: true });
+    expect(result.ok).toBe(true);
+    const data = result.data as { relatedHint?: string };
+    expect(data.relatedHint).toContain("180");
+    expect(data.relatedHint).toContain("181");
   });
 
   it("decodes jsonrpc -32602", () => {

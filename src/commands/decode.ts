@@ -65,6 +65,26 @@ const SUBSTRATE_1010 = {
   ledgerDocUrl: "https://docs.midnight.network/nodes/error-codes",
 };
 
+const TRANSCRIPT_LEDGER_CODES = ["179", "180", "181"] as const;
+
+function transcriptVersionHint(code: string): string | undefined {
+  if (!TRANSCRIPT_LEDGER_CODES.includes(code as (typeof TRANSCRIPT_LEDGER_CODES)[number])) {
+    return undefined;
+  }
+  return (
+    "Related proof/transcript codes: 179 UnsupportedProofVersion, " +
+    "180 GuaranteedTranscriptVersion, 181 FallibleTranscriptVersion"
+  );
+}
+
+function palletTransactionHint(variantName: string): string | undefined {
+  if (variantName !== "Transaction") return undefined;
+  return (
+    "Pallet Transaction wraps an inner Custom(N) ledger error — " +
+    "find Custom error: N in the full message, then: mn decode ledger N"
+  );
+}
+
 function parseLedgerCodeInput(input: string): string | null {
   const trimmed = input.trim();
   if (/^\d+$/.test(trimmed)) {
@@ -121,6 +141,7 @@ function decodeLedger(input: string, options: DecodeOptions): EmitResult {
 
   const entry = data.codes[code]!;
   const ledgerMeta = ledgerMapMeta(options, data);
+  const transcriptHint = transcriptVersionHint(code);
   const payload = {
     kind: "ledger" as const,
     code: parseInt(code, 10),
@@ -133,6 +154,7 @@ function decodeLedger(input: string, options: DecodeOptions): EmitResult {
       ? loadSupportMatrix().networks[options.network ?? ""]?.ledger
       : data.ledger,
     mapUpdated: data.updated,
+    ...(transcriptHint ? { relatedHint: transcriptHint } : {}),
   };
 
   if (options.json) {
@@ -146,6 +168,7 @@ function decodeLedger(input: string, options: DecodeOptions): EmitResult {
     `Name:   ${entry.name}`,
     `Desc:   ${entry.description}`,
     `Fix:    ${entry.fix}`,
+    ...(transcriptHint ? [`Hint:   ${transcriptHint}`] : []),
     ...(meta ? [meta] : []),
     `Docs:   ${data.docUrl}`,
   ].join("\n");
@@ -199,6 +222,7 @@ function decodePallet(
   }
 
   const variant = pallet.variants[variantKey]!;
+  const innerHint = palletTransactionHint(variant.name);
   const payload = {
     kind: "pallet" as const,
     palletIndex: parseInt(palletIndex, 10),
@@ -209,6 +233,7 @@ function decodePallet(
     description: variant.description,
     fix: variant.fix,
     docUrl: data.docUrl,
+    ...(innerHint ? { innerHint } : {}),
   };
 
   if (options.json) {
@@ -221,6 +246,7 @@ function decodePallet(
     `Variant: ${variantKey} (${variant.name})`,
     `Desc:    ${variant.description}`,
     `Fix:     ${variant.fix}`,
+    ...(innerHint ? [`Hint:    ${innerHint}`] : []),
     `Docs:    ${data.docUrl}`,
   ].join("\n");
 
