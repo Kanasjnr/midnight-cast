@@ -41,7 +41,7 @@ function globalOpts(cmd: Command): GlobalOptions {
 
 function decodeOpts(cmd: Command): DecodeOptions {
   const o = cmd.optsWithGlobals();
-  return { json: o.json, raw: o.raw };
+  return { json: o.json, raw: o.raw, network: o.network };
 }
 
 function resolveFlags(cmd: Command): ResolveFlags {

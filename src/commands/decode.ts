@@ -3,11 +3,13 @@ import {
   findLedgerCodesByName,
   parseRawErrorMessage,
 } from "../lib/error-parse.js";
+import { loadSupportMatrix } from "../lib/versions.js";
 import type { EmitResult, GlobalOptions } from "../output.js";
 import { fail, success } from "../output.js";
 
 export interface DecodeOptions extends GlobalOptions {
   raw?: string;
+  network?: string;
 }
 
 interface ErrorCodeEntry {
@@ -86,6 +88,24 @@ function findLedgerByName(name: string, data: ErrorCodesFile): string | null {
   return null;
 }
 
+function ledgerMapMeta(options: DecodeOptions, data: ErrorCodesFile): string | undefined {
+  if (!data.updated) return undefined;
+
+  if (options.network) {
+    const matrix = loadSupportMatrix();
+    const row = matrix.networks[options.network];
+    if (row?.ledger) {
+      return `Map:    ledger ${row.ledger} (${options.network}, updated ${data.updated})`;
+    }
+  }
+
+  if (data.ledger) {
+    return `Map:    ledger ${data.ledger} (preprod/mainnet default, updated ${data.updated})`;
+  }
+
+  return undefined;
+}
+
 function decodeLedger(input: string, options: DecodeOptions): EmitResult {
   const data = loadDataJson<ErrorCodesFile>("error-codes.json");
   const numericKey = parseLedgerCodeInput(input);
@@ -100,6 +120,7 @@ function decodeLedger(input: string, options: DecodeOptions): EmitResult {
   }
 
   const entry = data.codes[code]!;
+  const ledgerMeta = ledgerMapMeta(options, data);
   const payload = {
     kind: "ledger" as const,
     code: parseInt(code, 10),
@@ -107,7 +128,10 @@ function decodeLedger(input: string, options: DecodeOptions): EmitResult {
     description: entry.description,
     fix: entry.fix,
     docUrl: data.docUrl,
-    ledger: data.ledger,
+    network: options.network,
+    ledger: options.network
+      ? loadSupportMatrix().networks[options.network ?? ""]?.ledger
+      : data.ledger,
     mapUpdated: data.updated,
   };
 
@@ -115,10 +139,7 @@ function decodeLedger(input: string, options: DecodeOptions): EmitResult {
     return success(payload);
   }
 
-  const meta =
-    data.ledger && data.updated
-      ? `Map:    ledger ${data.ledger} (updated ${data.updated})`
-      : undefined;
+  const meta = ledgerMeta;
 
   const text = [
     `Kind:   ledger (Custom ${code})`,

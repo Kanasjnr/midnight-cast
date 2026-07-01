@@ -3,12 +3,13 @@ import { decodeCommand } from "../src/commands/decode.js";
 
 describe("decodeCommand", () => {
   it("decodes numeric ledger code 170", () => {
-    const result = decodeCommand(["170"], { json: true });
+    const result = decodeCommand(["170"], { json: true, network: "preview" });
     expect(result.ok).toBe(true);
-    const data = result.data as { kind: string; code: number; name: string };
+    const data = result.data as { kind: string; code: number; name: string; ledger: string };
     expect(data.kind).toBe("ledger");
     expect(data.code).toBe(170);
     expect(data.name).toBe("InvalidDustSpendProof");
+    expect(data.ledger).toBe("8.1.0");
   });
 
   it("decodes hex ledger code 0xAA", () => {
