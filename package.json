@@ -1,6 +1,6 @@
 {
   "name": "midnight-cast",
-  "version": "0.1.5",
+  "version": "0.1.4",
   "description": "Read-only developer CLI for Midnight: network health, indexer queries, error decoding",
   "type": "module",
   "repository": {
