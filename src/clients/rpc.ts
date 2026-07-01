@@ -54,8 +54,22 @@ export async function jsonRpc<T>(
 
 export async function chainGetHeader(
   rpcUrl: string,
+  blockHash?: string,
 ): Promise<ChainHeader> {
-  return jsonRpc<ChainHeader>(rpcUrl, "chain_getHeader", []);
+  const params = blockHash ? [blockHash] : [];
+  return jsonRpc<ChainHeader>(rpcUrl, "chain_getHeader", params);
+}
+
+export async function chainGetBlockHash(
+  rpcUrl: string,
+  blockNumber: number,
+): Promise<string> {
+  const heightHex = `0x${blockNumber.toString(16)}`;
+  return jsonRpc<string>(rpcUrl, "chain_getBlockHash", [heightHex]);
+}
+
+export async function chainGetHeadBlockHash(rpcUrl: string): Promise<string> {
+  return jsonRpc<string>(rpcUrl, "chain_getBlockHash", []);
 }
 
 export async function systemHealth(

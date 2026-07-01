@@ -9,7 +9,7 @@ import { decodeCommand, type DecodeOptions } from "./commands/decode.js";
 import { rpcCommand } from "./commands/rpc.js";
 import { pingCommand } from "./commands/ping.js";
 import { tipCommand } from "./commands/tip.js";
-import { blockLatestCommand } from "./commands/block.js";
+import { blockAtHeightCommand, blockLatestCommand } from "./commands/block.js";
 import { dustEventCommand, dustEventsCommand } from "./commands/dust.js";
 import { explainCommand } from "./commands/explain.js";
 import { txCommand } from "./commands/tx.js";
@@ -223,6 +223,22 @@ block
     await run(
       async () =>
         blockLatestCommand(network, resolveFlags(cmd), globalOpts(cmd)),
+      cmd,
+    );
+  });
+
+block
+  .command("<height> [network]")
+  .description("Block header at height")
+  .action(async (height: string, network: string | undefined, _opts, cmd) => {
+    await run(
+      async () =>
+        blockAtHeightCommand(
+          height,
+          network,
+          resolveFlags(cmd),
+          globalOpts(cmd),
+        ),
       cmd,
     );
   });
