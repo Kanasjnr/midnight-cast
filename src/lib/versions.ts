@@ -1,5 +1,6 @@
 import { readFileSync, existsSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { configPath } from "../config.js";
 import { jsonRpc } from "../clients/rpc.js";
 import { gqlPost } from "../clients/indexer.js";
 import { loadDataJson } from "./data-path.js";
@@ -17,7 +18,6 @@ export interface SupportMatrixFile {
   docUrl: string;
   updated: string;
   networks: Record<string, MatrixNetwork>;
-  localPackages?: string[];
 }
 
 export interface LiveVersions {
@@ -73,16 +73,23 @@ export function isMatrixStale(
   return ageMs > maxAgeDays * 24 * 60 * 60 * 1000;
 }
 
-export function matrixStalenessWarning(updated: string): string | undefined {
+export function matrixStalenessWarning(
+  updated: string,
+  docUrl: string,
+): string | undefined {
   if (!isMatrixStale(updated)) return undefined;
   return (
     `Bundled support matrix is stale (updated ${updated}). ` +
-    `Live network versions may differ — refresh from ${loadSupportMatrix().docUrl} ` +
-    `or expect possible false mismatches.`
+    `Live network versions may differ — refresh from ${docUrl} ` +
+    `or run: npm i -g midnight-cast@latest`
   );
 }
 
 export function loadSupportMatrix(): SupportMatrixFile {
+  const override = join(dirname(configPath()), "support-matrix.json");
+  if (existsSync(override)) {
+    return JSON.parse(readFileSync(override, "utf8")) as SupportMatrixFile;
+  }
   return loadDataJson<SupportMatrixFile>("support-matrix.json");
 }
 
@@ -194,13 +201,13 @@ export function formatVersionsHuman(report: VersionsReport): string {
 
   lines.push(
     "",
-    "Expected (support matrix):",
-    `  node:           ${report.expected.node}`,
-    `  ledger:         ${report.expected.ledger}`,
-    `  indexer:        ${report.expected.indexer}`,
-    `  indexer-api:    ${report.expected.indexerApi}`,
-    `  proof-server:   ${report.expected.proofServer}`,
-    `  on-chain runtime: ${report.expected.onChainRuntime}`,
+    "Expected (support matrix — reference):",
+    `  node:             ${report.expected.node}  [auto-checked]`,
+    `  ledger:           ${report.expected.ledger}  [reference]`,
+    `  indexer:          ${report.expected.indexer}  [reference]`,
+    `  indexer-api:      ${report.expected.indexerApi}  [auto-checked]`,
+    `  proof-server:     ${report.expected.proofServer}  [reference]`,
+    `  on-chain runtime: ${report.expected.onChainRuntime}  [reference]`,
     "",
     "Live:",
     `  node:             ${report.live.nodeVersion} (system_version)`,

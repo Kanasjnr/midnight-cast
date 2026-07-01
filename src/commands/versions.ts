@@ -48,7 +48,7 @@ export async function versionsCommand(
     network: endpoints.network,
     matrixUpdated: matrix.updated,
     matrixStale,
-    matrixWarning: matrixStalenessWarning(matrix.updated),
+    matrixWarning: matrixStalenessWarning(matrix.updated, matrix.docUrl),
     docUrl: matrix.docUrl,
     expected,
     live,

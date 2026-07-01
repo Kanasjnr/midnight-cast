@@ -101,9 +101,13 @@ mn versions preprod --no-local
 
 **Live checks:** node `system_version`, indexer API path (`v4`), RPC `specVersion` vs indexer `protocolVersion`.
 
+**Reference only (not auto-checked):** ledger, indexer package version, proof-server, on-chain runtime — compare manually to matrix.
+
 **Local deps:** reads every `@midnight-ntwrk/*` package from `package.json` (not a fixed shortlist).
 
 **Staleness:** warns when the bundled support matrix is older than 45 days (possible false mismatches).
+
+**Override:** drop `support-matrix.json` in `~/.config/midnight-cast/` to use a newer matrix without waiting for an npm release.
 
 ---
 
