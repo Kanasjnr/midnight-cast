@@ -8,6 +8,7 @@ import { configInitCommand, configShowCommand } from "./commands/config-cmd.js";
 import { decodeCommand, type DecodeOptions } from "./commands/decode.js";
 import { rpcCommand } from "./commands/rpc.js";
 import { pingCommand } from "./commands/ping.js";
+import { healthCommand } from "./commands/health.js";
 import { tipCommand } from "./commands/tip.js";
 import { blockAtHeightCommand, blockLatestCommand } from "./commands/block.js";
 import { dustEventCommand, dustEventsCommand } from "./commands/dust.js";
@@ -189,6 +190,29 @@ program
   .action(async (network: string | undefined, _opts, cmd) => {
     await run(
       async () => pingCommand(network, resolveFlags(cmd), globalOpts(cmd)),
+      cmd,
+    );
+  });
+
+program
+  .command("health [network]")
+  .description("Aggregate service ping, sync tip, and version checks")
+  .option("--threshold <n>", "Lag threshold in blocks", "100")
+  .option("--fail-on-lag", "Treat indexer lag as unhealthy (CI)")
+  .option("--fail-on-mismatch", "Treat version mismatches as unhealthy (CI)")
+  .action(async (network: string | undefined, opts, cmd) => {
+    await run(
+      async () =>
+        healthCommand(
+          network,
+          {
+            ...resolveFlags(cmd),
+            threshold: parseInt(opts.threshold, 10),
+            failOnLag: opts.failOnLag,
+            failOnMismatch: opts.failOnMismatch,
+          },
+          globalOpts(cmd),
+        ),
       cmd,
     );
   });
