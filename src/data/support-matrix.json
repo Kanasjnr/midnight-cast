@@ -26,11 +26,5 @@
       "proofServer": "8.0.3",
       "onChainRuntime": "3.0.0"
     }
-  },
-  "localPackages": [
-    "@midnight-ntwrk/ledger-v8",
-    "@midnight-ntwrk/midnight-js-network-id",
-    "@midnight-ntwrk/midnight-js-contracts",
-    "@midnight-ntwrk/wallet-sdk-facade"
-  ]
+  }
 }
