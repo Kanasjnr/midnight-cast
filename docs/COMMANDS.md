@@ -78,7 +78,7 @@ mn tip preprod --fail-on-lag --json
 | `--threshold <n>` | `100` | Lag tolerance in blocks |
 | `--fail-on-lag` | off | Exit `1` when `\|delta\| >= threshold` |
 
-**Exit code:** `0` if `\|rpcHeight - indexerHeight\| < threshold`; else `1`.
+**Exit code:** `0` by default (informational). With `--fail-on-lag`, exits `1` when `|delta| >= threshold`.
 
 ---
 

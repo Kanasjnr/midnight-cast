@@ -39,7 +39,8 @@ export async function tipCommand(
   }
 
   const delta = computeDelta(rpcHeight, indexerHeight);
-  const exitCode = tipExitCode(delta, threshold);
+  const lagging = Math.abs(delta) >= threshold;
+  const exitCode = tipExitCode(delta, threshold, flags.failOnLag);
 
   return {
     ok: exitCode === 0,
@@ -49,7 +50,7 @@ export async function tipCommand(
       indexerHeight,
       delta,
       threshold,
-      inSync: exitCode === 0,
+      inSync: !lagging,
     },
     exitCode,
   };
