@@ -121,6 +121,30 @@ describe("versions helpers", () => {
     );
     expect(checks.every((c) => c.ok)).toBe(true);
   });
+
+  it("checks proof-server version when live version provided", () => {
+    const checks = buildVersionChecks(
+      {
+        node: "0.22.5",
+        ledger: "8.0.3",
+        indexer: "4.0.1",
+        indexerApi: "v4",
+        proofServer: "8.0.3",
+        onChainRuntime: "3.0.0",
+      },
+      {
+        nodeVersion: "0.22.5",
+        runtimeSpecVersion: 22000,
+        runtimeImplVersion: 0,
+        indexerProtocolVersion: 22000,
+        indexerApi: "v4",
+      },
+      "8.0.3",
+    );
+    const proof = checks.find((c) => c.label === "proof-server");
+    expect(proof?.ok).toBe(true);
+    expect(proof?.live).toBe("8.0.3");
+  });
 });
 
 describe("fetchLiveVersions", () => {

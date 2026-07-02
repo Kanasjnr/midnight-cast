@@ -10,6 +10,7 @@ import {
   readLocalMidnightPackages,
   type VersionsReport,
 } from "../lib/versions.js";
+import { fetchProofServerVersion } from "../clients/proof-server.js";
 import { resolveNetwork, type ResolveFlags } from "../config.js";
 import type { EmitResult, GlobalOptions } from "../output.js";
 import { fail } from "../output.js";
@@ -42,7 +43,17 @@ export async function versionsCommand(
     return fail(err instanceof Error ? err.message : "Failed to fetch live versions");
   }
 
-  const checks = buildVersionChecks(expected, live);
+  let liveProofServer: string | undefined;
+  if (endpoints.proofServer) {
+    try {
+      liveProofServer = await fetchProofServerVersion(endpoints.proofServer);
+    } catch (err) {
+      liveProofServer =
+        err instanceof Error ? err.message : "proof server unreachable";
+    }
+  }
+
+  const checks = buildVersionChecks(expected, live, liveProofServer);
   const localPackages =
     flags.local !== false ? readLocalMidnightPackages() : undefined;
   const localPackageChecks = localPackages
