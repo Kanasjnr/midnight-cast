@@ -13,9 +13,11 @@ Available on every command:
 | `--rpc <url>` | Override node JSON-RPC URL |
 | `--indexer-http <url>` | Override indexer GraphQL HTTP URL |
 | `--indexer-ws <url>` | Override indexer WebSocket URL |
-| `--proof-server <url>` | Override proof server URL (ping only) |
+| `--proof-server <url>` | Override proof server URL (ping / health) |
 
 Environment: `MN_NETWORK` sets the default network (same as `--network`).
+
+**Version:** `mn --version` or `mn -V` prints the CLI package version.
 
 ---
 
@@ -63,6 +65,28 @@ mn ping preview --json
 
 ---
 
+## `mn health [network]`
+
+Aggregate **ping**, **tip**, and **versions** in one command. Good default for “is this network healthy?” before debugging.
+
+```bash
+mn health preprod
+mn health preview --json
+mn health preprod --fail-on-lag --fail-on-mismatch   # CI
+```
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--threshold <n>` | `100` | Lag tolerance in blocks (same as `tip`) |
+| `--fail-on-lag` | off | Treat indexer lag as unhealthy |
+| `--fail-on-mismatch` | off | Treat live version mismatches as unhealthy |
+
+**Sections in output:** service reachability (RPC, indexer, optional proof server), RPC vs indexer height delta, live version checks vs support matrix.
+
+**Exit code:** `0` when RPC and indexer are up and optional CI flags pass. Version mismatches are **warnings** unless `--fail-on-mismatch` is set. Proof server failure does not fail health by itself.
+
+---
+
 ## `mn tip [network]`
 
 Compare latest block height: node RPC vs indexer.
@@ -103,7 +127,9 @@ mn versions preprod --no-local
 
 **Reference only (not auto-checked):** ledger, indexer package version, proof-server, on-chain runtime — compare manually to matrix.
 
-**Local deps:** reads every `@midnight-ntwrk/*` package from `package.json` (not a fixed shortlist).
+**Local deps:** reads every `@midnight-ntwrk/*` package from `package.json`. When the matrix defines `packages` pins for the network, compares local semver specs and reports **MISMATCH** (e.g. `ledger-v8`, `compact-runtime`, `onchain-runtime-v3`, `midnight-js-indexer`).
+
+**Network warning:** if live `system_version` does not match the matrix row for `--network`, warns that endpoints may point at a different environment (e.g. preview RPC with `--network preprod`).
 
 **Staleness:** warns when the bundled support matrix is older than 45 days (possible false mismatches).
 
@@ -113,12 +139,27 @@ mn versions preprod --no-local
 
 ## `mn block latest [network]`
 
-Latest block header from node RPC (`chain_getHeader`).
+Latest block header from node RPC (`chain_getHeader` + head block hash).
 
 ```bash
 mn block latest preprod
 mn block latest --json
 ```
+
+**JSON / human fields:** `height`, `hash`, `parentHash`, `stateRoot`, `extrinsicsRoot`, `network`.
+
+---
+
+## `mn block <height> [network]`
+
+Block header at a specific height (`chain_getBlockHash` + `chain_getHeader`).
+
+```bash
+mn block 909000 preprod
+mn block 909000 --json
+```
+
+Useful to confirm a tx’s block or compare RPC state at a past height.
 
 ---
 
@@ -153,6 +194,10 @@ mn tx abc123... --by identifier
 
 **Shows:** status, fees, segment results, contract action types, DUST/zswap event ids, block height.
 
+When DUST events are present, human output includes `mn dust-event <id>` hints per event.
+
+**Network warning:** compares live node `system_version` to the matrix row for `--network` (same as `versions`).
+
 When a segment failed, output notes that indexer v4 does not expose the failure reason and suggests `mn decode --raw` with the wallet/node error string.
 
 ---
@@ -181,10 +226,15 @@ Auto-detects and decodes everything it can find in one paste:
 
 ```bash
 mn decode 170
+mn decode 170 --network preview    # ledger map uses preview row (8.1.0 vs 8.0.3)
 mn decode 0xaa
 mn decode InvalidDustSpendProof
 mn decode 1010
 ```
+
+**Pallet `Transaction`:** decoding `mn decode pallet pallet_midnight Transaction` adds a hint to find inner `Custom(N)` in the full error string.
+
+**Transcript codes 179 / 180 / 181:** decoding any of these shows related proof/transcript version context (`UnsupportedProofVersion`, `GuaranteedTranscriptVersion`, `FallibleTranscriptVersion`).
 
 ### Subcommands
 
@@ -199,6 +249,7 @@ mn decode jsonrpc -32602
 | Form | Purpose |
 |------|---------|
 | `--raw <message>` | Parse full error string (1010, Custom N, pallet) |
+| `--network <name>` | Stamp ledger map from matrix row (preview vs preprod) |
 | `ledger <code>` | `Custom(N)` / LedgerApiError (0–255); shows map ledger version |
 | `pallet <index> <variant>` | `DispatchError::Module` |
 | `1010` | Substrate Invalid Transaction envelope guide |
@@ -219,6 +270,8 @@ mn dust-event 565975 --verbose --json
 |------|---------|-------------|
 | `--verbose` | off | Full `raw` hex |
 | `--timeout <ms>` | `15000` | Subscription timeout |
+
+**Not found:** suggests `mn dust-events --from <id-10> --limit 10` to browse recent events on that network.
 
 ---
 
@@ -272,7 +325,7 @@ Failures:
 }
 ```
 
-Some commands also set non-zero exit codes for CI (`tip --fail-on-lag`, `versions --fail-on-mismatch`, `ping`).
+Some commands also set non-zero exit codes for CI (`health --fail-on-lag`, `health --fail-on-mismatch`, `tip --fail-on-lag`, `versions --fail-on-mismatch`, `ping`).
 
 ---
 

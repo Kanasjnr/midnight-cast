@@ -7,6 +7,7 @@ How to use `mn` in real debugging sessions.
 Run commands in this order when something breaks:
 
 ```
+0. mn health        →  Ping + tip + versions in one command (optional shortcut)
 1. mn ping          →  Are RPC and indexer up?
 2. mn tip           →  Is the indexer caught up?
 3. mn versions      →  Is the live stack aligned with the support matrix?
@@ -15,7 +16,7 @@ Run commands in this order when something breaks:
 6. mn dust-event(s) →  Ledger event / sync detail
 ```
 
-Skip step 3 and you will waste time on proof regeneration when the real issue is preview vs preprod or indexer lag.
+Skip step 3 (or `health`’s versions section) and you will waste time on proof regeneration when the real issue is preview vs preprod or indexer lag.
 
 ---
 
@@ -25,20 +26,26 @@ Skip step 3 and you will waste time on proof regeneration when the real issue is
 npm i -g midnight-cast
 
 mn config init
-mn ping preprod
-mn tip preprod
-mn versions preprod
+mn health preprod
 mn decode 170
 mn decode 1010
 ```
 
 You should see RPC/indexer OK, small tip delta, versions checks passing, and decode output for Custom 170.
 
+Or run the ladder manually: `mn ping`, `mn tip`, `mn versions`.
+
 ---
 
 ## Start of day
 
 Before writing repro scripts or opening Discord:
+
+```bash
+mn health preprod
+```
+
+Or:
 
 ```bash
 mn ping preprod
@@ -48,14 +55,17 @@ mn versions preprod
 
 | Result | Action |
 |--------|--------|
-| `ping` FAIL on RPC or indexer | Fix connectivity first |
+| `health` / `ping` FAIL on RPC or indexer | Fix connectivity first |
 | `\|tip delta\|` ≥ threshold | Wait for indexer sync; don’t debug submissions yet |
 | `versions` MISMATCH | Check [support matrix](https://docs.midnight.network/relnotes/support-matrix) and your local deps |
+| **Network warning** on `versions` or `tx` | Endpoints may target wrong network — fix `--network` or RPC URL |
 
 **CI example:**
 
 ```bash
-mn tip preprod --fail-on-lag 500
+mn health preprod --fail-on-lag --fail-on-mismatch
+# or separately:
+mn tip preprod --fail-on-lag --threshold 500
 mn versions preprod --fail-on-mismatch
 ```
 
@@ -79,7 +89,7 @@ If stack looks healthy:
 mn tx <your-tx-hash> --network preprod
 ```
 
-Check segment failures and DUST events on that transaction. If a segment shows `fail`, the indexer does not include the reason — use `mn decode --raw` with the error from your wallet or node logs.
+Check segment failures and DUST events on that transaction. Human output links `mn dust-event <id>` for each DUST event. If a segment shows `fail`, the indexer does not include the reason — use `mn decode --raw` with the error from your wallet or node logs.
 
 ---
 
@@ -105,24 +115,27 @@ If there is **no** inner `Custom(N)`, the rejection was upstream (nonce, fee, mo
 
 ---
 
-## Custom 179 / 180 (proof / transcript version)
+## Custom 179 / 180 / 181 (proof / transcript version)
 
-Almost always version skew:
+Almost always version skew between proof server, ledger, and SDK:
 
 ```bash
 mn decode 179
 mn decode 180
+mn decode 181
 mn versions preprod
 ```
 
-From your dApp directory (reads `package.json`):
+Each of 179–181 shows related transcript/proof codes in the decode hint. Use `--network preview` or `--network preprod` so the ledger map matches your environment.
+
+From your dApp directory (reads `package.json` and compares to matrix **package pins**):
 
 ```bash
 cd my-midnight-app
 mn versions preprod
 ```
 
-Compare local `@midnight-ntwrk/ledger-v8`, proof server, and midnight-js versions to the matrix row for your network.
+Look for **Local package checks** — `ledger-v8`, `compact-runtime`, `onchain-runtime-v3`, `midnight-js-indexer` vs matrix.
 
 ---
 
@@ -155,7 +168,9 @@ mn dust-event 565975 --network preprod
 
 **Known good preprod example:** event `565975` (if still in retention).
 
-**Preview note:** event ids differ per network. If `dust-event 12345` fails, the id may not exist — use `dust-events --from` to discover ids.
+**Preview note:** event ids differ per network. If `dust-event 12345` fails, the CLI suggests browsing with `dust-events --from` — use that to discover valid ids.
+
+**From a transaction:** `mn tx <hash>` lists DUST event ids and prints `mn dust-event <id>` hints for each.
 
 **Fields to watch:**
 
@@ -168,6 +183,19 @@ Static background:
 ```bash
 mn explain dust
 ```
+
+---
+
+## Block at height
+
+When you know the block number (from `mn tx` or an explorer) but want RPC header fields:
+
+```bash
+mn block 909000 preprod
+mn block latest preprod
+```
+
+`latest` and `<height>` both return `hash`, `parentHash`, `stateRoot`, and `extrinsicsRoot`.
 
 ---
 
@@ -214,8 +242,10 @@ mn config init -y --network preprod
 
 | You want… | Command |
 |-----------|---------|
+| Full stack check | `mn health` |
 | Is the node up? | `mn ping` |
 | Latest block | `mn block latest` |
+| Block at height | `mn block <height>` |
 | Raw RPC | `mn rpc` |
 | What does error N mean? | `mn decode` |
 | What happened to my tx? | `mn tx` |
@@ -250,7 +280,7 @@ mn config init -y --network preprod
 | Official reference | [Midnight docs](https://docs.midnight.network/) |
 | Version pins | [Support matrix](https://docs.midnight.network/relnotes/support-matrix) |
 
-**Before Discord:** run the debug ladder and paste `mn ping`, `mn tip`, `mn versions`, and `mn decode` output — same commands core devs use in threads.
+**Before Discord:** run `mn health` (or the debug ladder) and paste output — same signals core devs use in threads.
 
 ### Docs
 
