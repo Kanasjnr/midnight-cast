@@ -1,5 +1,6 @@
 import { chainGetHeader, parseBlockNumber } from "../clients/rpc.js";
 import { getLatestBlockHeight } from "../clients/indexer.js";
+import { fetchProofServerVersion } from "../clients/proof-server.js";
 import { resolveNetwork, type ResolveFlags } from "../config.js";
 import { computeDelta, tipExitCode } from "../lib/delta.js";
 import {
@@ -107,7 +108,9 @@ export async function healthCommand(
     );
   }
 
-  const serviceResults = await runServiceChecks(endpoints);
+  const serviceResults = await runServiceChecks(endpoints, {
+    proofServerExpected: expected.proofServer,
+  });
   const servicesOk = serviceResults
     .filter((r) => r.service === "rpc" || r.service === "indexer")
     .every((r) => r.status === "OK");
@@ -140,7 +143,17 @@ export async function healthCommand(
     return fail(err instanceof Error ? err.message : "Failed to fetch live versions");
   }
 
-  const versionChecks = buildVersionChecks(expected, live);
+  let liveProofServer: string | undefined;
+  if (endpoints.proofServer) {
+    try {
+      liveProofServer = await fetchProofServerVersion(endpoints.proofServer);
+    } catch (err) {
+      liveProofServer =
+        err instanceof Error ? err.message : "proof server unreachable";
+    }
+  }
+
+  const versionChecks = buildVersionChecks(expected, live, liveProofServer);
   const versionsOk = versionChecks.every((c) => c.ok);
   const matrixStale = isMatrixStale(matrix.updated);
 
@@ -157,6 +170,7 @@ export async function healthCommand(
       status: r.status,
       latencyMs: r.latencyMs,
       ...(r.service === "proof-server" ? { optional: true } : {}),
+      ...(r.version ? { version: r.version } : {}),
       ...(r.detail ? { detail: r.detail } : {}),
     })),
     sync: {

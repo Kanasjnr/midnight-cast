@@ -139,6 +139,7 @@ export async function fetchLiveVersions(
 export function buildVersionChecks(
   expected: MatrixNetwork,
   live: LiveVersions,
+  liveProofServer?: string,
 ): VersionCheck[] {
   const checks: VersionCheck[] = [
     {
@@ -162,6 +163,16 @@ export function buildVersionChecks(
       note: "RPC specVersion vs indexer latest block",
     },
   ];
+
+  if (liveProofServer !== undefined) {
+    checks.push({
+      label: "proof-server",
+      expected: expected.proofServer,
+      live: liveProofServer,
+      ok: versionMatches(expected.proofServer, liveProofServer),
+      note: "GET /version on configured proof server URL",
+    });
+  }
 
   return checks;
 }
@@ -279,7 +290,7 @@ export function formatVersionsHuman(report: VersionsReport): string {
     `  ledger:           ${report.expected.ledger}  [reference]`,
     `  indexer:          ${report.expected.indexer}  [reference]`,
     `  indexer-api:      ${report.expected.indexerApi}  [auto-checked]`,
-    `  proof-server:     ${report.expected.proofServer}  [reference]`,
+    `  proof-server:     ${report.expected.proofServer}  [auto-checked when URL configured]`,
     `  on-chain runtime: ${report.expected.onChainRuntime}  [reference]`,
     "",
     "Live:",

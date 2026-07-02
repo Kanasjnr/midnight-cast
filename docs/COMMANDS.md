@@ -54,12 +54,14 @@ mn config show --network mainnet --json
 
 ## `mn ping [network]`
 
-Check RPC and indexer reachability. Proof server is optional (FAIL does not fail the command).
+Check RPC and indexer reachability. When a proof server URL is configured, also GETs `/version` and compares to the support matrix pin (e.g. `8.0.3`). Proof server FAIL does not fail the command exit code.
 
 ```bash
 mn ping preprod
 mn ping preview --json
 ```
+
+**Proof server row:** `version=8.0.3 (matches matrix 8.0.3)` or `version=… (expected …)` on mismatch. Unreachable hosts (e.g. mainnet DNS not live yet) show as FAIL with detail.
 
 **Exit code:** `0` if RPC and indexer OK; `1` otherwise.
 
@@ -123,9 +125,9 @@ mn versions preprod --no-local
 | `--fail-on-mismatch` | Exit `1` if live checks fail (CI) |
 | `--no-local` | Do not read `package.json` in cwd |
 
-**Live checks:** node `system_version`, indexer API path (`v4`), RPC `specVersion` vs indexer `protocolVersion`.
+**Live checks:** node `system_version`, indexer API path (`v4`), RPC `specVersion` vs indexer `protocolVersion`, proof server `GET /version` when URL is configured.
 
-**Reference only (not auto-checked):** ledger, indexer package version, proof-server, on-chain runtime — compare manually to matrix.
+**Reference only (not auto-checked):** ledger, indexer package version, on-chain runtime — compare manually to matrix.
 
 **Local deps:** reads every `@midnight-ntwrk/*` package from `package.json`. When the matrix defines `packages` pins for the network, compares local semver specs and reports **MISMATCH** (e.g. `ledger-v8`, `compact-runtime`, `onchain-runtime-v3`, `midnight-js-indexer`).
 
@@ -337,5 +339,7 @@ Some commands also set non-zero exit codes for CI (`health --fail-on-lag`, `heal
 | `preprod` | `https://rpc.preprod.midnight.network` | `.../api/v4/graphql` |
 | `mainnet` | `https://rpc.mainnet.midnight.network` | `.../api/v4/graphql` |
 | `local` | `http://127.0.0.1:9944` | user-configured |
+
+Built-in proof server URLs: `https://proof-server.<network>.midnight.network` (`GET /` health, `GET /version` for ledger pin). **Mainnet** proof-server DNS may not resolve yet — `ping` will show FAIL until it is live.
 
 Override any endpoint in config or with flags. See [Midnight network docs](https://docs.midnight.network/relnotes/network).

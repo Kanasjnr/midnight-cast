@@ -56,6 +56,7 @@ mn versions preprod
 | Result | Action |
 |--------|--------|
 | `health` / `ping` FAIL on RPC or indexer | Fix connectivity first |
+| `proof-server` FAIL or version mismatch | Check local proof server / SDK pin vs matrix; mainnet URL may not exist yet |
 | `\|tip delta\|` ≥ threshold | Wait for indexer sync; don’t debug submissions yet |
 | `versions` MISMATCH | Check [support matrix](https://docs.midnight.network/relnotes/support-matrix) and your local deps |
 | **Network warning** on `versions` or `tx` | Endpoints may target wrong network — fix `--network` or RPC URL |
@@ -136,6 +137,8 @@ mn versions preprod
 ```
 
 Look for **Local package checks** — `ledger-v8`, `compact-runtime`, `onchain-runtime-v3`, `midnight-js-indexer` vs matrix.
+
+**Proof server:** `mn ping` and `mn versions` read `GET https://proof-server.<network>.midnight.network/version` when configured. Mismatch on 179–181 often means proof server or ledger skew, not just npm deps.
 
 ---
 
