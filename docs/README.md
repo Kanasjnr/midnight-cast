@@ -4,8 +4,8 @@ Extended docs for the `mn` CLI. **GitHub only** — not included in the npm pack
 
 | Doc | Description |
 |-----|-------------|
-| [WORKFLOWS.md](./WORKFLOWS.md) | Scenario-based guides (tx failed, 1010, DUST, version skew, `health`) |
-| [COMMANDS.md](./COMMANDS.md) | Full command and flag reference (`health`, `block <height>`, package pins) |
+| [WORKFLOWS.md](./WORKFLOWS.md) | Scenario-based guides with real sample output (`health`, tx failure, 1010, DUST, version skew) |
+| [COMMANDS.md](./COMMANDS.md) | Reference-style command docs with examples and output snippets |
 
 Quick start lives in the repo [README](../README.md).
 

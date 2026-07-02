@@ -1,6 +1,6 @@
 # Developer workflows
 
-How to use `mn` in real debugging sessions.
+How to use `mn` in real debugging sessions, with sample output you can compare against.
 
 ## The debug ladder
 
@@ -43,6 +43,24 @@ Before writing repro scripts or opening Discord:
 
 ```bash
 mn health preprod
+```
+
+Example output:
+
+```text
+Network: preprod
+Healthy: yes
+
+Services:
+  rpc: OK (1104ms)
+  indexer: OK (2226ms)
+  proof-server: OK (3902ms) (optional) — version=8.0.3 (matches matrix 8.0.3)
+
+Sync:
+  RPC height:      1477767
+  Indexer height:  1477765
+  Delta:           2 (threshold 100)
+  In sync:         yes
 ```
 
 Or:
@@ -90,6 +108,24 @@ If stack looks healthy:
 mn tx <your-tx-hash> --network preprod
 ```
 
+Example output:
+
+```text
+Type:     RegularTransaction
+ID:       232830
+Hash:     e5c86fcd43eb9707e8f23d940e59a6c12ca7ad3ca7e9d2f1232843cc62de1b8c
+Block:    909000 (428660a6154a27cee57af3527cb3370ad3bbce94f461f433533b1413e24b71f4)
+Protocol: 22000
+Status:   PARTIAL_SUCCESS
+Fees:     paid=1 estimated=1
+Segments: 0:ok, 20003:ok, 35012:fail
+Failure:  indexer v4 exposes segment success only (no failure reason)
+Hint:     paste wallet/node error → mn decode --raw "<error>"
+Actions:  ContractCall
+DUST:     665110:DustSpendProcessed
+          → mn dust-event 665110
+```
+
 Check segment failures and DUST events on that transaction. Human output links `mn dust-event <id>` for each DUST event. If a segment shows `fail`, the indexer does not include the reason — use `mn decode --raw` with the error from your wallet or node logs.
 
 ---
@@ -102,6 +138,21 @@ Check segment failures and DUST events on that transaction. Human output links `
 
 ```bash
 mn decode --raw "1010: Invalid Transaction: Custom error: 186"
+```
+
+Example output:
+
+```text
+Parsed: 1010: Invalid Transaction: Custom error: 186
+
+Kind:  substrate (1010 InvalidTransaction)
+Desc:  Substrate transaction pool rejected the extrinsic. This is an envelope code, not a Midnight ledger code.
+
+Next steps:
+  1. Find Custom error: N in the error message (u8, 0–255).
+  2. Run: mn decode ledger N   (or: mn decode N)
+  3. If DispatchError::Module { index, error }, run: mn decode pallet <index> <error>
+  4. If there is no inner Custom(N), rejection was upstream Substrate validation (nonce, fee, size, etc.).
 ```
 
 **Manual path:**
@@ -138,6 +189,18 @@ mn versions preprod
 
 Look for **Local package checks** — `ledger-v8`, `compact-runtime`, `onchain-runtime-v3`, `midnight-js-indexer` vs matrix.
 
+Example output:
+
+```text
+Checks:
+  node: expected=0.22.5 live=0.22.5 → OK
+  indexer-api: expected=v4 live=v4 → OK (from configured indexer URL path)
+  protocolVersion: expected=22000 live=22000 → OK (RPC specVersion vs indexer latest block)
+  proof-server: expected=8.0.3 live=8.0.3 → OK (GET /version on configured proof server URL)
+
+Summary: live stack matches matrix checks ✓
+```
+
 **Proof server:** `mn ping` and `mn versions` read `GET https://proof-server.<network>.midnight.network/version` when configured. Mismatch on 179–181 often means proof server or ledger skew, not just npm deps.
 
 ---
@@ -161,6 +224,14 @@ Indexer v4 exposes DUST events via **WebSocket subscription only**.
 
 ```bash
 mn dust-events --network preprod --from 565900 --limit 10
+```
+
+Example output:
+
+```text
+id=565900  typename=DustGenerationDtimeUpdate  protocolVersion=22000  raw=0x6d69646e696768743a6576656e745b76…  maxId=1219348
+id=565901  typename=DustInitialUtxo  protocolVersion=22000  raw=0x6d69646e696768743a6576656e745b76…  maxId=1219348
+id=565902  typename=DustInitialUtxo  protocolVersion=22000  raw=0x6d69646e696768743a6576656e745b76…  maxId=1219348
 ```
 
 **Inspect one event:**
@@ -199,6 +270,17 @@ mn block latest preprod
 ```
 
 `latest` and `<height>` both return `hash`, `parentHash`, `stateRoot`, and `extrinsicsRoot`.
+
+Example output:
+
+```text
+network: preprod
+height: 909000
+hash: 0x428660a6154a27cee57af3527cb3370ad3bbce94f461f433533b1413e24b71f4
+parentHash: 0x0f3ea13ff874e823035aa0a27d94c6c79776a4076607c17079fec6519d7aa17a
+stateRoot: 0x0d3efc9ac7f5a310e83bc1b83c3d283df4f8bbe8ba5bb6faff668bbd26a581f9
+extrinsicsRoot: 0x3a61ec7982b80286f7908e90b481548e9f07240f80fb2dbd9f02205b05f49399
+```
 
 ---
 
