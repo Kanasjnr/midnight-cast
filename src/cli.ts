@@ -238,34 +238,37 @@ program
     );
   });
 
-const block = program.command("block").description("Block queries");
-
-block
-  .command("latest [network]")
-  .description("Latest block header from RPC")
-  .action(async (network: string | undefined, _opts, cmd) => {
-    await run(
-      async () =>
-        blockLatestCommand(network, resolveFlags(cmd), globalOpts(cmd)),
+program
+  .command("block [selector] [network]")
+  .description("Latest block or block header at height")
+  .action(
+    async (
+      selector: string | undefined,
+      network: string | undefined,
+      _opts,
       cmd,
-    );
-  });
+    ) => {
+      await run(
+        async () => {
+          if (!selector || selector === "latest") {
+            return blockLatestCommand(
+              network,
+              resolveFlags(cmd),
+              globalOpts(cmd),
+            );
+          }
 
-block
-  .command("<height> [network]")
-  .description("Block header at height")
-  .action(async (height: string, network: string | undefined, _opts, cmd) => {
-    await run(
-      async () =>
-        blockAtHeightCommand(
-          height,
-          network,
-          resolveFlags(cmd),
-          globalOpts(cmd),
-        ),
-      cmd,
-    );
-  });
+          return blockAtHeightCommand(
+            selector,
+            network,
+            resolveFlags(cmd),
+            globalOpts(cmd),
+          );
+        },
+        cmd,
+      );
+    },
+  );
 
 function registerVersions(alias: string, description: string): void {
   program
