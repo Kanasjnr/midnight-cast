@@ -1,6 +1,6 @@
 # midnight-cast (`mn`)
 
-Read-only developer CLI for Midnight network health, indexer queries, and error decoding. Think **Foundry `cast`** for Midnight, not a wallet or app scaffold.
+Read-only CLI for Midnight network health, indexer queries, and error decoding. Think **Foundry `cast`** for Midnight, not a wallet or app scaffold.
 
 ```bash
 npm i -g midnight-cast
@@ -13,9 +13,9 @@ Requires **Node.js 20+** (22+ recommended).
 
 ## Key capabilities
 
-- Read network health: RPC, indexer, proof-server
-- Compare live stack vs Midnight support matrix
-- Decode Midnight ledger, pallet, Substrate 1010, and JSON-RPC errors
+- Read RPC, indexer, and proof-server health
+- Compare live stack signals to the Midnight support matrix
+- Decode ledger, pallet, Substrate 1010, and JSON-RPC errors
 - Inspect transactions and DUST event streams
 - Query block headers and raw JSON-RPC without writing scripts
 
@@ -113,9 +113,9 @@ mn decode 170
 
 ## Debug ladder
 
-When something breaks, run in order:
+When something breaks, run these in order:
 
-1. `mn health` — ping + sync + versions in one shot (or steps 2–4 below)
+1. `mn health` — ping + sync + versions in one shot
 2. `mn ping` — services up?
 3. `mn tip` — indexer synced?
 4. `mn versions` — stack matches [support matrix](https://docs.midnight.network/relnotes/support-matrix)?
@@ -145,7 +145,7 @@ mn versions preprod --fail-on-mismatch   # CI; local @midnight-ntwrk/* vs matrix
 | `mn` bug or something not working | [GitHub Issues](https://github.com/Kanasjnr/midnight-cast/issues) |
 | New command or feature idea | [GitHub Issues](https://github.com/Kanasjnr/midnight-cast/issues) (feature request) |
 
-`mn decode --raw "…"` auto-detects 1010 envelopes, `Custom(N)`, ledger error names, pallet module errors, and JSON-RPC codes in one paste. Use `--network` so the ledger map matches preview vs preprod. Pallet `Transaction` hints point to inner `Custom(N)`; codes 179–181 show grouped transcript context. For codes not in the map or protocol questions — Discord + [Midnight docs](https://docs.midnight.network/) are the right place.
+`mn decode --raw "…"` auto-detects 1010 envelopes, `Custom(N)`, ledger error names, pallet module errors, and JSON-RPC codes from one pasted error. Use `--network` so the ledger map matches preview vs preprod. Pallet `Transaction` hints point to inner `Custom(N)`, and codes 179–181 show grouped transcript context. For missing codes or protocol questions, use Discord and the [Midnight docs](https://docs.midnight.network/).
 
 **Note:** `mn` may clash with `midnight-wallet-cli` on some machines (both install a `mn` binary). Use `npx midnight-cast` or `midnight-cast` if needed.
 
