@@ -35,7 +35,6 @@ export const BUILTIN_NETWORKS: Record<string, NetworkEndpoints> = {
     rpcWs: "wss://rpc.mainnet.midnight.network",
     indexerHttp: indexerHttp("mainnet"),
     indexerWs: indexerWs("mainnet"),
-    proofServer: "https://proof-server.mainnet.midnight.network",
   },
   local: {
     networkId: "local",
