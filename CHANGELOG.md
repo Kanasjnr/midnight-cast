@@ -15,6 +15,7 @@
 
 ### Tests & CI
 - Gate live network tests behind `INTEGRATION=1`
+- CI smoke: preprod (full) + preview (ping, health, versions, tip, decode)
 - Add unit tests for ping, dust, parse-int, sanitize
 - Node 20 / 22 / 24 CI matrix
 

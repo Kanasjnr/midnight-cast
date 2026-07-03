@@ -37,7 +37,7 @@ jobs:
         run: npm test
 
   smoke:
-    name: Smoke (live preprod)
+    name: Smoke (live preprod + preview)
     runs-on: ubuntu-latest
     needs: test
     timeout-minutes: 20
@@ -58,7 +58,7 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Run live preprod smoke tests
+      - name: Run live smoke tests (preprod + preview)
         run: npm run test:smoke
         env:
           INTEGRATION: "1"
