@@ -17,6 +17,7 @@ import { explainCommand } from "./commands/explain.js";
 import { txCommand } from "./commands/tx.js";
 import { versionsCommand } from "./commands/versions.js";
 import type { ResolveFlags } from "./config.js";
+import { normalizeArgv } from "./lib/argv.js";
 
 const program = new Command();
 
@@ -154,11 +155,24 @@ decode
   });
 
 decode
-  .command("jsonrpc <code>")
+  .command("jsonrpc [code]")
   .description("JSON-RPC error code (e.g. -32602)")
-  .action(async (code: string, _opts, cmd) => {
+  .option("--code <code>", "JSON-RPC error code (used for negative values)")
+  .action(async (code: string | undefined, opts, cmd) => {
+    const codeArg = opts.code ?? code;
+    if (!codeArg) {
+      await run(
+        async () => ({
+          ok: false,
+          error: "Usage: mn decode jsonrpc <code> (e.g. -32602)",
+          exitCode: 1,
+        }),
+        cmd,
+      );
+      return;
+    }
     await run(
-      async () => decodeCommand(["jsonrpc", code], decodeOpts(cmd)),
+      async () => decodeCommand(["jsonrpc", codeArg], decodeOpts(cmd)),
       cmd,
     );
   });
@@ -396,4 +410,4 @@ program
     await run(async () => explainCommand(topic, globalOpts(cmd)), cmd);
   });
 
-program.parseAsync(process.argv);
+program.parseAsync(normalizeArgv(process.argv));
