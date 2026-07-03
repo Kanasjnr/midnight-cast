@@ -32,3 +32,30 @@ jobs:
 
       - name: Run tests
         run: npm test
+
+  smoke:
+    name: Smoke (live preprod)
+    runs-on: ubuntu-latest
+    needs: test
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run live preprod smoke tests
+        run: npm run test:smoke
+        env:
+          INTEGRATION: "1"

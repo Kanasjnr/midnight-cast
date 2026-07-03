@@ -10,6 +10,8 @@ permissions:
 
 jobs:
   publish:
+    # Only publish when the GitHub release targets main (not next-release).
+    if: github.event.release.target_commitish == 'main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
