@@ -187,7 +187,7 @@ cd my-midnight-app
 mn versions preprod
 ```
 
-Look for **Local package checks** — `ledger-v8`, `compact-runtime`, `onchain-runtime-v3`, `midnight-js-indexer` vs matrix.
+Look for **Local package checks** — `ledger-v8`, `compact-runtime`, `onchain-runtime-v3`, `midnight-js-indexer-public-data-provider` vs matrix.
 
 Example output:
 
