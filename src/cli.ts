@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import { emit, type GlobalOptions } from "./output.js";
+import { parseIntOrFail } from "./lib/parse-int.js";
 import { configInitCommand, configShowCommand } from "./commands/config-cmd.js";
 import { decodeCommand, type DecodeOptions } from "./commands/decode.js";
 import { rpcCommand } from "./commands/rpc.js";
@@ -45,6 +46,18 @@ function decodeOpts(cmd: Command): DecodeOptions {
   return { json: o.json, raw: o.raw, network: o.network };
 }
 
+function parseFlagInt(
+  value: string,
+  label: string,
+  options?: { min?: number; max?: number },
+): number {
+  const parsed = parseIntOrFail(value, label, options);
+  if (typeof parsed === "object") {
+    throw new Error(parsed.error);
+  }
+  return parsed;
+}
+
 function resolveFlags(cmd: Command): ResolveFlags {
   const o = cmd.optsWithGlobals();
   return {
@@ -84,7 +97,15 @@ config
   .option("--proof-server <url>", "Proof server URL")
   .option("-y, --yes", "Non-interactive (default network: preprod)")
   .action(async (opts, cmd) => {
-    await run(async () => configInitCommand(opts), cmd);
+    const global = cmd.optsWithGlobals();
+    await run(
+      async () =>
+        configInitCommand({
+          ...opts,
+          network: opts.network ?? global.network,
+        }),
+      cmd,
+    );
   });
 
 config
@@ -208,7 +229,7 @@ program
           network,
           {
             ...resolveFlags(cmd),
-            threshold: parseInt(opts.threshold, 10),
+            threshold: parseFlagInt(opts.threshold, "threshold", { min: 0 }),
             failOnLag: opts.failOnLag,
             failOnMismatch: opts.failOnMismatch,
           },
@@ -230,7 +251,7 @@ program
           network,
           {
             ...resolveFlags(cmd),
-            threshold: parseInt(opts.threshold, 10),
+            threshold: parseFlagInt(opts.threshold, "threshold", { min: 0 }),
             failOnLag: opts.failOnLag,
           },
           globalOpts(cmd),
@@ -328,12 +349,12 @@ program
     await run(
       async () =>
         dustEventCommand(
-          parseInt(id, 10),
+          parseFlagInt(id, "dust-event id", { min: 0 }),
           undefined,
           {
             ...resolveFlags(cmd),
             verbose: opts.verbose,
-            timeoutMs: parseInt(opts.timeout, 10),
+            timeoutMs: parseFlagInt(opts.timeout, "timeout", { min: 1 }),
           },
           globalOpts(cmd),
         ),
@@ -355,10 +376,12 @@ program
           network,
           {
             ...resolveFlags(cmd),
-            from: opts.from ? parseInt(opts.from, 10) : undefined,
-            limit: parseInt(opts.limit, 10),
+            from: opts.from
+              ? parseFlagInt(opts.from, "from", { min: 0 })
+              : undefined,
+            limit: parseFlagInt(opts.limit, "limit", { min: 1, max: 1000 }),
             verbose: opts.verbose,
-            timeoutMs: parseInt(opts.timeout, 10),
+            timeoutMs: parseFlagInt(opts.timeout, "timeout", { min: 1 }),
           },
           globalOpts(cmd),
         ),
