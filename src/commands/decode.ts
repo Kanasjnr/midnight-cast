@@ -4,8 +4,11 @@ import {
   parseRawErrorMessage,
 } from "../lib/error-parse.js";
 import { loadSupportMatrix } from "../lib/versions.js";
+import { NETWORK_NAMES } from "../networks.js";
 import type { EmitResult, GlobalOptions } from "../output.js";
 import { fail, success } from "../output.js";
+
+const MAX_RAW_ERROR_LENGTH = 16_384;
 
 export interface DecodeOptions extends GlobalOptions {
   raw?: string;
@@ -253,9 +256,22 @@ function decodePallet(
   return success(text);
 }
 
+function validateDecodeNetwork(network?: string): string | undefined {
+  if (!network) return undefined;
+  if (!NETWORK_NAMES.includes(network)) {
+    throw new Error(
+      `Unknown network "${network}". Known: ${NETWORK_NAMES.join(", ")}`,
+    );
+  }
+  return network;
+}
+
 function decodeJsonRpc(codeArg: string, options: DecodeOptions): EmitResult {
   const data = loadDataJson<JsonRpcErrorsFile>("jsonrpc-errors.json");
-  const key = codeArg.startsWith("-") ? codeArg : `-${codeArg}`;
+  const trimmed = codeArg.trim();
+  const numeric = /^-?\d+$/.test(trimmed) ? parseInt(trimmed, 10) : NaN;
+  const key =
+    Number.isInteger(numeric) && numeric < 0 ? String(numeric) : `-${trimmed.replace(/^-/, "")}`;
   const entry = data.codes[key] ?? data.codes[codeArg];
 
   if (!entry) {
@@ -319,6 +335,12 @@ function appendDecodeResult(
 }
 
 function decodeRaw(raw: string, options: DecodeOptions): EmitResult {
+  if (raw.length > MAX_RAW_ERROR_LENGTH) {
+    return fail(
+      `Error message too long (${raw.length} chars, max ${MAX_RAW_ERROR_LENGTH}). ` +
+        "Truncate or pass a shorter excerpt.",
+    );
+  }
   const parsed = parseRawErrorMessage(raw);
   const ledgerData = loadDataJson<ErrorCodesFile>("error-codes.json");
   const nameCodes = findLedgerCodesByName(
@@ -397,6 +419,15 @@ export function decodeCommand(
   args: string[],
   options: DecodeOptions,
 ): EmitResult {
+  try {
+    options = {
+      ...options,
+      network: validateDecodeNetwork(options.network),
+    };
+  } catch (err) {
+    return fail(err instanceof Error ? err.message : String(err));
+  }
+
   if (options.raw) {
     return decodeRaw(options.raw, options);
   }

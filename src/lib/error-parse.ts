@@ -58,7 +58,8 @@ function extractCustomLedgerCodes(raw: string): string[] {
 
 function extractStandaloneHexCodes(raw: string): string[] {
   const codes: string[] = [];
-  const hexPattern = /(?<![0-9a-fA-F])0x([0-9a-fA-F]{1,2})(?![0-9a-fA-F])/gi;
+  const hexPattern =
+    /(?:^|[\s(,;{])(?:0x)?([0-9a-fA-F]{1,2})(?=[\s),;}\]]|$)/gi;
   for (const match of raw.matchAll(hexPattern)) {
     if (match[1]) addLedgerCode(codes, String(parseInt(match[1], 16)));
   }
