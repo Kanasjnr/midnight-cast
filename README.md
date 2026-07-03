@@ -3,7 +3,13 @@
 Read-only CLI for Midnight network health, indexer queries, and error decoding. Think **Foundry `cast`** for Midnight, not a wallet or app scaffold.
 
 ```bash
-npm i -g midnight-cast
+npx midnight-cast@latest health preprod
+# or: npm i -g midnight-cast@latest && mn health preprod
+```
+
+> **Note:** The `mn` binary may clash with other global CLIs (e.g. `@mermaid-js/mermaid-cli`). Prefer `npx midnight-cast` or alias `midnight-cast` in your shell.
+
+```bash
 mn health preprod
 ```
 
