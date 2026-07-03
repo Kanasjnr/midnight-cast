@@ -1,6 +1,21 @@
 {
-  "docUrl": "https://docs.midnight.network/nodes/error-codes",
+  "docUrl": "https://www.jsonrpc.org/specification#error_object",
   "codes": {
+    "-32700": {
+      "name": "PARSE_ERROR",
+      "description": "Invalid JSON was received by the server",
+      "fix": "Check request body is valid JSON"
+    },
+    "-32600": {
+      "name": "INVALID_REQUEST",
+      "description": "The JSON sent is not a valid Request object",
+      "fix": "Ensure jsonrpc, method, params, and id fields are correct"
+    },
+    "-32601": {
+      "name": "METHOD_NOT_FOUND",
+      "description": "The method does not exist or is not available",
+      "fix": "Verify RPC method name and node API version"
+    },
     "-32602": {
       "name": "INVALID_PARAMS",
       "description": "Invalid method parameter(s)",
@@ -10,6 +25,11 @@
       "name": "INTERNAL_ERROR",
       "description": "Internal JSON-RPC error",
       "fix": "Node internal failure; retry or check node logs"
+    },
+    "-32000": {
+      "name": "SERVER_ERROR",
+      "description": "Generic server error (implementation-defined)",
+      "fix": "Check node logs; retry with corrected parameters"
     }
   }
 }
