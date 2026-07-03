@@ -1,3 +1,5 @@
+import { sanitizeForOutput } from "./lib/sanitize.js";
+
 export interface EmitResult<T = unknown> {
   ok: boolean;
   error?: string;
@@ -13,18 +15,26 @@ export function emit<T>(
   result: EmitResult<T>,
   options: GlobalOptions,
 ): number {
+  const safe = sanitizeEmitResult(result);
+
   if (options.json) {
-    console.log(JSON.stringify(result, null, 2));
-  } else if (result.ok && result.data !== undefined) {
-    printHuman(result.data);
-  } else if (!result.ok && result.error) {
-    console.error(result.error);
+    const { exitCode: _exitCode, ...publicPayload } = safe;
+    console.log(JSON.stringify(publicPayload, null, 2));
+  } else if (safe.ok && safe.data !== undefined) {
+    printHuman(safe.data);
+  } else if (!safe.ok && safe.error) {
+    console.error(safe.error);
   }
 
-  if (!result.ok) {
-    return result.exitCode ?? 1;
+  if (!safe.ok) {
+    return safe.exitCode ?? 1;
   }
-  return result.exitCode ?? 0;
+  return safe.exitCode ?? 0;
+}
+
+function sanitizeEmitResult<T>(result: EmitResult<T>): EmitResult<T> {
+  if (!result.error) return result;
+  return { ...result, error: sanitizeForOutput(result.error) };
 }
 
 function printHuman(data: unknown): void {

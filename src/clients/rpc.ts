@@ -1,3 +1,5 @@
+import { sanitizeForOutput } from "../lib/sanitize.js";
+
 const DEFAULT_TIMEOUT_MS = 5000;
 
 export interface JsonRpcResponse<T = unknown> {
@@ -44,7 +46,7 @@ export async function jsonRpc<T>(
 
   const body = (await response.json()) as JsonRpcResponse<T>;
   if (body.error) {
-    throw new Error(`RPC error: ${body.error.message}`);
+    throw new Error(`RPC error: ${sanitizeForOutput(body.error.message)}`);
   }
   if (body.result === undefined) {
     throw new Error("RPC unreachable (empty result)");
