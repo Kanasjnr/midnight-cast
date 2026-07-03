@@ -5,6 +5,8 @@ import {
   proofServerVersionUrl,
 } from "../src/clients/proof-server.js";
 
+const integration = process.env.INTEGRATION === "1";
+
 describe("proof-server client", () => {
   it("builds version URL from base", () => {
     expect(proofServerVersionUrl("https://proof-server.preprod.midnight.network"))
@@ -15,7 +17,7 @@ describe("proof-server client", () => {
     expect(proofServerBaseUrl("https://example.com/")).toBe("https://example.com");
   });
 
-  it(
+  it.skipIf(!integration)(
     "reads live version from preprod proof server",
     async () => {
       const version = await fetchProofServerVersion(

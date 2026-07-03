@@ -147,7 +147,9 @@ describe("versions helpers", () => {
   });
 });
 
-describe("fetchLiveVersions", () => {
+const integration = process.env.INTEGRATION === "1";
+
+describe.skipIf(!integration)("fetchLiveVersions", () => {
   it("reads preprod live versions", async () => {
     const live = await fetchLiveVersions(
       "https://rpc.preprod.midnight.network",
