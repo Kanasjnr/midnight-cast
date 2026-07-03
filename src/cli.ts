@@ -62,11 +62,12 @@ async function run(
 ): Promise<void> {
   try {
     const result = await fn();
-    process.exit(emit(result, globalOpts(cmd)));
+    process.exitCode = emit(result, globalOpts(cmd));
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    process.exit(
-      emit({ ok: false, error: message, exitCode: 1 }, globalOpts(cmd)),
+    process.exitCode = emit(
+      { ok: false, error: message, exitCode: 1 },
+      globalOpts(cmd),
     );
   }
 }
