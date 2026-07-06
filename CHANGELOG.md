@@ -10,6 +10,8 @@
 - Validate numeric CLI flags (`--threshold`, `--limit`, `--timeout`, dust event id)
 - Validate `decode --network`; cap `decode --raw` length
 - Strip control characters from error output; omit internal `exitCode` from JSON
+- Sanitize untrusted version/data at client boundary (proof-server, node version, emit data)
+- Positional `[network]` on `tx`, `rpc`, `decode`, and `dust-event` (aligned with ping/health)
 - `config init` respects `MN_NETWORK` and global `--network`
 - Expanded JSON-RPC error code reference
 
