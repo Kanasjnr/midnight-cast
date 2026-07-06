@@ -5,3 +5,20 @@ export function stripControlChars(text: string): string {
 export function sanitizeForOutput(text: string): string {
   return stripControlChars(text);
 }
+
+export function sanitizeDeep<T>(value: T): T {
+  if (typeof value === "string") {
+    return sanitizeForOutput(value) as T;
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeDeep(item)) as T;
+  }
+  if (value !== null && typeof value === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [key, entry] of Object.entries(value)) {
+      out[key] = sanitizeDeep(entry);
+    }
+    return out as T;
+  }
+  return value;
+}

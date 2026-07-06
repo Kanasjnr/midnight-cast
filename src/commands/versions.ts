@@ -12,6 +12,7 @@ import {
 } from "../lib/versions.js";
 import { fetchProofServerVersion } from "../clients/proof-server.js";
 import { resolveNetwork, type ResolveFlags } from "../config.js";
+import { sanitizeForOutput } from "../lib/sanitize.js";
 import type { EmitResult, GlobalOptions } from "../output.js";
 import { fail } from "../output.js";
 
@@ -48,8 +49,9 @@ export async function versionsCommand(
     try {
       liveProofServer = await fetchProofServerVersion(endpoints.proofServer);
     } catch (err) {
-      liveProofServer =
-        err instanceof Error ? err.message : "proof server unreachable";
+      liveProofServer = sanitizeForOutput(
+        err instanceof Error ? err.message : "proof server unreachable",
+      );
     }
   }
 

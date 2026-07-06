@@ -1,4 +1,4 @@
-import { sanitizeForOutput } from "./lib/sanitize.js";
+import { sanitizeDeep, sanitizeForOutput } from "./lib/sanitize.js";
 
 export interface EmitResult<T = unknown> {
   ok: boolean;
@@ -33,8 +33,14 @@ export function emit<T>(
 }
 
 function sanitizeEmitResult<T>(result: EmitResult<T>): EmitResult<T> {
-  if (!result.error) return result;
-  return { ...result, error: sanitizeForOutput(result.error) };
+  const next: EmitResult<T> = { ...result };
+  if (next.error !== undefined) {
+    next.error = sanitizeForOutput(next.error);
+  }
+  if (next.data !== undefined) {
+    next.data = sanitizeDeep(next.data);
+  }
+  return next;
 }
 
 function printHuman(data: unknown): void {
@@ -42,7 +48,7 @@ function printHuman(data: unknown): void {
     return;
   }
   if (typeof data === "string") {
-    console.log(data);
+    console.log(sanitizeForOutput(data));
     return;
   }
   if (Array.isArray(data)) {
@@ -81,7 +87,8 @@ function formatRow(row: Record<string, unknown>): string {
 
 function formatValue(value: unknown): string {
   if (value === null || value === undefined) return "";
-  if (typeof value === "object") return JSON.stringify(value);
+  if (typeof value === "string") return sanitizeForOutput(value);
+  if (typeof value === "object") return JSON.stringify(sanitizeDeep(value));
   return String(value);
 }
 
