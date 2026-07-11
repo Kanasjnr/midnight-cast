@@ -4,6 +4,7 @@ import { configPath } from "../config.js";
 import { jsonRpc } from "../clients/rpc.js";
 import { gqlPost } from "../clients/indexer.js";
 import { loadDataJson } from "./data-path.js";
+import { sanitizeForOutput } from "./sanitize.js";
 
 export interface MatrixNetwork {
   node: string;
@@ -97,7 +98,8 @@ export function loadSupportMatrix(): SupportMatrixFile {
 }
 
 export function parseNodeVersion(systemVersion: string): string {
-  return systemVersion.split("-")[0] ?? systemVersion;
+  const clean = sanitizeForOutput(systemVersion);
+  return clean.split("-")[0] ?? clean;
 }
 
 export function versionMatches(expected: string, live: string): boolean {

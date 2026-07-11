@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 import { emit, type GlobalOptions } from "./output.js";
+import { parseIntOrFail } from "./lib/parse-int.js";
 import { configInitCommand, configShowCommand } from "./commands/config-cmd.js";
 import { decodeCommand, type DecodeOptions } from "./commands/decode.js";
 import { rpcCommand } from "./commands/rpc.js";
@@ -16,6 +17,8 @@ import { explainCommand } from "./commands/explain.js";
 import { txCommand } from "./commands/tx.js";
 import { versionsCommand } from "./commands/versions.js";
 import type { ResolveFlags } from "./config.js";
+import { normalizeArgv } from "./lib/argv.js";
+import { isNetworkName, splitRpcPositionalArgs } from "./lib/network-arg.js";
 
 const program = new Command();
 
@@ -40,9 +43,24 @@ function globalOpts(cmd: Command): GlobalOptions {
   return { json: o.json };
 }
 
-function decodeOpts(cmd: Command): DecodeOptions {
+function decodeOpts(cmd: Command, networkPositional?: string): DecodeOptions {
   const o = cmd.optsWithGlobals();
-  return { json: o.json, raw: o.raw, network: o.network };
+  const network =
+    o.network ??
+    (isNetworkName(networkPositional) ? networkPositional : undefined);
+  return { json: o.json, raw: o.raw, network };
+}
+
+function parseFlagInt(
+  value: string,
+  label: string,
+  options?: { min?: number; max?: number },
+): number {
+  const parsed = parseIntOrFail(value, label, options);
+  if (typeof parsed === "object") {
+    throw new Error(parsed.error);
+  }
+  return parsed;
 }
 
 function resolveFlags(cmd: Command): ResolveFlags {
@@ -62,11 +80,12 @@ async function run(
 ): Promise<void> {
   try {
     const result = await fn();
-    process.exit(emit(result, globalOpts(cmd)));
+    process.exitCode = emit(result, globalOpts(cmd));
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    process.exit(
-      emit({ ok: false, error: message, exitCode: 1 }, globalOpts(cmd)),
+    process.exitCode = emit(
+      { ok: false, error: message, exitCode: 1 },
+      globalOpts(cmd),
     );
   }
 }
@@ -83,7 +102,15 @@ config
   .option("--proof-server <url>", "Proof server URL")
   .option("-y, --yes", "Non-interactive (default network: preprod)")
   .action(async (opts, cmd) => {
-    await run(async () => configInitCommand(opts), cmd);
+    const global = cmd.optsWithGlobals();
+    await run(
+      async () =>
+        configInitCommand({
+          ...opts,
+          network: opts.network ?? global.network,
+        }),
+      cmd,
+    );
   });
 
 config
@@ -132,11 +159,24 @@ decode
   });
 
 decode
-  .command("jsonrpc <code>")
+  .command("jsonrpc [code]")
   .description("JSON-RPC error code (e.g. -32602)")
-  .action(async (code: string, _opts, cmd) => {
+  .option("--code <code>", "JSON-RPC error code (used for negative values)")
+  .action(async (code: string | undefined, opts, cmd) => {
+    const codeArg = opts.code ?? code;
+    if (!codeArg) {
+      await run(
+        async () => ({
+          ok: false,
+          error: "Usage: mn decode jsonrpc <code> (e.g. -32602)",
+          exitCode: 1,
+        }),
+        cmd,
+      );
+      return;
+    }
     await run(
-      async () => decodeCommand(["jsonrpc", code], decodeOpts(cmd)),
+      async () => decodeCommand(["jsonrpc", codeArg], decodeOpts(cmd)),
       cmd,
     );
   });
@@ -150,11 +190,12 @@ decode
   });
 
 decode
-  .command("[code]", { isDefault: true })
+  .command("[code] [network]", { isDefault: true })
   .description("Shorthand: ledger code or 1010")
   .argument("[code]", "ledger code or 1010")
-  .action(async function (this: Command, code?: string) {
-    const opts = decodeOpts(this);
+  .argument("[network]", "Network (preview|preprod|mainnet|local)")
+  .action(async function (this: Command, code?: string, network?: string) {
+    const opts = decodeOpts(this, network);
     if (opts.raw) {
       await run(async () => decodeCommand([], opts), this);
       return;
@@ -167,22 +208,30 @@ decode
   });
 
 program
-  .command("rpc <method> [params]")
+  .command("rpc <method> [params] [network]")
   .description("Call a JSON-RPC method on the node (params as JSON array)")
-  .action(async (method: string, params: string | undefined, _opts, cmd) => {
-    const o = cmd.optsWithGlobals();
-    await run(
-      async () =>
-        rpcCommand(
-          method,
-          params,
-          undefined,
-          resolveFlags(cmd),
-          globalOpts(cmd),
-        ),
+  .action(
+    async (
+      method: string,
+      params: string | undefined,
+      network: string | undefined,
+      _opts,
       cmd,
-    );
-  });
+    ) => {
+      const split = splitRpcPositionalArgs(params, network);
+      await run(
+        async () =>
+          rpcCommand(
+            method,
+            split.params,
+            split.network,
+            resolveFlags(cmd),
+            globalOpts(cmd),
+          ),
+        cmd,
+      );
+    },
+  );
 
 program
   .command("ping [network]")
@@ -207,7 +256,7 @@ program
           network,
           {
             ...resolveFlags(cmd),
-            threshold: parseInt(opts.threshold, 10),
+            threshold: parseFlagInt(opts.threshold, "threshold", { min: 0 }),
             failOnLag: opts.failOnLag,
             failOnMismatch: opts.failOnMismatch,
           },
@@ -229,7 +278,7 @@ program
           network,
           {
             ...resolveFlags(cmd),
-            threshold: parseInt(opts.threshold, 10),
+            threshold: parseFlagInt(opts.threshold, "threshold", { min: 0 }),
             failOnLag: opts.failOnLag,
           },
           globalOpts(cmd),
@@ -300,17 +349,16 @@ registerVersions(
 registerVersions("matrix", "Alias for versions");
 
 program
-  .command("tx <hashOrId>")
+  .command("tx <hashOrId> [network]")
   .description("Look up a transaction by hash or identifier (indexer)")
   .option("--by <kind>", "Lookup by hash or identifier", "hash")
-  .action(async (hashOrId: string, opts, cmd) => {
+  .action(async (hashOrId: string, network: string | undefined, opts, cmd) => {
     const by = opts.by === "identifier" ? "identifier" : "hash";
-    const o = cmd.optsWithGlobals();
     await run(
       async () =>
         txCommand(
           hashOrId,
-          o.network,
+          network,
           { ...resolveFlags(cmd), by },
           globalOpts(cmd),
         ),
@@ -319,20 +367,20 @@ program
   });
 
 program
-  .command("dust-event <id>")
+  .command("dust-event <id> [network]")
   .description("Fetch one DUST ledger event by id (indexer WebSocket)")
   .option("--verbose", "Print full raw hex")
   .option("--timeout <ms>", "Subscription timeout", "15000")
-  .action(async (id: string, opts, cmd) => {
+  .action(async (id: string, network: string | undefined, opts, cmd) => {
     await run(
       async () =>
         dustEventCommand(
-          parseInt(id, 10),
-          undefined,
+          parseFlagInt(id, "dust-event id", { min: 0 }),
+          network,
           {
             ...resolveFlags(cmd),
             verbose: opts.verbose,
-            timeoutMs: parseInt(opts.timeout, 10),
+            timeoutMs: parseFlagInt(opts.timeout, "timeout", { min: 1 }),
           },
           globalOpts(cmd),
         ),
@@ -354,10 +402,12 @@ program
           network,
           {
             ...resolveFlags(cmd),
-            from: opts.from ? parseInt(opts.from, 10) : undefined,
-            limit: parseInt(opts.limit, 10),
+            from: opts.from
+              ? parseFlagInt(opts.from, "from", { min: 0 })
+              : undefined,
+            limit: parseFlagInt(opts.limit, "limit", { min: 1, max: 1000 }),
             verbose: opts.verbose,
-            timeoutMs: parseInt(opts.timeout, 10),
+            timeoutMs: parseFlagInt(opts.timeout, "timeout", { min: 1 }),
           },
           globalOpts(cmd),
         ),
@@ -372,4 +422,4 @@ program
     await run(async () => explainCommand(topic, globalOpts(cmd)), cmd);
   });
 
-program.parseAsync(process.argv);
+program.parseAsync(normalizeArgv(process.argv));

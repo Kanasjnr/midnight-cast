@@ -77,8 +77,30 @@ describe("decodeCommand", () => {
     expect(data.relatedHint).toContain("181");
   });
 
+  it("fails on unknown decode network", () => {
+    const result = decodeCommand(["170"], { json: true, network: "bogus" });
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain("Unknown network");
+  });
+
+  it("rejects oversized --raw input", () => {
+    const result = decodeCommand([], {
+      json: true,
+      raw: "x".repeat(20_000),
+    });
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain("too long");
+  });
+
   it("decodes jsonrpc -32602", () => {
     const result = decodeCommand(["jsonrpc", "-32602"], { json: true });
+    expect(result.ok).toBe(true);
+    const data = result.data as { name: string };
+    expect(data.name).toBe("INVALID_PARAMS");
+  });
+
+  it("decodes jsonrpc 32602 without minus sign", () => {
+    const result = decodeCommand(["jsonrpc", "32602"], { json: true });
     expect(result.ok).toBe(true);
     const data = result.data as { name: string };
     expect(data.name).toBe("INVALID_PARAMS");

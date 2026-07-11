@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { healthCommand } from "../src/commands/health.js";
 
-describe("healthCommand", () => {
+const integration = process.env.INTEGRATION === "1";
+
+describe.skipIf(!integration)("healthCommand", () => {
   it(
     "returns aggregate health report on preprod",
     async () => {

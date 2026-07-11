@@ -1,3 +1,5 @@
+import { sanitizeForOutput } from "../lib/sanitize.js";
+
 const DEFAULT_TIMEOUT_MS = 5000;
 
 export function proofServerVersionUrl(baseUrl: string): string {
@@ -21,10 +23,10 @@ export async function fetchProofServerVersion(
     throw new Error(`HTTP ${response.status}`);
   }
 
-  const text = (await response.text()).trim();
+  const text = sanitizeForOutput((await response.text()).trim());
   if (!text) {
     throw new Error("empty version response");
   }
 
-  return text.split(/\s+/)[0] ?? text;
+  return sanitizeForOutput(text.split(/\s+/)[0] ?? text);
 }

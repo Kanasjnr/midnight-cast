@@ -1,3 +1,5 @@
+import { sanitizeDeep, sanitizeForOutput } from "./lib/sanitize.js";
+
 export interface EmitResult<T = unknown> {
   ok: boolean;
   error?: string;
@@ -13,18 +15,32 @@ export function emit<T>(
   result: EmitResult<T>,
   options: GlobalOptions,
 ): number {
+  const safe = sanitizeEmitResult(result);
+
   if (options.json) {
-    console.log(JSON.stringify(result, null, 2));
-  } else if (result.ok && result.data !== undefined) {
-    printHuman(result.data);
-  } else if (!result.ok && result.error) {
-    console.error(result.error);
+    const { exitCode: _exitCode, ...publicPayload } = safe;
+    console.log(JSON.stringify(publicPayload, null, 2));
+  } else if (safe.ok && safe.data !== undefined) {
+    printHuman(safe.data);
+  } else if (!safe.ok && safe.error) {
+    console.error(safe.error);
   }
 
-  if (!result.ok) {
-    return result.exitCode ?? 1;
+  if (!safe.ok) {
+    return safe.exitCode ?? 1;
   }
-  return result.exitCode ?? 0;
+  return safe.exitCode ?? 0;
+}
+
+function sanitizeEmitResult<T>(result: EmitResult<T>): EmitResult<T> {
+  const next: EmitResult<T> = { ...result };
+  if (next.error !== undefined) {
+    next.error = sanitizeForOutput(next.error);
+  }
+  if (next.data !== undefined) {
+    next.data = sanitizeDeep(next.data);
+  }
+  return next;
 }
 
 function printHuman(data: unknown): void {
@@ -32,7 +48,7 @@ function printHuman(data: unknown): void {
     return;
   }
   if (typeof data === "string") {
-    console.log(data);
+    console.log(sanitizeForOutput(data));
     return;
   }
   if (Array.isArray(data)) {
@@ -71,7 +87,8 @@ function formatRow(row: Record<string, unknown>): string {
 
 function formatValue(value: unknown): string {
   if (value === null || value === undefined) return "";
-  if (typeof value === "object") return JSON.stringify(value);
+  if (typeof value === "string") return sanitizeForOutput(value);
+  if (typeof value === "object") return JSON.stringify(sanitizeDeep(value));
   return String(value);
 }
 

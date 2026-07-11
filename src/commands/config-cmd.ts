@@ -33,7 +33,7 @@ export async function configInitCommand(opts: {
     }
   }
 
-  network = network ?? "preprod";
+  network = network ?? process.env.MN_NETWORK ?? "preprod";
 
   try {
     const path = initConfig({

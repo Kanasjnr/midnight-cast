@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getTransaction } from "../src/lib/transaction.js";
 
+const integration = process.env.INTEGRATION === "1";
 const PREPROD_INDEXER =
   "https://indexer.preprod.midnight.network/api/v4/graphql";
 
@@ -8,7 +9,7 @@ const PREPROD_INDEXER =
 const SAMPLE_TX_HASH =
   "e5c86fcd43eb9707e8f23d940e59a6c12ca7ad3ca7e9d2f1232843cc62de1b8c";
 
-describe("getTransaction", () => {
+describe.skipIf(!integration)("getTransaction", () => {
   it("finds transaction by hash on preprod", async () => {
     const tx = await getTransaction(PREPROD_INDEXER, {
       hash: SAMPLE_TX_HASH,
