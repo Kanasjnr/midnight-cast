@@ -1,6 +1,6 @@
 {
   "docUrl": "https://docs.midnight.network/relnotes/support-matrix",
-  "updated": "2026-06",
+  "updated": "2026-07",
   "networks": {
     "preview": {
       "node": "1.0.0",
@@ -17,7 +17,7 @@
       }
     },
     "preprod": {
-      "node": "0.22.5",
+      "node": "1.0.0",
       "ledger": "8.0.3",
       "indexer": "4.0.1",
       "indexerApi": "v4",
