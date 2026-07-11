@@ -9,6 +9,8 @@ import {
   parseNodeVersion,
   versionMatches,
   fetchLiveVersions,
+  loadSupportMatrix,
+  versionMatches,
 } from "../src/lib/versions.js";
 
 describe("versions helpers", () => {
@@ -151,11 +153,12 @@ const integration = process.env.INTEGRATION === "1";
 
 describe.skipIf(!integration)("fetchLiveVersions", () => {
   it("reads preprod live versions", async () => {
+    const expected = loadSupportMatrix().networks.preprod!;
     const live = await fetchLiveVersions(
       "https://rpc.preprod.midnight.network",
       "https://indexer.preprod.midnight.network/api/v4/graphql",
     );
-    expect(live.nodeVersion).toMatch(/^0\.22\./);
+    expect(versionMatches(expected.node, live.nodeVersion)).toBe(true);
     expect(live.runtimeSpecVersion).toBeGreaterThan(0);
     expect(live.indexerProtocolVersion).toBe(live.runtimeSpecVersion);
   });

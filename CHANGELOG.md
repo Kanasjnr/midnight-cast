@@ -4,6 +4,7 @@
 
 ### Fixes
 - Correct indexer package pin in support matrix (`midnight-js-indexer-public-data-provider`)
+- Update preprod support matrix node pin to 1.0.0 (network upgrade)
 - Omit mainnet proof-server URL until a public endpoint exists
 - Use `process.exitCode` instead of `process.exit` for large `--json` piping
 - Full Apache-2.0 license text

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { join } from "node:path";
+import { loadSupportMatrix } from "../src/lib/versions.js";
 
 const execFileAsync = promisify(execFile);
 const integration = process.env.INTEGRATION === "1";
@@ -61,16 +62,21 @@ describe.skipIf(!integration)("integration (live preprod)", () => {
   });
 
   it("mn versions preprod", async () => {
+    const expectedNode = loadSupportMatrix().networks.preprod!.node;
     const { stdout, code } = await runMn([
       "versions",
       "preprod",
       "--json",
+      "--no-local",
+      "--fail-on-mismatch",
     ]);
     expect(code).toBe(0);
     const parsed = JSON.parse(stdout) as {
       data: { allOk: boolean; live: { nodeVersion: string } };
     };
-    expect(parsed.data.live.nodeVersion).toMatch(/^0\.22\./);
+    expect(parsed.data.live.nodeVersion).toMatch(
+      new RegExp(`^${expectedNode.replace(/\./g, "\\.")}`),
+    );
     expect(parsed.data.allOk).toBe(true);
   });
 });
