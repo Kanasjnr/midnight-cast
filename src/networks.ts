@@ -42,6 +42,7 @@ export const BUILTIN_NETWORKS: Record<string, NetworkEndpoints> = {
     rpcWs: "ws://127.0.0.1:9944",
     indexerHttp: "http://127.0.0.1:8088/api/v4/graphql",
     indexerWs: "ws://127.0.0.1:8088/api/v4/graphql/ws",
+    proofServer: "http://127.0.0.1:6300",
   },
 };
 

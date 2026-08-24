@@ -62,7 +62,7 @@ describe.skipIf(!integration)("smoke (live preview)", () => {
       };
     };
     expect(parsed.data.network).toBe("preview");
-    expect(parsed.data.expected.node).toBe("1.0.0");
+    expect(parsed.data.expected.node).toMatch(/^1\.0\./);
     expect(parsed.data.live.nodeVersion).toMatch(/^1\.0\./);
     expect(parsed.data.allOk).toBe(true);
   });
@@ -108,6 +108,9 @@ describe.skipIf(!integration)("smoke (live preview)", () => {
     };
     expect(parsed.data.name).toBe("InvalidDustSpendProof");
     expect(parsed.data.network).toBe("preview");
-    expect(parsed.data.ledger).toBe("8.1.0");
+    expect(parsed.data.ledger).toBe("8.0.3");
+    expect(
+      (parsed.data as { networkLedger?: string }).networkLedger,
+    ).toBe("8.1.0");
   });
 });

@@ -5,11 +5,20 @@ describe("decodeCommand", () => {
   it("decodes numeric ledger code 170", () => {
     const result = decodeCommand(["170"], { json: true, network: "preview" });
     expect(result.ok).toBe(true);
-    const data = result.data as { kind: string; code: number; name: string; ledger: string };
+    const data = result.data as {
+      kind: string;
+      code: number;
+      name: string;
+      ledger: string;
+      networkLedger?: string;
+      mapMismatch?: string;
+    };
     expect(data.kind).toBe("ledger");
     expect(data.code).toBe(170);
     expect(data.name).toBe("InvalidDustSpendProof");
-    expect(data.ledger).toBe("8.1.0");
+    expect(data.ledger).toBe("8.0.3");
+    expect(data.networkLedger).toBe("8.1.0");
+    expect(data.mapMismatch).toContain("8.1.0");
   });
 
   it("decodes hex ledger code 0xAA", () => {
@@ -90,6 +99,15 @@ describe("decodeCommand", () => {
     });
     expect(result.ok).toBe(false);
     expect(result.error).toContain("too long");
+  });
+
+  it("routes Compact/SDK-style --raw to other tooling", () => {
+    const result = decodeCommand([], {
+      json: true,
+      raw: "Implicit disclosure of witness value in Compact circuit",
+    });
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain("Compact");
   });
 
   it("decodes jsonrpc -32602", () => {

@@ -172,6 +172,15 @@ export async function pingCommand(
     proofServerExpected: expected?.proofServer,
   });
 
+  if (!endpoints.proofServer) {
+    results.push({
+      service: "proof-server",
+      status: "FAIL",
+      latencyMs: 0,
+      detail: "not configured (set proofServer URL or use local default :6300)",
+    });
+  }
+
   const requiredOk = results
     .filter((r) => r.service === "rpc" || r.service === "indexer")
     .every((r) => r.status === "OK");

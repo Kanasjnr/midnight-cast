@@ -1,19 +1,22 @@
 # midnight-cast (`mn`)
 
+> [!NOTE]
+> This project extends the Midnight Network with additional developer tooling.
+
 Read-only CLI for Midnight network health, indexer queries, and error decoding. Think **Foundry `cast`** for Midnight, not a wallet or app scaffold.
 
 ```bash
 npx midnight-cast@latest health preprod
-# or: npm i -g midnight-cast@latest && mn health preprod
+# or: npm i -g midnight-cast@latest && midnight-cast health preprod
 ```
 
-> **Note:** The `mn` binary may clash with other global CLIs (e.g. `@mermaid-js/mermaid-cli`). Prefer `npx midnight-cast` or alias `midnight-cast` in your shell.
+> **Note:** The optional `mn` binary may clash with other global CLIs (e.g. `@mermaid-js/mermaid-cli`, `midnight-wallet-cli`). Prefer **`npx midnight-cast`** or the `midnight-cast` bin.
 
 ```bash
-mn health preprod
+midnight-cast health preprod
 ```
 
-Or step by step: `mn ping preprod && mn tip preprod && mn versions preprod`
+Or step by step: `midnight-cast ping preprod && midnight-cast tip preprod && midnight-cast versions preprod`
 
 Requires **Node.js 20+** (22+ recommended).
 
