@@ -34,7 +34,7 @@ describe("versions helpers", () => {
   });
 
   it("detects stale matrix by age", () => {
-    expect(isMatrixStale("2026-06", 45)).toBe(false);
+    expect(isMatrixStale("2026-08", 45)).toBe(false);
     expect(isMatrixStale("2024-01", 45)).toBe(true);
   });
 
