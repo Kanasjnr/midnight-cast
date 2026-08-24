@@ -134,7 +134,7 @@ function ledgerMapMeta(options: DecodeOptions, data: ErrorCodesFile): string | u
     if (row?.ledger) {
       const mismatch =
         data.ledger && data.ledger !== row.ledger
-          ? ` — map content is ${data.ledger}`
+          ? ` — matrix expects ${row.ledger}`
           : "";
       return `Map:    ledger ${data.ledger ?? row.ledger} (${options.network}, updated ${data.updated})${mismatch}`;
     }
@@ -413,8 +413,8 @@ function decodeRaw(raw: string, options: DecodeOptions): EmitResult {
 
   if (parts.length === 0) {
     return fail(
-      failures[0] ??
-        otherErrorRouterHint(raw) ??
+      otherErrorRouterHint(raw) ??
+        failures[0] ??
         "Could not extract a known error from message. " +
           "Paste 1010/Custom(N)/pallet/RPC text, or run: midnight-cast decode ledger <N>",
     );
