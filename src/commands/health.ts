@@ -44,9 +44,16 @@ function formatHealthHuman(report: HealthReport): string {
   const lines: string[] = [
     `Network: ${report.network}`,
     `Healthy: ${report.healthy ? "yes" : "no"}`,
-    "",
-    "Services:",
   ];
+
+  if (report.healthy && !report.versions.allOk) {
+    lines.push(
+      "Note:    healthy (services/sync OK) but version checks mismatched — " +
+        "use --fail-on-mismatch for CI",
+    );
+  }
+
+  lines.push("", "Services:");
 
   for (const row of report.services) {
     const opt = row.optional ? " (optional)" : "";

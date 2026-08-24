@@ -111,6 +111,20 @@ function findLedgerByName(name: string, data: ErrorCodesFile): string | null {
   return null;
 }
 
+function ledgerMapMismatch(
+  options: DecodeOptions,
+  data: ErrorCodesFile,
+): string | undefined {
+  if (!options.network || !data.ledger) return undefined;
+  const row = loadSupportMatrix().networks[options.network];
+  if (!row?.ledger || row.ledger === data.ledger) return undefined;
+  return (
+    `Warning: bundled error map is ledger ${data.ledger}, but ${options.network} ` +
+    `matrix expects ledger ${row.ledger}. Code names/fixes may be wrong — ` +
+    `refresh from ${data.docUrl}`
+  );
+}
+
 function ledgerMapMeta(options: DecodeOptions, data: ErrorCodesFile): string | undefined {
   if (!data.updated) return undefined;
 
@@ -118,7 +132,11 @@ function ledgerMapMeta(options: DecodeOptions, data: ErrorCodesFile): string | u
     const matrix = loadSupportMatrix();
     const row = matrix.networks[options.network];
     if (row?.ledger) {
-      return `Map:    ledger ${row.ledger} (${options.network}, updated ${data.updated})`;
+      const mismatch =
+        data.ledger && data.ledger !== row.ledger
+          ? ` — map content is ${data.ledger}`
+          : "";
+      return `Map:    ledger ${data.ledger ?? row.ledger} (${options.network}, updated ${data.updated})${mismatch}`;
     }
   }
 
@@ -144,6 +162,7 @@ function decodeLedger(input: string, options: DecodeOptions): EmitResult {
 
   const entry = data.codes[code]!;
   const ledgerMeta = ledgerMapMeta(options, data);
+  const mapMismatch = ledgerMapMismatch(options, data);
   const transcriptHint = transcriptVersionHint(code);
   const payload = {
     kind: "ledger" as const,
@@ -153,10 +172,13 @@ function decodeLedger(input: string, options: DecodeOptions): EmitResult {
     fix: entry.fix,
     docUrl: data.docUrl,
     network: options.network,
-    ledger: options.network
+    ledger: data.ledger,
+    mapLedger: data.ledger,
+    networkLedger: options.network
       ? loadSupportMatrix().networks[options.network ?? ""]?.ledger
-      : data.ledger,
+      : undefined,
     mapUpdated: data.updated,
+    ...(mapMismatch ? { mapMismatch } : {}),
     ...(transcriptHint ? { relatedHint: transcriptHint } : {}),
   };
 
@@ -172,6 +194,7 @@ function decodeLedger(input: string, options: DecodeOptions): EmitResult {
     `Desc:   ${entry.description}`,
     `Fix:    ${entry.fix}`,
     ...(transcriptHint ? [`Hint:   ${transcriptHint}`] : []),
+    ...(mapMismatch ? [`Warn:   ${mapMismatch}`] : []),
     ...(meta ? [meta] : []),
     `Docs:   ${data.docUrl}`,
   ].join("\n");
@@ -391,8 +414,9 @@ function decodeRaw(raw: string, options: DecodeOptions): EmitResult {
   if (parts.length === 0) {
     return fail(
       failures[0] ??
+        otherErrorRouterHint(raw) ??
         "Could not extract a known error from message. " +
-          "Paste 1010/Custom(N)/pallet/RPC text, or run: mn decode ledger <N>",
+          "Paste 1010/Custom(N)/pallet/RPC text, or run: midnight-cast decode ledger <N>",
     );
   }
 
@@ -413,6 +437,35 @@ function decodeRaw(raw: string, options: DecodeOptions): EmitResult {
   }
 
   return success(sections.join("\n").trimEnd());
+}
+
+function otherErrorRouterHint(raw: string): string | undefined {
+  const lower = raw.toLowerCase();
+  if (
+    /compact|witness|zkir|circuit|implicit disclosure/i.test(raw) ||
+    lower.includes("compactc")
+  ) {
+    return (
+      "This looks like a Compact / witness / ZKIR error — midnight-cast only decodes " +
+      "ledger/pallet/1010/JSON-RPC. Try Midnight Expert compact-debugging or Compact CLI logs."
+    );
+  }
+  if (
+    /effect|wallet|lace|dapp.?connector|provider/i.test(raw) ||
+    lower.includes("@midnight-ntwrk/wallet")
+  ) {
+    return (
+      "This looks like an SDK / wallet / Lace error — midnight-cast does not map Effect " +
+      "or wallet error classes. Check Midnight Discord or wallet SDK docs."
+    );
+  }
+  if (/proof.?server|prove|plonk|proving/i.test(raw)) {
+    return (
+      "This looks like a proof-server / proving error — try: midnight-cast ping " +
+      "(proof-server optional check) or proof-server HTTP logs."
+    );
+  }
+  return undefined;
 }
 
 export function decodeCommand(

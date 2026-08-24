@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.6
+
+### Fixes
+- Refresh support matrix (preview 1.0.1, preprod/mainnet 1.0.2; proof-server pins; updated 2026-08)
+- Warn when `decode --network` ledger ≠ bundled error-codes map ledger
+- Default local `proofServer` to `http://127.0.0.1:6300`; surface “not configured”
+- Prefer `midnight-cast` over `mn` in install docs; Extends Midnight README attribution
+- Expand `explain` topics: `dust`, `1010`, `versions`, `transcript`
+- Health human output notes “healthy but mismatched” when versions fail
+- Route unrecognized Compact/SDK/proof `--raw` pastes to other tooling hints
+
 ## 0.1.5
 
 ### Fixes
