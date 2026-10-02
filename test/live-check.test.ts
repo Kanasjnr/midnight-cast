@@ -6,6 +6,7 @@ import {
   failingService,
   fingerprint,
   releaseBlockers,
+  rowVersions,
   parseArgs,
   parseUpstreamMatrix,
   redact,
@@ -136,6 +137,10 @@ describe("live-check tag and matrix parsing", () => {
   it("tolerates a malformed upstream file", () => {
     expect(parseUpstreamMatrix(null, "preprod")).toEqual({ versions: {}, notes: [] });
     expect(parseUpstreamMatrix({ components: "nope" }, "preprod").versions).toEqual({});
+  });
+
+  it("reads component versions from the matrix row the CLI reports", () => {
+    expect(rowVersions(matrix.networks.preprod!)).toEqual(bundledVersions(matrix, "preprod"));
   });
 
   it("reads bundled versions, taking compact-runtime from either npm scope", () => {

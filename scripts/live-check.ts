@@ -14,6 +14,7 @@ import { promisify } from "node:util";
 import type { HealthReport } from "../src/commands/health.js";
 import {
   versionMatches,
+  type MatrixNetwork,
   type SupportMatrixFile,
   type VersionsReport,
 } from "../src/lib/versions.js";
@@ -163,7 +164,11 @@ export function bundledVersions(
   network: string,
 ): ComponentVersions | undefined {
   const net = matrix.networks[network];
-  if (!net) return undefined;
+  return net ? rowVersions(net) : undefined;
+}
+
+/** Component versions from one matrix row. */
+export function rowVersions(net: MatrixNetwork): ComponentVersions {
   const compactRuntime = Object.entries(net.packages ?? {}).find(([name]) =>
     name.endsWith("/compact-runtime"),
   )?.[1];
@@ -508,7 +513,10 @@ async function main(): Promise<number> {
       runCli<HealthReport>(["health", network, "--json"]),
       runCli<VersionsReport>(["versions", network, "--json", "--no-local"]),
     ]);
-    result = classify({ network, health, versions, upstream, upstreamError, bundled });
+    // Judge and report against the matrix row the CLI actually used (it may
+    // come from a user override or a different build), not a separate read.
+    const used = versions?.data?.expected ? rowVersions(versions.data.expected) : bundled;
+    result = classify({ network, health, versions, upstream, upstreamError, bundled: used });
     if (result.status !== "outage" || attempt === opts.attempts) break;
     console.error(
       `attempt ${attempt}/${opts.attempts}: outage, retrying in ${opts.delayMs / 1000}s`,
