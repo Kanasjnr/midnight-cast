@@ -33,7 +33,8 @@ describe.skipIf(!integration)("integration (live preprod)", () => {
 
   it("mn tip preprod", async () => {
     const { stdout } = await runMn(["tip", "preprod", "--json", "--threshold", "10000"]);
-    const parsed = JSON.parse(stdout) as { ok: boolean; data: { rpcHeight: number } };
+    const parsed = JSON.parse(stdout) as { ok: boolean; error?: string; data: { rpcHeight: number } };
+    expect(parsed.ok, parsed.error).toBe(true);
     expect(parsed.data.rpcHeight).toBeGreaterThan(0);
   });
 
@@ -67,6 +68,7 @@ describe.skipIf(!integration)("integration (live preprod)", () => {
     const expectedNode = loadSupportMatrix().networks.preprod!.node;
     const { stdout } = await runMn(["versions", "preprod", "--json", "--no-local"]);
     const parsed = JSON.parse(stdout) as {
+      error?: string;
       data: {
         expected: { node: string };
         live: {
@@ -77,6 +79,7 @@ describe.skipIf(!integration)("integration (live preprod)", () => {
         checks: Array<{ label: string; ok: boolean }>;
       };
     };
+    expect(parsed.data, parsed.error).toBeDefined();
     expect(parsed.data.expected.node).toBe(expectedNode);
     expect(parsed.data.live.nodeVersion).toMatch(/^\d+\.\d+\.\d+/);
     expect(parsed.data.live.runtimeSpecVersion).toBeGreaterThan(0);
