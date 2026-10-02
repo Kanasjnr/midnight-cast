@@ -16,6 +16,7 @@
 - Live check: node and proof-server numbers in Midnight's matrix that differ from the bundled ones are reported as `upstream-differs` (info), since those components are checked against the live network
 
 ### Fixes
+- RPC and indexer requests retry timeouts, network errors and 502/503/504 (up to 3 attempts) with a 10 s timeout, instead of failing on the first slow response. Preprod's RPC is load-balanced across nodes that sometimes lag (servicedesk#223). The generic `rpc` command still makes a single attempt, since it can call methods that submit
 - Matrix staleness test no longer depends on the current date (`isMatrixStale` accepts an injectable clock)
 - Config path test passes on Windows
 
