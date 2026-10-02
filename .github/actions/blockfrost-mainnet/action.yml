@@ -1,11 +1,8 @@
 name: Blockfrost mainnet config
 description: >
-  Points midnight-cast's mainnet endpoints at Blockfrost using a project token.
-  Midnight retired its hosted mainnet RPC and indexer on 2026-09-30; Blockfrost
-  now serves them and every request needs a Midnight Mainnet project_id.
-  Writes a config under $RUNNER_TEMP (never the workspace) and exports
-  XDG_CONFIG_HOME. When the token is empty it reports configured=false
-  (mainnet skipped, not passed), or fails if `required` is true.
+  Exports BLOCKFROST_PROJECT_ID so midnight-cast reaches mainnet through
+  Blockfrost, the way users configure it. When the token is empty it reports
+  configured=false (mainnet skipped, not passed), or fails if `required` is true.
 
 inputs:
   project-id:
@@ -44,18 +41,5 @@ runs:
           exit 0
         fi
         echo "::add-mask::$PROJECT_ID"
-        dir="$RUNNER_TEMP/midnight-cast-xdg/midnight-cast"
-        mkdir -p "$dir"
-        umask 077
-        cat > "$dir/config.toml" <<EOF
-        [networks.mainnet]
-        network_id = "mainnet"
-        rpc = "https://rpc.midnight-mainnet.blockfrost.io?project_id=$PROJECT_ID"
-        rpc_ws = "wss://rpc.midnight-mainnet.blockfrost.io?project_id=$PROJECT_ID"
-        indexer_http = "https://midnight-mainnet.blockfrost.io/api/v0?project_id=$PROJECT_ID"
-        indexer_ws = "wss://midnight-mainnet.blockfrost.io/api/v0/ws?project_id=$PROJECT_ID"
-        EOF
-        echo "XDG_CONFIG_HOME=$RUNNER_TEMP/midnight-cast-xdg" >> "$GITHUB_ENV"
-        echo "MN_MAINNET_SMOKE=1" >> "$GITHUB_ENV"
         echo "BLOCKFROST_PROJECT_ID=$PROJECT_ID" >> "$GITHUB_ENV"
         echo "configured=true" >> "$GITHUB_OUTPUT"
