@@ -31,7 +31,7 @@ Available on every command:
 | `--proof-server <url>` | Override proof server URL (ping / health) |
 | `--project-id <id>` | Blockfrost project ID for mainnet |
 
-Environment: `MN_NETWORK` sets the default network (same as `--network`). `BLOCKFROST_PROJECT_ID` sets the Blockfrost project ID (same as `--project-id`).
+Environment: `MN_NETWORK` sets the default network (same as `--network`). `BLOCKFROST_PROJECT_ID` supplies the Blockfrost project ID for any Blockfrost network that has none in its config section; `--project-id` overrides both.
 
 **Version:** `mn --version` or `mn -V` prints the CLI package version.
 
@@ -477,7 +477,7 @@ Built-in proof server URLs: `https://proof-server.<network>.midnight.network` (`
 
 ### Mainnet and Blockfrost
 
-Midnight retired its hosted mainnet RPC and indexer on 30 September 2026, and Blockfrost serves them now. Every request needs a project ID from a **Midnight Mainnet** project on [blockfrost.io](https://blockfrost.io) (it starts with `nightmainnet`). Give it to midnight-cast in any of these ways, highest precedence first:
+Midnight retired its hosted mainnet RPC and indexer on 30 September 2026, and Blockfrost serves them now. Every request needs a project ID from a **Midnight Mainnet** project on [blockfrost.io](https://blockfrost.io) (it starts with `nightmainnet`). Pass it with `--project-id`, set it in the network's config section (as `blockfrost_project_id`, or as `project_id` in its URLs), or export `BLOCKFROST_PROJECT_ID`, in that order of precedence. The environment variable applies to every Blockfrost network, so a network's own config wins over it:
 
 ```bash
 mn health mainnet --project-id nightmainnet...

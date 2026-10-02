@@ -15,6 +15,7 @@ import {
   missingProjectIdError,
   retiredEndpointWarning,
   takeProjectId,
+  usesBlockfrost,
   withProjectId,
 } from "./lib/blockfrost.js";
 import { registerSecret } from "./lib/sanitize.js";
@@ -101,6 +102,7 @@ export function writeConfigFile(config: ConfigFile): void {
 export function resolveNetwork(
   name?: string,
   flags: ResolveFlags = {},
+  { requireProjectId = true }: { requireProjectId?: boolean } = {},
 ): NetworkEndpoints & { network: string; projectIdSource?: ProjectIdSource } {
   const file = loadConfigFile();
   const networkName =
@@ -142,7 +144,7 @@ export function resolveNetwork(
   const retired = [merged.rpc, merged.indexerHttp].filter(isRetiredUrl);
   if (retired.length > 0) warn(retiredEndpointWarning(networkName, retired));
 
-  const projectIdSource = attachProjectId(merged, networkName, flags, fromFile);
+  const projectIdSource = attachProjectId(merged, networkName, flags, fromFile, requireProjectId);
   return {
     ...merged,
     network: networkName,
@@ -155,22 +157,26 @@ function attachProjectId(
   network: string,
   flags: ResolveFlags,
   section: TomlNetworkSection | undefined,
+  required: boolean,
 ): ProjectIdSource | undefined {
+  if (!usesBlockfrost(endpoints)) return undefined;
   const keys = ["rpc", "rpcWs", "indexerHttp", "indexerWs"] as const;
   const blockfrost = keys.filter((k) => isBlockfrostUrl(endpoints[k]));
-  if (blockfrost.length === 0) return undefined;
 
   const fromUrl = blockfrost
     .map((k) => takeProjectId(endpoints[k]!).projectId)
     .find((id) => id !== undefined);
   const candidates: Array<[ProjectIdSource, string | undefined]> = [
     ["flag", flags.projectId],
-    ["env", process.env[BLOCKFROST_ENV]],
     ["config", section?.blockfrost_project_id],
     ["url", fromUrl],
+    ["env", process.env[BLOCKFROST_ENV]],
   ];
   const found = candidates.find(([, value]) => value && value.trim() !== "");
-  if (!found) throw new Error(missingProjectIdError(network));
+  if (!found) {
+    if (required) throw new Error(missingProjectIdError(network));
+    return undefined;
+  }
 
   const [source, raw] = found;
   const projectId = raw!.trim();
@@ -209,7 +215,11 @@ export function initConfig(options: {
   const file = loadConfigFile();
   file.defaults = { network: options.network };
   file.networks = file.networks ?? {};
-  file.networks[options.network] = endpointsToSection(endpoints);
+  const projectId = file.networks[options.network]?.blockfrost_project_id;
+  file.networks[options.network] = {
+    ...endpointsToSection(endpoints),
+    ...(projectId ? { blockfrost_project_id: projectId } : {}),
+  };
 
   writeConfigFile(file);
   return configPath();

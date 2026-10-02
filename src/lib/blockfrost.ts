@@ -23,6 +23,18 @@ export function isBlockfrostUrl(url: string | undefined): boolean {
   return host === "blockfrost.io" || (host?.endsWith(".blockfrost.io") ?? false);
 }
 
+export function usesBlockfrost(endpoints: {
+  rpc?: string;
+  rpcWs?: string;
+  indexerHttp?: string;
+  indexerWs?: string;
+}): boolean {
+  return [endpoints.rpc, endpoints.rpcWs, endpoints.indexerHttp, endpoints.indexerWs].some(isBlockfrostUrl);
+}
+
+export const PROJECT_ID_SOURCES =
+  "--project-id, the network's config section (blockfrost_project_id, or a project_id in its URLs), or BLOCKFROST_PROJECT_ID, in that order";
+
 export function isRetiredUrl(url: string | undefined): boolean {
   const host = url ? parse(url)?.hostname : undefined;
   return host !== undefined && RETIRED_HOSTS.has(host);
@@ -52,7 +64,7 @@ export function blockfrostHttpError(service: "RPC" | "Indexer", status: number):
     return (
       `${service} rejected by Blockfrost (403): the project token is missing, invalid, ` +
       `or for a different network. Mainnet needs a Midnight Mainnet project ID (it starts with "nightmainnet"). ` +
-      `Set ${BLOCKFROST_ENV} or --project-id. See ${BLOCKFROST_DOCS}`
+      `It is read from ${PROJECT_ID_SOURCES}. See ${BLOCKFROST_DOCS}`
     );
   }
   if (status === 402 || status === 429) {
@@ -64,8 +76,8 @@ export function blockfrostHttpError(service: "RPC" | "Indexer", status: number):
 export function missingProjectIdError(network: string): string {
   return (
     `The ${network} RPC and indexer are served by Blockfrost and need a project token. ` +
-    `Create a Midnight Mainnet project at https://blockfrost.io, then set ${BLOCKFROST_ENV}=<project id> ` +
-    `(or pass --project-id, or set blockfrost_project_id under [networks.${network}] in the config). ` +
+    `Create a Midnight Mainnet project at https://blockfrost.io, then set ${BLOCKFROST_ENV}=<project id>, ` +
+    `pass --project-id, or set blockfrost_project_id under [networks.${network}] in the config. ` +
     `See ${BLOCKFROST_DOCS}`
   );
 }

@@ -8,7 +8,7 @@ import {
   type ResolveFlags,
 } from "../config.js";
 import { BUILTIN_NETWORKS, NETWORK_NAMES } from "../networks.js";
-import { BLOCKFROST_ENV, isBlockfrostUrl } from "../lib/blockfrost.js";
+import { BLOCKFROST_ENV, PROJECT_ID_SOURCES, isBlockfrostUrl, usesBlockfrost } from "../lib/blockfrost.js";
 import type { EmitResult, GlobalOptions } from "../output.js";
 import { fail, success } from "../output.js";
 
@@ -44,7 +44,10 @@ export async function configInitCommand(opts: {
       indexerWs: opts.indexerWs,
       proofServer: opts.proofServer,
     });
-    const needsToken = isBlockfrostUrl(BUILTIN_NETWORKS[network]?.rpc) && !opts.rpc;
+    const needsToken =
+      isBlockfrostUrl(BUILTIN_NETWORKS[network]?.rpc) &&
+      !opts.rpc &&
+      !loadConfigFile().networks?.[network]?.blockfrost_project_id;
     return success({
       message: `Wrote config to ${path}`,
       network,
@@ -66,7 +69,7 @@ export function configShowCommand(
   options: GlobalOptions,
 ): EmitResult {
   try {
-    const resolved = resolveNetwork(flags.network, flags);
+    const resolved = resolveNetwork(flags.network, flags, { requireProjectId: false });
     const file = loadConfigFile();
     const payload = {
       configPath: configPath(),
@@ -80,7 +83,9 @@ export function configShowCommand(
       proofServer: resolved.proofServer,
       ...(resolved.projectIdSource
         ? { blockfrostProjectId: `set (from ${projectIdSourceLabel(resolved.projectIdSource)})` }
-        : {}),
+        : usesBlockfrost(resolved)
+          ? { blockfrostProjectId: `not set (read from ${PROJECT_ID_SOURCES})` }
+          : {}),
       builtin: BUILTIN_NETWORKS[resolved.network] !== undefined,
     };
 

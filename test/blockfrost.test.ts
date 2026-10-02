@@ -11,7 +11,7 @@ import {
   takeProjectId,
   withProjectId,
 } from "../src/lib/blockfrost.js";
-import { resolveNetwork } from "../src/config.js";
+import { initConfig, loadConfigFile, resolveNetwork } from "../src/config.js";
 import { redactSecrets, registerSecret } from "../src/lib/sanitize.js";
 import { jsonRpc } from "../src/clients/rpc.js";
 import { gqlPost } from "../src/clients/indexer.js";
@@ -83,20 +83,38 @@ describe("resolving mainnet", () => {
     expect(() => resolveNetwork("mainnet")).toThrow(/served by Blockfrost and need a project token/);
   });
 
-  it("attaches the token from --project-id, then the env var, then the config file", () => {
-    writeConfig(`[networks.mainnet]\nblockfrost_project_id = "nightmainnetFROMCONFIG1234"\n`);
-    expect(resolveNetwork("mainnet").projectIdSource).toBe("config");
-
+  it("uses the env var when the network's config has no ID", () => {
     process.env.BLOCKFROST_PROJECT_ID = "nightmainnetFROMENV123456";
     const fromEnv = resolveNetwork("mainnet");
     expect(fromEnv.projectIdSource).toBe("env");
     expect(fromEnv.rpc).toContain("project_id=nightmainnetFROMENV123456");
+  });
+
+  it("prefers the network's own config ID over the global env var, and --project-id over both", () => {
+    process.env.BLOCKFROST_PROJECT_ID = "nightmainnetFROMENV123456";
+    writeConfig(`[networks.mainnet]\nblockfrost_project_id = "nightmainnetFROMCONFIG1234"\n`);
+    const fromConfig = resolveNetwork("mainnet");
+    expect(fromConfig.projectIdSource).toBe("config");
+    expect(fromConfig.rpc).toContain("project_id=nightmainnetFROMCONFIG1234");
 
     const fromFlag = resolveNetwork("mainnet", { projectId: TOKEN });
     expect(fromFlag.projectIdSource).toBe("flag");
     for (const url of [fromFlag.rpc, fromFlag.rpcWs, fromFlag.indexerHttp, fromFlag.indexerWs]) {
       expect(url).toContain(`project_id=${TOKEN}`);
     }
+  });
+
+  it("prefers a project_id in the network's own URLs over the global env var", () => {
+    process.env.BLOCKFROST_PROJECT_ID = "nightmainnetFROMENV123456";
+    writeConfig(
+      `[networks.custom]\nnetwork_id = "custom"\nrpc = "http://127.0.0.1:9944"\n` +
+        `indexer_http = "https://midnight-mainnet.blockfrost.io/api/v0?project_id=nightpreprodOWNURL12345"\n` +
+        `indexer_ws = "wss://midnight-mainnet.blockfrost.io/api/v0/ws?project_id=nightpreprodOWNURL12345"\n`,
+    );
+    const resolved = resolveNetwork("custom");
+    expect(resolved.projectIdSource).toBe("url");
+    expect(resolved.indexerHttp).toContain("nightpreprodOWNURL12345");
+    expect(resolved.indexerHttp).not.toContain("FROMENV");
   });
 
   it("keeps a token already written into a configured URL unless one is given explicitly", () => {
@@ -107,6 +125,18 @@ describe("resolving mainnet", () => {
     expect(resolved.projectIdSource).toBe("url");
     expect(resolved.indexerHttp).toContain("project_id=nightmainnetINURL12345678");
     expect(resolveNetwork("mainnet", { projectId: TOKEN }).rpc).toContain(`project_id=${TOKEN}`);
+  });
+
+  it("can resolve mainnet without a token when one isn't required", () => {
+    const resolved = resolveNetwork("mainnet", {}, { requireProjectId: false });
+    expect(resolved.projectIdSource).toBeUndefined();
+    expect(resolved.rpc).not.toContain("project_id");
+  });
+
+  it("keeps a saved project ID when config init rewrites the network", () => {
+    writeConfig(`[networks.mainnet]\nblockfrost_project_id = "nightmainnetSAVED1234567"\n`);
+    initConfig({ network: "mainnet" });
+    expect(loadConfigFile().networks?.mainnet?.blockfrost_project_id).toBe("nightmainnetSAVED1234567");
   });
 
   it("leaves non-Blockfrost networks untouched", () => {
@@ -190,6 +220,22 @@ describe("CLI output never shows the token", () => {
       expect(output).not.toContain(TOKEN);
       expect(output).toContain("BLOCKFROST_PROJECT_ID");
     }
+  });
+
+  it("config show works before a token is set", async () => {
+    const { output, code } = await runCli(["config", "show", "--network", "mainnet"], { BLOCKFROST_PROJECT_ID: "" });
+    expect(code).toBe(0);
+    expect(output).toContain("blockfrostProjectId: not set");
+  });
+
+  it("config show flags a missing ID when only the indexer is on Blockfrost", async () => {
+    writeConfig(
+      `[networks.custom]\nnetwork_id = "custom"\nrpc = "http://127.0.0.1:9944"\n` +
+        `indexer_http = "https://midnight-mainnet.blockfrost.io/api/v0"\n` +
+        `indexer_ws = "wss://midnight-mainnet.blockfrost.io/api/v0/ws"\n`,
+    );
+    const { output } = await runCli(["config", "show", "--network", "custom"], { BLOCKFROST_PROJECT_ID: "" });
+    expect(output).toContain("blockfrostProjectId: not set");
   });
 
   it("a missing token fails with guidance and no request", async () => {
