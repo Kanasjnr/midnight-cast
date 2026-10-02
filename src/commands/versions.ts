@@ -8,6 +8,9 @@ import {
   loadSupportMatrix,
   matrixStalenessWarning,
   readLocalMidnightPackages,
+  readInstalledMidnightPackages,
+  buildScopeConflictChecks,
+  buildScopeHints,
   type VersionsReport,
 } from "../lib/versions.js";
 import { fetchProofServerVersion } from "../clients/proof-server.js";
@@ -56,11 +59,16 @@ export async function versionsCommand(
   }
 
   const checks = buildVersionChecks(expected, live, liveProofServer);
+  const installed = flags.local !== false ? readInstalledMidnightPackages() : [];
   const localPackages =
-    flags.local !== false ? readLocalMidnightPackages() : undefined;
+    flags.local !== false ? readLocalMidnightPackages(process.cwd(), installed) : undefined;
   const localPackageChecks = localPackages
-    ? buildLocalPackageChecks(expected, localPackages)
+    ? [
+        ...buildLocalPackageChecks(expected, localPackages),
+        ...buildScopeConflictChecks(localPackages, installed),
+      ]
     : undefined;
+  const scopeHints = localPackages ? buildScopeHints(localPackages) : undefined;
   const allOk =
     checks.every((c) => c.ok) &&
     (localPackageChecks?.every((c) => c.ok) ?? true);
@@ -84,6 +92,7 @@ export async function versionsCommand(
     checks,
     localPackages,
     localPackageChecks,
+    ...(scopeHints?.length ? { scopeHints } : {}),
     allOk,
   };
 
