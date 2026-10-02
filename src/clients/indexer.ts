@@ -119,7 +119,7 @@ export async function subscribeDustEvents(
         settled = true;
         client.dispose();
         if (events.length === 0) {
-          reject(new Error("Event not received within timeout"));
+          reject(new NetworkError("Event not received within timeout", "timeout", "Indexer"));
         } else {
           resolve(events);
         }
@@ -183,11 +183,17 @@ export async function subscribeDustEvents(
         },
         error: (err) => {
           finish(
-            new NetworkError(
-              `Indexer WS unreachable: ${err instanceof Error ? err.message : String(err)}`,
-              transportKind(err),
-              "Indexer",
-            ),
+            Array.isArray(err)
+              ? new NetworkError(
+                  `Indexer WS error: ${err.map((e: { message?: string }) => e.message ?? String(e)).join("; ")}`,
+                  "graphql_error",
+                  "Indexer",
+                )
+              : new NetworkError(
+                  `Indexer WS unreachable: ${String((err as { message?: unknown })?.message ?? "connection failed")}`,
+                  transportKind(err),
+                  "Indexer",
+                ),
           );
         },
         complete: () => finish(),

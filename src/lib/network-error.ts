@@ -31,7 +31,8 @@ const TLS_CODES = /CERT|TLS|SSL|SELF_SIGNED|UNABLE_TO_(GET|VERIFY)|DEPTH_ZERO/;
 
 export function transportKind(err: unknown): NetworkErrorKind {
   if (err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError")) return "timeout";
-  const code = String((err as { cause?: { code?: unknown } })?.cause?.code ?? (err as { code?: unknown })?.code ?? "");
+  const e = err as { code?: unknown; cause?: { code?: unknown }; error?: { code?: unknown } } | undefined;
+  const code = String(e?.cause?.code ?? e?.error?.code ?? e?.code ?? "");
   if (code === "ENOTFOUND" || code === "EAI_AGAIN") return "dns";
   if (code === "ECONNREFUSED") return "refused";
   if (code === "ETIMEDOUT" || code === "UND_ERR_CONNECT_TIMEOUT" || code === "UND_ERR_HEADERS_TIMEOUT") return "timeout";

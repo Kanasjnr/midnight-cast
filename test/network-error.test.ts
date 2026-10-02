@@ -26,6 +26,7 @@ describe("transportKind", () => {
     expect(transportKind(fetchFailed("DEPTH_ZERO_SELF_SIGNED_CERT"))).toBe("tls");
     expect(transportKind(fetchFailed("ECONNRESET"))).toBe("network");
     expect(transportKind("something")).toBe("network");
+    expect(transportKind({ error: Object.assign(new Error("connect"), { code: "ECONNREFUSED" }) })).toBe("refused");
   });
 
   it("separates transport failures from HTTP and protocol ones", () => {
