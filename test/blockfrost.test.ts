@@ -246,9 +246,18 @@ describe("CLI output never shows the token", () => {
 
   it("a request error to a Blockfrost URL doesn't leak the token", async () => {
     const { output } = await runCli(
-      ["ping", "mainnet", "--json", "--rpc", `http://127.0.0.1:9/?project_id=${TOKEN}`],
+      [
+        "ping",
+        "mainnet",
+        "--json",
+        "--rpc",
+        `http://127.0.0.1:9/?project_id=${TOKEN}`,
+        "--indexer-http",
+        `http://127.0.0.1:9/api/v0?project_id=${TOKEN}`,
+      ],
       { BLOCKFROST_PROJECT_ID: TOKEN },
     );
+    expect(output).toContain("unreachable");
     expect(output).not.toContain(TOKEN);
   });
 });
