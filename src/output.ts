@@ -29,10 +29,9 @@ export function emit<T>(
   if (options.json) {
     const { exitCode: _exitCode, ...publicPayload } = safe;
     console.log(JSON.stringify(publicPayload, null, 2));
-  } else if (safe.ok && safe.data !== undefined) {
-    printHuman(safe.data);
-  } else if (!safe.ok && safe.error) {
-    console.error(safe.error);
+  } else {
+    if (safe.data !== undefined) printHuman(safe.data);
+    if (!safe.ok && safe.error) console.error(safe.error);
   }
 
   if (!safe.ok) {
