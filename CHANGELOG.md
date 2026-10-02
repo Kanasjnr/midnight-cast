@@ -11,6 +11,7 @@
 - Unit tests run on Linux, macOS and Windows × Node 20/22/24, plus a typecheck of `src/` and `scripts/`
 
 ### Changes
+- `versions` reads Midnight packages under both npm scopes (`@midnight-ntwrk` and the new `@midnightntwrk`) and takes installed versions from `package-lock.json`. Matrix pins apply whichever scope is used. Installing one package under both scopes, directly or through a dependency, fails a `scope:` check, and old-scope packages that have a stable new-scope release get a rename hint
 - Mainnet works again, through Blockfrost. Midnight retired `rpc.mainnet.midnight.network` and `indexer.mainnet.midnight.network` on 2026-09-30, so the built-in mainnet endpoints are now Blockfrost's. The project ID comes from `--project-id`, the network's config section (`blockfrost_project_id`, or `project_id` in its URLs), or `BLOCKFROST_PROJECT_ID`, in that order. It is sent in the `project_id` header (in the URL only for WebSockets) and redacted from all output. Without one, mainnet commands stop before any request and explain how to get one
 - Blockfrost errors are explained: a `403` means a missing, invalid or wrong-network project ID, and `402`/`429` mean a plan limit. The v4 indexer API under Blockfrost's `/api/v0` is recognised
 - A config that still points at the retired mainnet hosts gets a warning on stderr. `config show` reports where the project ID came from, and `config init --network mainnet` says how to set it
@@ -20,6 +21,7 @@
 - Live check: node and proof-server numbers in Midnight's matrix that differ from the bundled ones are reported as `upstream-differs` (info), since those components are checked against the live network
 
 ### Fixes
+- Local package checks compare only exact versions (from `package-lock.json` or an exact pin) against the matrix. A range such as `^8.1.0` used to be compared as if it were the installed version; without a lockfile it is now listed as not resolved
 - RPC and indexer requests retry timeouts, network errors and 502/503/504 (up to 3 attempts, 10 s each, within 20 s per request) instead of failing on the first slow response. Preprod's RPC is load-balanced across nodes that sometimes lag (servicedesk#223). The generic `rpc` command still makes a single attempt, since it can call methods that submit
 - `ping` checks RPC, indexer and proof server in parallel, and reports a dead stack in about 20 s
 - Matrix staleness test no longer depends on the current date (`isMatrixStale` accepts an injectable clock)

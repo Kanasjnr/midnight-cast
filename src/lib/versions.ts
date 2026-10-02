@@ -6,6 +6,7 @@ import { gqlPost } from "../clients/indexer.js";
 import { loadDataJson } from "./data-path.js";
 import { sanitizeForOutput } from "./sanitize.js";
 import { isBlockfrostUrl } from "./blockfrost.js";
+import { NEW_SCOPE, OLD_SCOPE, isMidnightPackage, loadMigratedPackages, packageBaseName } from "./npm-scope.js";
 
 export interface MatrixNetwork {
   /** Recommended node release for running your own node. */
@@ -60,6 +61,7 @@ export interface VersionsReport {
   checks: VersionCheck[];
   localPackages?: Record<string, string>;
   localPackageChecks?: VersionCheck[];
+  scopeHints?: string[];
   allOk: boolean;
 }
 
@@ -263,45 +265,63 @@ export function buildNetworkMismatchWarning(
   );
 }
 
-export function normalizePackageVersion(spec: string): string {
-  return spec.replace(/^[\^~>=<]+/, "").split("-")[0] ?? spec;
-}
-
 export function buildLocalPackageChecks(
   expected: MatrixNetwork,
   localPackages: Record<string, string>,
 ): VersionCheck[] {
-  const pins = expected.packages ?? {};
+  const pinsByBase = new Map(
+    Object.entries(expected.packages ?? {}).map(([name, version]) => [packageBaseName(name) ?? name, version]),
+  );
   const checks: VersionCheck[] = [];
 
-  for (const [name, expectedVersion] of Object.entries(pins)) {
-    const liveSpec = localPackages[name];
-    if (!liveSpec) continue;
-    const live = normalizePackageVersion(liveSpec);
-    checks.push({
-      label: `pkg:${name}`,
-      expected: expectedVersion,
-      live,
-      ok: versionMatches(expectedVersion, live),
-    });
-  }
-
   for (const [name, liveSpec] of Object.entries(localPackages)) {
-    if (pins[name]) continue;
-    checks.push({
-      label: `pkg:${name}`,
-      expected: "(no matrix pin)",
-      live: normalizePackageVersion(liveSpec),
-      ok: true,
-      note: "listed only",
-    });
+    const pin = pinsByBase.get(packageBaseName(name) ?? name);
+    const exact = liveSpec.trim().replace(/^[=v]/, "");
+    const resolved = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(exact);
+    checks.push(
+      !resolved
+        ? { label: `pkg:${name}`, expected: pin ?? "(no matrix pin)", live: liveSpec, ok: true, note: "version not resolved: no npm lockfile entry" }
+        : pin
+          ? { label: `pkg:${name}`, expected: pin, live: exact, ok: exact === pin }
+          : { label: `pkg:${name}`, expected: "(no matrix pin)", live: exact, ok: true, note: "listed only" },
+    );
   }
 
   return checks.sort((a, b) => a.label.localeCompare(b.label));
 }
 
+export interface InstalledPackage {
+  name: string;
+  version: string;
+  path: string;
+}
+
+export function readInstalledMidnightPackages(cwd = process.cwd()): InstalledPackage[] {
+  const path = join(cwd, "package-lock.json");
+  if (!existsSync(path)) return [];
+  try {
+    const lock = JSON.parse(readFileSync(path, "utf8")) as {
+      packages?: Record<string, { name?: string; version?: string }>;
+    };
+    const installed: InstalledPackage[] = [];
+    for (const [key, entry] of Object.entries(lock.packages ?? {})) {
+      const folder = /(?:^|\/)node_modules\/((?:@[^/]+\/)?[^/]+)$/.exec(key)?.[1];
+      if (!folder) continue;
+      // npm records the real package in `name` when the folder is an alias.
+      const name = entry.name ?? folder;
+      if (name && entry.version && isMidnightPackage(name)) {
+        installed.push({ name, version: entry.version, path: key });
+      }
+    }
+    return installed;
+  } catch {
+    return [];
+  }
+}
+
 export function readLocalMidnightPackages(
   cwd = process.cwd(),
+  installed: InstalledPackage[] = readInstalledMidnightPackages(cwd),
 ): Record<string, string> | undefined {
   const path = join(cwd, "package.json");
   if (!existsSync(path)) return undefined;
@@ -312,11 +332,13 @@ export function readLocalMidnightPackages(
       devDependencies?: Record<string, string>;
     };
     const all = { ...pkg.dependencies, ...pkg.devDependencies };
+    const installedAt = new Map(installed.map((p) => [p.path, p.version]));
     const found: Record<string, string> = {};
-    for (const [name, version] of Object.entries(all)) {
-      if (name.startsWith("@midnight-ntwrk/")) {
-        found[name] = version;
-      }
+    for (const [declared, spec] of Object.entries(all)) {
+      const alias = /^npm:((?:@[^/]+\/)?[^@]+)(?:@(.+))?$/.exec(spec);
+      const name = alias ? alias[1]! : declared;
+      if (!isMidnightPackage(name)) continue;
+      found[name] = installedAt.get(`node_modules/${declared}`) ?? alias?.[2] ?? spec;
     }
     return Object.keys(found).length > 0
       ? Object.fromEntries(Object.entries(found).sort(([a], [b]) => a.localeCompare(b)))
@@ -324,6 +346,103 @@ export function readLocalMidnightPackages(
   } catch {
     return undefined;
   }
+}
+
+export function buildScopeConflictChecks(
+  declared: Record<string, string>,
+  installed: InstalledPackage[],
+): VersionCheck[] {
+  const scopesByBase = new Map<string, Set<string>>();
+  for (const name of [...Object.keys(declared), ...installed.map((p) => p.name)]) {
+    const base = packageBaseName(name);
+    if (!base) continue;
+    const scope = name.startsWith(NEW_SCOPE) ? NEW_SCOPE : OLD_SCOPE;
+    scopesByBase.set(base, (scopesByBase.get(base) ?? new Set()).add(scope));
+  }
+  const crossScope = [...scopesByBase]
+    .filter(([, scopes]) => scopes.size > 1)
+    .map(([base]) => ({
+      label: `scope:${base}`,
+      expected: "one npm scope",
+      live: `${OLD_SCOPE}${base} and ${NEW_SCOPE}${base}`,
+      ok: false,
+      note: "two copies of the same package can break instanceof checks and types; depend on one scope only",
+    }));
+
+  const topLevelFolders = new Map<string, string[]>();
+  for (const p of installed.filter((p) => /^node_modules\/(?:@[^/]+\/)?[^/]+$/.test(p.path))) {
+    topLevelFolders.set(p.name, [...(topLevelFolders.get(p.name) ?? []), p.path]);
+  }
+  const declaredTwice = [...topLevelFolders]
+    .filter(([, paths]) => paths.length > 1)
+    .map(([name, paths]) => ({
+      label: `twice:${name}`,
+      expected: "one copy",
+      live: paths.join(", "),
+      ok: false,
+      note: "the same package is installed under two names (an npm: alias and a direct dependency); keep one",
+    }));
+
+  return [...crossScope, ...declaredTwice].sort((a, b) => a.label.localeCompare(b.label));
+}
+
+export function readDeclaredDuplicates(cwd = process.cwd()): VersionCheck[] {
+  const path = join(cwd, "package.json");
+  if (!existsSync(path)) return [];
+  try {
+    const pkg = JSON.parse(readFileSync(path, "utf8")) as {
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+    };
+    const declaredAs = new Map<string, string[]>();
+    for (const [declared, spec] of Object.entries({ ...pkg.dependencies, ...pkg.devDependencies })) {
+      const name = /^npm:((?:@[^/]+\/)?[^@]+)/.exec(spec)?.[1] ?? declared;
+      if (isMidnightPackage(name)) declaredAs.set(name, [...(declaredAs.get(name) ?? []), declared]);
+    }
+    return [...declaredAs]
+      .filter(([, names]) => names.length > 1)
+      .map(([name, names]) => ({
+        label: `twice:${name}`,
+        expected: "one copy",
+        live: names.join(", "),
+        ok: false,
+        note: "the same package is installed under two names (an npm: alias and a direct dependency); keep one",
+      }));
+  } catch {
+    return [];
+  }
+}
+
+export function checkLocalPackages(
+  expected: MatrixNetwork,
+  cwd = process.cwd(),
+): Pick<VersionsReport, "localPackages" | "localPackageChecks" | "scopeHints"> {
+  const installed = readInstalledMidnightPackages(cwd);
+  const localPackages = readLocalMidnightPackages(cwd, installed);
+  const conflicts = buildScopeConflictChecks(localPackages ?? {}, installed);
+  const conflictLabels = new Set(conflicts.map((c) => c.label));
+  const checks = [
+    ...(localPackages ? buildLocalPackageChecks(expected, localPackages) : []),
+    ...conflicts,
+    ...readDeclaredDuplicates(cwd).filter((c) => !conflictLabels.has(c.label)),
+  ];
+  const scopeHints = localPackages ? buildScopeHints(localPackages) : [];
+  return {
+    ...(localPackages ? { localPackages } : {}),
+    ...(checks.length ? { localPackageChecks: checks } : {}),
+    ...(scopeHints.length ? { scopeHints } : {}),
+  };
+}
+
+export function buildScopeHints(
+  declared: Record<string, string>,
+  migrated: Set<string> = loadMigratedPackages(),
+): string[] {
+  return Object.keys(declared)
+    .filter((name) => name.startsWith(OLD_SCOPE))
+    .map((name) => name.slice(OLD_SCOPE.length))
+    .filter((base) => migrated.has(base) && !(`${NEW_SCOPE}${base}` in declared))
+    .map((base) => `${OLD_SCOPE}${base} is also published as ${NEW_SCOPE}${base} (rename only, same API)`);
 }
 
 export function formatVersionsHuman(report: VersionsReport): string {
@@ -373,7 +492,7 @@ export function formatVersionsHuman(report: VersionsReport): string {
   }
 
   if (report.localPackageChecks?.length) {
-    lines.push("", "Local package checks (@midnight-ntwrk vs matrix):");
+    lines.push("", "Local package checks (Midnight packages vs matrix):");
     for (const check of report.localPackageChecks) {
       const mark = check.ok ? "OK" : "MISMATCH";
       const note = check.note ? ` (${check.note})` : "";
@@ -382,7 +501,7 @@ export function formatVersionsHuman(report: VersionsReport): string {
       );
     }
   } else if (report.localPackages) {
-    lines.push("", "Local package.json (@midnight-ntwrk):");
+    lines.push("", "Local package.json (Midnight packages):");
     for (const [name, version] of Object.entries(report.localPackages)) {
       lines.push(`  ${name}: ${version}`);
     }
@@ -391,6 +510,11 @@ export function formatVersionsHuman(report: VersionsReport): string {
       "No matrix package pins for this network — compare manually to:",
       `  ledger: ${report.expected.ledger}`,
     );
+  }
+
+  if (report.scopeHints?.length) {
+    lines.push("", "npm scope:");
+    for (const hint of report.scopeHints) lines.push(`  ${hint}`);
   }
 
   lines.push(

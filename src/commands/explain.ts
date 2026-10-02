@@ -51,9 +51,12 @@ const VERSIONS_HELP = `
 Support matrix / versions
 =========================
 
-midnight-cast versions compares live node, indexer API, protocolVersion, and
-optional proof-server against the bundled support matrix (and local
-@midnight-ntwrk package pins when package.json is present).
+midnight-cast versions compares live node, runtime spec, indexer API,
+protocolVersion and optional proof-server against the bundled support matrix.
+With a package.json present it also checks local Midnight packages under
+either npm scope (@midnight-ntwrk or @midnightntwrk) against the matrix pins,
+fails if one package is installed under both scopes, and notes packages that
+have moved to @midnightntwrk.
 
 Useful flags:
   --fail-on-mismatch   exit 1 when live checks fail (CI)
