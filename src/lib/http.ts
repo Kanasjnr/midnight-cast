@@ -3,20 +3,14 @@ const RETRYABLE_STATUS = new Set([502, 503, 504]);
 export interface PostJsonOptions {
   timeoutMs: number;
   attempts?: number;
-  /** Total time allowed across all attempts. */
   budgetMs?: number;
   retryDelayMs?: number;
-  /** Don't start a retry with less time than this left in the budget. */
   minAttemptMs?: number;
   headers?: Record<string, string>;
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-
-// Retries timeouts, network errors and 502/503/504: public endpoints such as
-// preprod's RPC are load-balanced, and a retry usually reaches a healthy
-// backend. Only read-only calls should use more than one attempt.
 export async function postJson(
   url: string,
   body: unknown,

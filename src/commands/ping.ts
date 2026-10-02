@@ -43,12 +43,9 @@ async function checkRpc(rpcUrl: string): Promise<ServiceResult> {
       latencyMs: Date.now() - start,
     };
   } catch (err) {
-    // A timeout or a gateway error has already used the retry budget, so a
-    // second method would only fail again. Anything else (another HTTP
-    // status, a rejected method) may still answer chain_getHeader.
-    const unreachable =
+    const retriesExhausted =
       err instanceof Error && /^RPC unreachable( \((502|503|504)\))?$/.test(err.message);
-    if (unreachable) {
+    if (retriesExhausted) {
       return {
         service: "rpc",
         status: "FAIL",
