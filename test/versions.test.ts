@@ -9,8 +9,6 @@ import {
   parseNodeVersion,
   versionMatches,
   fetchLiveVersions,
-  loadSupportMatrix,
-  versionMatches,
 } from "../src/lib/versions.js";
 
 describe("versions helpers", () => {
@@ -34,8 +32,10 @@ describe("versions helpers", () => {
   });
 
   it("detects stale matrix by age", () => {
-    expect(isMatrixStale("2026-08", 45)).toBe(false);
-    expect(isMatrixStale("2024-01", 45)).toBe(true);
+    const now = Date.UTC(2026, 8, 1); // 2026-09-01, fixed so the test never ages out
+    expect(isMatrixStale("2026-08", 45, now)).toBe(false);
+    expect(isMatrixStale("2026-07-01", 45, now)).toBe(true);
+    expect(isMatrixStale("2024-01", 45, now)).toBe(true);
   });
 
   it("builds local package checks against matrix pins", () => {
@@ -152,13 +152,14 @@ describe("versions helpers", () => {
 const integration = process.env.INTEGRATION === "1";
 
 describe.skipIf(!integration)("fetchLiveVersions", () => {
+  // Matrix drift is tracked by .github/workflows/live.yml; assert invariants only.
   it("reads preprod live versions", async () => {
-    const expected = loadSupportMatrix().networks.preprod!;
     const live = await fetchLiveVersions(
       "https://rpc.preprod.midnight.network",
       "https://indexer.preprod.midnight.network/api/v4/graphql",
     );
-    expect(versionMatches(expected.node, live.nodeVersion)).toBe(true);
+    expect(live.nodeVersion).toMatch(/^\d+\.\d+\.\d+/);
+    expect(live.indexerApi).toBe("v4");
     expect(live.runtimeSpecVersion).toBeGreaterThan(0);
     expect(live.indexerProtocolVersion).toBe(live.runtimeSpecVersion);
   });
