@@ -41,7 +41,8 @@ export type FindingKind =
   | "bundled-drift"
   | "upstream-ahead"
   | "upstream-lag"
-  | "upstream-unavailable";
+  | "upstream-unavailable"
+  | "indexer-api-undetected";
 
 export type Severity = "outage" | "drift" | "info";
 export type Status = "clean" | "drift" | "outage";
@@ -114,6 +115,7 @@ const SEVERITY: Record<FindingKind, Severity> = {
   "upstream-ahead": "drift",
   "upstream-lag": "info",
   "upstream-unavailable": "info",
+  "indexer-api-undetected": "info",
 };
 
 /** "node-1.0.400" / "midnight-indexer-4.3.302" -> "1.0.400" */
@@ -212,7 +214,11 @@ export function classify(input: ClassifyInput): CheckResult {
       );
     }
     const api = versions.checks.find((c) => c.label === "indexer-api");
-    if (api && !api.ok) {
+    if (api?.live === "unknown") {
+      // midnight-cast infers the API from the URL path; providers such as
+      // Blockfrost (/api/v0) don't expose it there, so we can't tell.
+      add("indexer-api-undetected", "indexer-api", "indexer API version not detectable from the endpoint URL");
+    } else if (api && !api.ok) {
       add("bundled-drift", "indexer-api", `indexer API ${api.live}, matrix expects ${api.expected}`, {
         bundled: api.expected,
         live: api.live,

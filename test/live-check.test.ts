@@ -190,9 +190,19 @@ describe("live-check classify", () => {
     expect(result.findings[0]).toMatchObject({ kind: "protocol-split" });
   });
 
-  it("flags an unexpected indexer API", () => {
+  it("reports an undetectable indexer API path as info, not drift", () => {
     const base = input();
     base.versions!.data!.checks[1] = { label: "indexer-api", expected: "v4", live: "unknown", ok: false };
+    const result = classify(base);
+    expect(result.status).toBe("clean");
+    expect(result.findings).toEqual([
+      expect.objectContaining({ kind: "indexer-api-undetected", severity: "info" }),
+    ]);
+  });
+
+  it("flags an unexpected indexer API", () => {
+    const base = input();
+    base.versions!.data!.checks[1] = { label: "indexer-api", expected: "v4", live: "v3", ok: false };
     expect(classify(base).findings).toContainEqual(
       expect.objectContaining({ kind: "bundled-drift", component: "indexer-api" }),
     );
