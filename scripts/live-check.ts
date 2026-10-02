@@ -288,9 +288,34 @@ export function failingService(message: string): string {
 }
 
 /**
+ * Findings that block a release. The live network is the truth where we can
+ * see it: a release must not ship a bundled matrix that disagrees with what a
+ * network runs, or while node and indexer disagree, or during an outage.
+ *
+ * upstream-ahead blocks only for components the endpoints don't reveal
+ * (indexer, on-chain runtime, compact runtime), where Midnight's published
+ * matrix is the only source of truth. For observed components (node, proof
+ * server) it is a heads-up: Midnight can publish a version before a network
+ * runs it, and blocking then would leave no bundled matrix that could pass.
+ */
+const RELEASE_BLOCKING = new Set<FindingKind>(["outage", "bundled-drift", "protocol-split"]);
+
+/** Never visible from the public endpoints, whatever a given run manages to reach. */
+const UNOBSERVABLE = new Set<Component>(["indexer", "onChainRuntime", "compactRuntime"]);
+
+export function releaseBlockers(result: CheckResult): Finding[] {
+  return result.findings.filter(
+    (f) =>
+      RELEASE_BLOCKING.has(f.kind) ||
+      (f.kind === "upstream-ahead" && UNOBSERVABLE.has(f.component as Component)),
+  );
+}
+
+/**
  * Exit code for a result. Without upstream data a drift verdict is incomplete
- * (upstream-ahead findings vanish), so it must not open, edit or close the
- * issue: report an error instead. An outage is still reported as such.
+ * (upstream-ahead findings vanish, and they can block a release for components
+ * we can't observe), so it must not open, edit or close the issue, or pass a
+ * release: report an error instead. An outage is still reported as such.
  */
 export function exitCodeFor(result: CheckResult): number {
   if (result.status === "outage") return EXIT.outage;
@@ -488,7 +513,13 @@ async function main(): Promise<number> {
   );
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${report}\n`);
   if (process.env.GITHUB_OUTPUT) {
-    appendFileSync(process.env.GITHUB_OUTPUT, `status=${result.status}\nfingerprint=${fp}\n`);
+    const blockers = releaseBlockers(result)
+      .map((f) => `${f.kind}: ${f.component}`)
+      .join(", ");
+    appendFileSync(
+      process.env.GITHUB_OUTPUT,
+      `status=${result.status}\nfingerprint=${fp}\nblockers=${redact(blockers, secrets)}\n`,
+    );
   }
 
   console.log(report);

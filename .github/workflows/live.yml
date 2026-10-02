@@ -112,15 +112,19 @@ jobs:
         env:
           CODE: ${{ steps.check.outputs.code }}
           EVENT: ${{ github.event_name }}
+          BLOCKERS: ${{ steps.check.outputs.blockers }}
         run: |
           case "$CODE" in
             0) echo "${{ matrix.network }}: clean" ;;
             10)
-              if [ "$EVENT" = "pull_request" ]; then
-                echo "::error title=release blocked (${{ matrix.network }} drift)::The bundled support matrix doesn't match ${{ matrix.network }}. Refresh src/data/support-matrix.json on next-release before releasing. See the job summary."
+              # On a release PR, live-check's blockers decide: disagreement with
+              # the live network, or upstream ahead for components the endpoints
+              # don't reveal. Upstream ahead for node or proof server is a heads-up.
+              if [ "$EVENT" = "pull_request" ] && [ -n "$BLOCKERS" ]; then
+                echo "::error title=release blocked (${{ matrix.network }})::$BLOCKERS. The bundled support matrix must match what ${{ matrix.network }} is running: refresh src/data/support-matrix.json on next-release. See the job summary."
                 exit 1
               fi
-              echo "::warning title=${{ matrix.network }} drift::Live network differs from the bundled support matrix. See the job summary." ;;
+              echo "::warning title=${{ matrix.network }} drift::See the job summary for details." ;;
             20) echo "::error title=${{ matrix.network }} outage::Public endpoints failed after retries."; exit 1 ;;
             2) echo "::error title=${{ matrix.network }} incomplete::Check could not complete (upstream matrix unavailable or internal error); issue left unchanged."; exit 1 ;;
             *) echo "::error::live-check exited with $CODE"; exit 1 ;;

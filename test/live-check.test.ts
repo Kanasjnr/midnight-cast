@@ -5,6 +5,7 @@ import {
   exitCodeFor,
   failingService,
   fingerprint,
+  releaseBlockers,
   parseArgs,
   parseUpstreamMatrix,
   redact,
@@ -310,6 +311,56 @@ describe("live-check fingerprint", () => {
     expect(fingerprint(drifted())).not.toBe(fingerprint(classify(input())));
   });
 
+});
+
+describe("live-check release blockers", () => {
+  it("blocks on disagreement with the live network", () => {
+    const base = input();
+    const result = classify({ ...base, bundled: { ...base.bundled, node: "1.0.2" } });
+    expect(releaseBlockers(result).map((f) => f.kind)).toContain("bundled-drift");
+  });
+
+  it("blocks when upstream is ahead for a component the endpoints don't reveal", () => {
+    const base = input();
+    const result = classify({
+      ...base,
+      upstream: { versions: { ...base.upstream!.versions, indexer: "4.4.0" }, notes: [] },
+    });
+    expect(releaseBlockers(result)).toEqual([
+      expect.objectContaining({ kind: "upstream-ahead", component: "indexer", upstream: "4.4.0" }),
+    ]);
+  });
+
+  it("doesn't block when only the upstream matrix is ahead of a network that hasn't upgraded", () => {
+    const base = input();
+    // bundled == live == 1.0.400; upstream already lists 1.0.500
+    const result = classify({
+      ...base,
+      upstream: { versions: { ...base.upstream!.versions, node: "1.0.500" }, notes: [] },
+    });
+    expect(result.status).toBe("drift");
+    expect(result.findings.map((f) => f.kind)).toContain("upstream-ahead");
+    expect(releaseBlockers(result)).toEqual([]);
+  });
+
+  it("doesn't block on upstream-ahead for the proof server even when this run couldn't reach it", () => {
+    const base = input();
+    base.versions!.data!.checks[2] = { label: "proof-server", expected: "8.1.0", live: "fetch failed", ok: false };
+    const result = classify({
+      ...base,
+      upstream: { versions: { ...base.upstream!.versions, proofServer: "8.2.0" }, notes: [] },
+    });
+    expect(result.live.proofServer).toBeUndefined();
+    expect(result.findings.map((f) => f.kind)).toContain("upstream-ahead");
+    expect(releaseBlockers(result)).toEqual([]);
+  });
+
+  it("blocks on an outage and on a protocol split", () => {
+    expect(releaseBlockers(classify(input({ health: { ok: false, error: "RPC unreachable" } })))[0]?.kind).toBe("outage");
+    const split = input();
+    split.versions!.data!.live.indexerProtocolVersion = 1000000;
+    expect(releaseBlockers(classify(split)).map((f) => f.kind)).toEqual(["protocol-split"]);
+  });
 });
 
 describe("live-check exit code", () => {

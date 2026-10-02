@@ -8,7 +8,7 @@ midnight-cast answers questions about live Midnight networks, so its tests have 
 
 ## Releases: pull requests into main
 
-A release pull request from `next-release` into `main` runs everything above and then the live checks, which are required checks in `main`'s branch protection. The live smoke suite (in `test.yml`) runs against preview, preprod and mainnet. It asserts things that should hold whatever version a network runs: the RPC and indexer answer, the node's runtime `specVersion` matches the indexer's `protocolVersion`, the JSON output has the expected shape, and a known preprod transaction decodes. The live drift check (in `live.yml`, described below) runs for each network, and any drift fails it. So a release can't ship a bundled support matrix that no longer matches the real networks, and it can't ship while a network is in an outage that would make the release unverifiable.
+A release pull request from `next-release` into `main` runs everything above and then the live checks, which are required checks in `main`'s branch protection. The live smoke suite (in `test.yml`) runs against preview, preprod and mainnet. It asserts things that should hold whatever version a network runs: the RPC and indexer answer, the node's runtime `specVersion` matches the indexer's `protocolVersion`, the JSON output has the expected shape, and a known preprod transaction decodes. The live drift check (in `live.yml`, described below) runs for each network. It fails when the bundled support matrix disagrees with what a network is actually running, when node and indexer disagree, or during an outage. So a release can't ship a matrix that no longer matches the real networks, and it can't ship while a network is down and the release can't be verified. Midnight's published matrix is treated as the truth only for components the public endpoints don't reveal (indexer, on-chain runtime and compact runtime), so it blocks a release when it is ahead of the bundled matrix for those. For node and proof server, which we can observe, Midnight's matrix being ahead is only a warning: Midnight can publish a version before a network runs it, and blocking on that would leave no matrix that could pass. Because the published matrix can block, a release check that can't fetch it after retries fails as incomplete; re-run it.
 
 When an outage blocks a release, report it to Midnight's service desk (`midnightntwrk/servicedesk`, bug-report form), then re-run the checks once the network recovers. Repository admins can still override branch protection in an emergency.
 
@@ -24,7 +24,7 @@ Each finding is classified, and the classification decides what happens:
 | --- | --- | --- | --- |
 | outage | A required service still failed after three attempts | Job fails, issue opened | Blocks |
 | bundled-drift | The live network differs from the bundled matrix | Issue opened | Blocks |
-| upstream-ahead | Midnight's matrix moved past the bundled one | Issue opened | Blocks |
+| upstream-ahead | Midnight's matrix moved past the bundled one | Issue opened | Blocks for indexer and runtimes; warns for node and proof server |
 | protocol-split | Node and indexer disagree on the protocol version | Issue opened | Blocks |
 | upstream-lag | Midnight's own matrix is behind the live network | Reported only | Reported only |
 
