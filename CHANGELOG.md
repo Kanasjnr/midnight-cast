@@ -3,14 +3,15 @@
 ## Unreleased
 
 ### Tests & CI
-- Scheduled live network check (`live.yml`, every 6h and on demand) compares each network's live versions against the bundled and upstream support matrices, and keeps one `live-check` issue per network in sync (opens on drift or outage, closes when clean)
-- Mainnet joins the live checks via Blockfrost when the `BLOCKFROST_MAINNET_PROJECT_ID` secret is set; skipped (not passed) otherwise
-- PR smoke tests assert live-stack invariants instead of bundled-matrix equality, so a network upgrade no longer turns PRs red
+- Scheduled live network check (`live.yml`, every 6h, on push to `main` and on demand) compares each network's live versions against the bundled and upstream support matrices, and keeps one `live-check` issue per network in sync (opens on drift or outage, closes when clean)
+- Mainnet joins the live checks via Blockfrost using the `BLOCKFROST_MAINNET_PROJECT_ID` secret; skipped (not passed) on scheduled runs without it, and mandatory on release PRs
+- Live checks are a release gate: they run only for `main` (release PRs and pushes) as required checks, so PRs into `next-release` stay off the network, and a release can't ship during an outage or with a stale support matrix
+- Live smoke tests assert live-stack invariants instead of bundled-matrix equality
 - Unit tests run on Linux, macOS and Windows × Node 20/22/24, plus a typecheck of `src/` and `scripts/`
-- Support-matrix PRs must pass the live check before merging
 
 ### Fixes
 - Matrix staleness test no longer depends on the current date (`isMatrixStale` accepts an injectable clock)
+- Config path test passes on Windows
 
 ### Docs
 - `docs/LIVE-CHECKS.md`: how CI tests live networks and how to enable mainnet
