@@ -13,19 +13,21 @@ import { fail } from "../output.js";
 async function networkWarningFor(
   endpoints: { rpc: string; network: string },
 ): Promise<string | undefined> {
+  // The runtime spec sharpens the warning but isn't required for it.
+  const [systemVersion, runtime] = await Promise.allSettled([
+    jsonRpc<string>(endpoints.rpc, "system_version", []),
+    jsonRpc<{ specVersion: number }>(endpoints.rpc, "chain_getRuntimeVersion", []),
+  ]);
+  if (systemVersion.status !== "fulfilled") return undefined; // optional warning only
   try {
-    const [systemVersion, runtime] = await Promise.all([
-      jsonRpc<string>(endpoints.rpc, "system_version", []),
-      jsonRpc<{ specVersion: number }>(endpoints.rpc, "chain_getRuntimeVersion", []),
-    ]);
     return buildNetworkMismatchWarning(
       endpoints.network,
       loadSupportMatrix(),
-      parseNodeVersion(systemVersion),
-      runtime.specVersion,
+      parseNodeVersion(systemVersion.value),
+      runtime.status === "fulfilled" ? runtime.value.specVersion : undefined,
     );
   } catch {
-    return undefined; // optional warning only
+    return undefined;
   }
 }
 
