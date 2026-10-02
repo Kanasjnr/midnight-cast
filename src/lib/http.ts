@@ -3,6 +3,8 @@ const RETRYABLE_STATUS = new Set([502, 503, 504]);
 export interface PostJsonOptions {
   timeoutMs: number;
   attempts?: number;
+  /** Total time allowed across all attempts. */
+  budgetMs?: number;
   retryDelayMs?: number;
   headers?: Record<string, string>;
 }
@@ -15,21 +17,25 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 export async function postJson(
   url: string,
   body: unknown,
-  { timeoutMs, attempts = 3, retryDelayMs = 300, headers = {} }: PostJsonOptions,
+  { timeoutMs, attempts = 3, budgetMs = 20_000, retryDelayMs = 300, headers = {} }: PostJsonOptions,
 ): Promise<Response> {
+  const deadline = Date.now() + budgetMs;
   for (let attempt = 1; ; attempt++) {
+    const remaining = deadline - Date.now();
+    const isLast = attempt >= attempts;
     try {
       const response = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...headers },
         body: JSON.stringify(body),
-        signal: AbortSignal.timeout(timeoutMs),
+        signal: AbortSignal.timeout(Math.max(1, Math.min(timeoutMs, remaining))),
       });
-      if (!RETRYABLE_STATUS.has(response.status) || attempt >= attempts) {
+      if (!RETRYABLE_STATUS.has(response.status) || isLast || deadline - Date.now() <= retryDelayMs * attempt) {
         return response;
       }
+      await response.body?.cancel();
     } catch (err) {
-      if (attempt >= attempts) throw err;
+      if (isLast || deadline - Date.now() <= retryDelayMs * attempt) throw err;
     }
     await sleep(retryDelayMs * attempt);
   }

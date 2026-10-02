@@ -57,6 +57,32 @@ describe("postJson", () => {
     await expect(postJson("http://x", {}, fast)).rejects.toThrow("down");
   });
 
+  it("stops at the time budget when an endpoint never answers", async () => {
+    const hang = vi.fn(
+      (_url: string, init: RequestInit) =>
+        new Promise<Response>((_, reject) => {
+          init.signal?.addEventListener("abort", () => reject(new Error("timeout")));
+        }),
+    );
+    vi.stubGlobal("fetch", hang);
+    const started = Date.now();
+    await expect(
+      postJson("http://x", {}, { timeoutMs: 100, budgetMs: 250, retryDelayMs: 10, attempts: 5 }),
+    ).rejects.toThrow("timeout");
+    const elapsed = Date.now() - started;
+    expect(elapsed).toBeLessThan(500);
+    expect(hang.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(hang.mock.calls.length).toBeLessThan(5);
+  });
+
+  it("cancels the body of a response it retries", async () => {
+    const cancel = vi.fn();
+    const body = new ReadableStream({ cancel });
+    stubFetch(new Response(body, { status: 503 }), ok({}));
+    await postJson("http://x", {}, fast);
+    expect(cancel).toHaveBeenCalledTimes(1);
+  });
+
   it("sends the JSON body and extra headers", async () => {
     const fetchMock = stubFetch(ok({}));
     await postJson("http://x", { query: "q" }, { ...fast, headers: { project_id: "p" } });

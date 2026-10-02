@@ -26,21 +26,11 @@ export async function runServiceChecks(
   },
   options?: { proofServerExpected?: string },
 ): Promise<ServiceResult[]> {
-  const results: ServiceResult[] = [
-    await checkRpc(endpoints.rpc),
-    await checkIndexer(endpoints.indexerHttp),
-  ];
-
+  const checks = [checkRpc(endpoints.rpc), checkIndexer(endpoints.indexerHttp)];
   if (endpoints.proofServer) {
-    results.push(
-      await checkProofServer(
-        endpoints.proofServer,
-        options?.proofServerExpected,
-      ),
-    );
+    checks.push(checkProofServer(endpoints.proofServer, options?.proofServerExpected));
   }
-
-  return results;
+  return Promise.all(checks);
 }
 
 async function checkRpc(rpcUrl: string): Promise<ServiceResult> {
@@ -52,7 +42,18 @@ async function checkRpc(rpcUrl: string): Promise<ServiceResult> {
       status: "OK",
       latencyMs: Date.now() - start,
     };
-  } catch {
+  } catch (err) {
+    // Fall back only when the node rejected the method; an unreachable node
+    // would just time out a second time.
+    const rejected = err instanceof Error && err.message.startsWith("RPC error:");
+    if (!rejected) {
+      return {
+        service: "rpc",
+        status: "FAIL",
+        latencyMs: Date.now() - start,
+        detail: err instanceof Error ? err.message : "RPC unreachable",
+      };
+    }
     try {
       await chainGetHeader(rpcUrl);
       return {
