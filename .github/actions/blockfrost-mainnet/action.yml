@@ -4,14 +4,20 @@ description: >
   Midnight retired its hosted mainnet RPC and indexer on 2026-09-30; Blockfrost
   now serves them and every request needs a Midnight Mainnet project_id.
   Writes a config under $RUNNER_TEMP (never the workspace) and exports
-  XDG_CONFIG_HOME. Does nothing, and reports configured=false, when the token
-  is empty (e.g. pull requests from forks).
+  XDG_CONFIG_HOME. When the token is empty it reports configured=false
+  (mainnet skipped, not passed), or fails if `required` is true.
 
 inputs:
   project-id:
     description: Blockfrost Midnight Mainnet project ID
     required: false
     default: ""
+  required:
+    description: >
+      'true' to fail when the token is missing. Used where mainnet must be
+      checked (release PRs into main), so a required check can't pass without it.
+    required: false
+    default: "false"
 
 outputs:
   configured:
@@ -25,9 +31,15 @@ runs:
       shell: bash
       env:
         PROJECT_ID: ${{ inputs.project-id }}
+        REQUIRED: ${{ inputs.required }}
       run: |
         if [ -z "$PROJECT_ID" ]; then
+          if [ "$REQUIRED" = "true" ]; then
+            echo "::error title=mainnet not checked::Secret BLOCKFROST_MAINNET_PROJECT_ID is not set, so mainnet can't be checked. It is required here."
+            exit 1
+          fi
           echo "::notice title=mainnet skipped::No Blockfrost mainnet token (secret BLOCKFROST_MAINNET_PROJECT_ID); mainnet checks are skipped, not passed."
+          echo "### ⏭️ mainnet: skipped (no BLOCKFROST_MAINNET_PROJECT_ID secret)" >> "$GITHUB_STEP_SUMMARY"
           echo "configured=false" >> "$GITHUB_OUTPUT"
           exit 0
         fi
