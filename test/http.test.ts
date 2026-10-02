@@ -15,7 +15,7 @@ function stubFetch(...responses: Array<Response | Error>) {
   return fetchMock;
 }
 
-const fast = { timeoutMs: 1000, retryDelayMs: 0 };
+const fast = { timeoutMs: 1000, retryDelayMs: 0, minAttemptMs: 0 };
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -67,12 +67,19 @@ describe("postJson", () => {
     vi.stubGlobal("fetch", hang);
     const started = Date.now();
     await expect(
-      postJson("http://x", {}, { timeoutMs: 100, budgetMs: 250, retryDelayMs: 10, attempts: 5 }),
+      postJson("http://x", {}, { timeoutMs: 100, budgetMs: 250, retryDelayMs: 10, minAttemptMs: 20, attempts: 5 }),
     ).rejects.toThrow("timeout");
     const elapsed = Date.now() - started;
     expect(elapsed).toBeLessThan(500);
     expect(hang.mock.calls.length).toBeGreaterThanOrEqual(2);
     expect(hang.mock.calls.length).toBeLessThan(5);
+  });
+
+  it("returns the last real response rather than retry without enough time left", async () => {
+    const fetchMock = stubFetch(status(503), ok({}));
+    const response = await postJson("http://x", {}, { timeoutMs: 1000, budgetMs: 500, retryDelayMs: 0, minAttemptMs: 1000 });
+    expect(response.status).toBe(503);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("cancels the body of a response it retries", async () => {

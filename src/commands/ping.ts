@@ -43,10 +43,12 @@ async function checkRpc(rpcUrl: string): Promise<ServiceResult> {
       latencyMs: Date.now() - start,
     };
   } catch (err) {
-    // Fall back only when the node rejected the method; an unreachable node
-    // would just time out a second time.
-    const rejected = err instanceof Error && err.message.startsWith("RPC error:");
-    if (!rejected) {
+    // A timeout or a gateway error has already used the retry budget, so a
+    // second method would only fail again. Anything else (another HTTP
+    // status, a rejected method) may still answer chain_getHeader.
+    const unreachable =
+      err instanceof Error && /^RPC unreachable( \((502|503|504)\))?$/.test(err.message);
+    if (unreachable) {
       return {
         service: "rpc",
         status: "FAIL",
