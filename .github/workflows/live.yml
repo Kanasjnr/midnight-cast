@@ -1,0 +1,161 @@
+name: Live network check
+
+# Watches preview, preprod and mainnet for drift between what each network is
+# running, the support matrix bundled in midnight-cast, and the matrix Midnight
+# publishes upstream. Keeps one `live-check` issue per network in sync.
+
+on:
+  schedule:
+    - cron: "23 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      network:
+        description: Network to check
+        type: choice
+        options: [all, preview, preprod, mainnet]
+        default: all
+  # A support-matrix refresh must be proven against the live networks before
+  # it merges; changes to the checker itself are exercised here too.
+  pull_request:
+    branches: [main, next-release]
+    paths:
+      - src/data/support-matrix.json
+      - scripts/live-check.ts
+      - scripts/live-issue.ts
+      - .github/actions/blockfrost-mainnet/**
+      - .github/workflows/live.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-check-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  check:
+    name: Live (${{ matrix.network }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: write
+    strategy:
+      fail-fast: false
+      matrix:
+        network: [preview, preprod, mainnet]
+
+    steps:
+      - name: Select
+        id: select
+        env:
+          WANTED: ${{ inputs.network || 'all' }}
+        run: |
+          if [ "$WANTED" = "all" ] || [ "$WANTED" = "${{ matrix.network }}" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping ${{ matrix.network }} (requested: $WANTED)"
+          fi
+
+      - name: Checkout
+        if: steps.select.outputs.run == 'true'
+        uses: actions/checkout@v4
+        with:
+          # Full history so the PR verdict can diff against the base commit.
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        if: steps.select.outputs.run == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        if: steps.select.outputs.run == 'true'
+        run: npm ci
+
+      - name: Build
+        if: steps.select.outputs.run == 'true'
+        run: npm run build
+
+      - name: Configure mainnet (Blockfrost)
+        id: mainnet
+        if: steps.select.outputs.run == 'true' && matrix.network == 'mainnet'
+        uses: ./.github/actions/blockfrost-mainnet
+        with:
+          project-id: ${{ secrets.BLOCKFROST_MAINNET_PROJECT_ID }}
+
+      - name: Check ${{ matrix.network }}
+        id: check
+        if: steps.select.outputs.run == 'true' && (matrix.network != 'mainnet' || steps.mainnet.outputs.configured == 'true')
+        run: |
+          set +e
+          npm run --silent live-check -- "${{ matrix.network }}" --out live-check
+          echo "code=$?" >> "$GITHUB_OUTPUT"
+
+      - name: Upload report
+        if: steps.check.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-check-${{ matrix.network }}
+          path: live-check/
+          retention-days: 14
+
+      - name: Sync issue
+        if: steps.check.outcome == 'success' && github.event_name != 'pull_request' && steps.check.outputs.code != '2'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: >
+          npx tsx scripts/live-issue.ts "${{ matrix.network }}"
+          "${{ steps.check.outputs.status }}" "${{ steps.check.outputs.fingerprint }}"
+          live-check/report.md
+
+      - name: Verdict
+        if: steps.check.outcome == 'success'
+        env:
+          CODE: ${{ steps.check.outputs.code }}
+          EVENT: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          case "$CODE" in
+            0) echo "${{ matrix.network }}: clean" ;;
+            10)
+              echo "::warning title=${{ matrix.network }} drift::Live network differs from the bundled support matrix. See the job summary."
+              if [ "$EVENT" = "pull_request" ] && git diff --name-only "$BASE_SHA" HEAD | grep -qx src/data/support-matrix.json; then
+                echo "::error::This PR changes the support matrix but ${{ matrix.network }} still drifts."
+                exit 1
+              fi ;;
+            20) echo "::error title=${{ matrix.network }} outage::Public endpoints failed after retries."; exit 1 ;;
+            *) echo "::error::live-check exited with $CODE"; exit 1 ;;
+          esac
+
+  # Full live smoke suite on a schedule too, so indexer/RPC schema changes
+  # are caught even when nobody is pushing.
+  smoke:
+    name: Live smoke
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+
+      - name: Configure mainnet (Blockfrost)
+        uses: ./.github/actions/blockfrost-mainnet
+        with:
+          project-id: ${{ secrets.BLOCKFROST_MAINNET_PROJECT_ID }}
+
+      - name: Run live smoke tests
+        run: npm run test:smoke
+        env:
+          INTEGRATION: "1"
