@@ -7,6 +7,7 @@
 - Mainnet joins the live checks via Blockfrost using the `BLOCKFROST_MAINNET_PROJECT_ID` secret, exported as `BLOCKFROST_PROJECT_ID` the way users set it; skipped (not passed) on scheduled runs without it, and mandatory on release PRs
 - Live checks are a release gate: they run only for `main` (release PRs and pushes) as required checks, so PRs into `next-release` stay off the network, and a release can't ship during an outage or with a stale support matrix
 - Live smoke tests assert live-stack invariants instead of bundled-matrix equality
+- Every live job lives in `live.yml` and the `Tests` workflow is unit-only, so PRs into `main` list no skipped checks
 - Unit tests run on Linux, macOS and Windows × Node 20/22/24, plus a typecheck of `src/` and `scripts/`
 
 ### Changes
