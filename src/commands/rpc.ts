@@ -42,7 +42,8 @@ export async function rpcCommand(
   }
 
   try {
-    const result = await jsonRpc(endpoints.rpc, method, params);
+    // Arbitrary methods may submit, so never retry them.
+    const result = await jsonRpc(endpoints.rpc, method, params, { attempts: 1 });
 
     return {
       ok: true,
