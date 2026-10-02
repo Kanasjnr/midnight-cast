@@ -44,27 +44,27 @@ describe.skipIf(!integration)("smoke (live preview)", () => {
     );
   });
 
-  it("mn versions preview", async () => {
-    const { stdout, code } = await runMn([
-      "versions",
-      "preview",
-      "--json",
-      "--no-local",
-      "--fail-on-mismatch",
-    ]);
-    expect(code).toBe(0);
+  it("mn versions preview reports a consistent live stack", async () => {
+    const { stdout } = await runMn(["versions", "preview", "--json", "--no-local"]);
     const parsed = JSON.parse(stdout) as {
       data: {
         network: string;
-        allOk: boolean;
-        live: { nodeVersion: string };
+        live: {
+          nodeVersion: string;
+          runtimeSpecVersion: number;
+          indexerProtocolVersion: number;
+        };
         expected: { node: string };
+        checks: Array<{ label: string; ok: boolean }>;
       };
     };
     expect(parsed.data.network).toBe("preview");
-    expect(parsed.data.expected.node).toMatch(/^1\.0\./);
-    expect(parsed.data.live.nodeVersion).toMatch(/^1\.0\./);
-    expect(parsed.data.allOk).toBe(true);
+    expect(parsed.data.expected.node).toMatch(/^\d+\.\d+\.\d+/);
+    expect(parsed.data.live.nodeVersion).toMatch(/^\d+\.\d+\.\d+/);
+    expect(parsed.data.live.indexerProtocolVersion).toBe(
+      parsed.data.live.runtimeSpecVersion,
+    );
+    expect(parsed.data.checks.find((c) => c.label === "indexer-api")?.ok).toBe(true);
   });
 
   it("mn health preview", async () => {

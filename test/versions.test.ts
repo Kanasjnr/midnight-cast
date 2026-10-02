@@ -9,8 +9,6 @@ import {
   parseNodeVersion,
   versionMatches,
   fetchLiveVersions,
-  loadSupportMatrix,
-  versionMatches,
 } from "../src/lib/versions.js";
 
 describe("versions helpers", () => {
@@ -154,13 +152,14 @@ describe("versions helpers", () => {
 const integration = process.env.INTEGRATION === "1";
 
 describe.skipIf(!integration)("fetchLiveVersions", () => {
+  // Matrix drift is tracked by .github/workflows/live.yml; assert invariants only.
   it("reads preprod live versions", async () => {
-    const expected = loadSupportMatrix().networks.preprod!;
     const live = await fetchLiveVersions(
       "https://rpc.preprod.midnight.network",
       "https://indexer.preprod.midnight.network/api/v4/graphql",
     );
-    expect(versionMatches(expected.node, live.nodeVersion)).toBe(true);
+    expect(live.nodeVersion).toMatch(/^\d+\.\d+\.\d+/);
+    expect(live.indexerApi).toBe("v4");
     expect(live.runtimeSpecVersion).toBeGreaterThan(0);
     expect(live.indexerProtocolVersion).toBe(live.runtimeSpecVersion);
   });
