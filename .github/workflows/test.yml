@@ -48,10 +48,12 @@ jobs:
         run: npm test
 
   # Live, but only asserts invariants (services up, RPC and indexer agree,
-  # JSON shape, known tx decodes). Bundled-matrix drift is the job of
-  # live.yml, so a network upgrade alone never turns a PR red.
+  # JSON shape, known tx decodes); bundled-matrix drift is live.yml's job.
+  # Runs only for main (release PRs and pushes), where it is a required check.
+  # Day-to-day PRs into next-release stay off the network.
   smoke:
     name: Smoke (live preview, preprod, mainnet)
+    if: github.base_ref == 'main' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     needs: test
     timeout-minutes: 20
@@ -76,6 +78,7 @@ jobs:
         uses: ./.github/actions/blockfrost-mainnet
         with:
           project-id: ${{ secrets.BLOCKFROST_MAINNET_PROJECT_ID }}
+          required: "true"
 
       - name: Run live smoke tests
         run: npm run test:smoke
