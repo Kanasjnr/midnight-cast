@@ -3,6 +3,7 @@ import {
   bundledVersions,
   classify,
   exitCodeFor,
+  failingService,
   fingerprint,
   parseArgs,
   parseUpstreamMatrix,
@@ -246,6 +247,63 @@ describe("live-check fingerprint", () => {
     const b = drifted();
     b.findings.reverse();
     expect(fingerprint(a)).toBe(fingerprint(b));
+  });
+
+  it("ignores the upstream fetch flapping during an outage, even alongside drift", () => {
+    const base = input();
+    const outage = (upstreamUp: boolean) =>
+      classify({
+        ...base,
+        // bundled behind live and upstream: bundled-drift (with an upstream
+        // field) and upstream-ahead, both of which vanish without upstream
+        bundled: { ...base.bundled, node: "1.0.2" },
+        health: { ok: false, error: "Indexer unreachable (503)" },
+        ...(upstreamUp ? {} : { upstream: undefined, upstreamError: "HTTP 503" }),
+      });
+    const up = outage(true);
+    expect(up.findings.map((f) => f.kind)).toEqual(
+      expect.arrayContaining(["outage", "bundled-drift", "upstream-ahead"]),
+    );
+    expect(fingerprint(outage(false))).toBe(fingerprint(up));
+  });
+
+  it("still updates an outage issue when drift unrelated to upstream changes", () => {
+    const outageWithNode = (node: string) => {
+      const base = input({ health: { ok: false, error: "Indexer unreachable (503)" } });
+      base.versions!.data!.live.nodeVersion = node;
+      return classify(base);
+    };
+    expect(fingerprint(outageWithNode("1.0.400"))).not.toBe(fingerprint(outageWithNode("2.1.0")));
+  });
+
+  it("keeps one outage's fingerprint stable as the failure mode varies", () => {
+    const outage = (error: string) => classify(input({ health: { ok: false, error } }));
+    const fp = fingerprint(outage("Indexer unreachable"));
+    expect(fingerprint(outage("Indexer unreachable (502)"))).toBe(fp);
+    expect(fingerprint(outage("Indexer unreachable (503)"))).toBe(fp);
+  });
+
+  it("names the failing service in outage messages", () => {
+    expect(failingService("RPC unreachable (403)")).toBe("rpc");
+    expect(failingService("RPC error: method not found")).toBe("rpc");
+    expect(failingService("Indexer unreachable")).toBe("indexer");
+    expect(failingService("proof-server is FAIL")).toBe("proof-server");
+    expect(failingService("indexer is 400 blocks behind the node")).toBe("indexer");
+    expect(failingService("health check produced no usable output")).toBe("");
+  });
+
+  it("changes the outage fingerprint when the outage itself changes", () => {
+    const outage = (error: string) => classify(input({ health: { ok: false, error } }));
+    expect(fingerprint(outage("RPC unreachable"))).not.toBe(fingerprint(outage("Indexer unreachable (503)")));
+  });
+
+  it("keeps the outage fingerprint stable as indexer lag fluctuates", () => {
+    const lagging = (delta: number) => {
+      const base = input();
+      base.health!.data!.sync = { rpcHeight: 1000, indexerHeight: 1000 - delta, delta, threshold: 100, inSync: false };
+      return classify(base);
+    };
+    expect(fingerprint(lagging(400))).toBe(fingerprint(lagging(450)));
   });
 
   it("changes when findings change", () => {

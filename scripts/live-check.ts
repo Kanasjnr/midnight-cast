@@ -118,6 +118,8 @@ const SEVERITY: Record<FindingKind, Severity> = {
   "indexer-api-undetected": "info",
 };
 
+const UPSTREAM_KINDS = new Set<FindingKind>(["upstream-ahead", "upstream-lag", "upstream-unavailable"]);
+
 /** "node-1.0.400" / "midnight-indexer-4.3.302" -> "1.0.400" */
 export function versionFromTag(tag: string | undefined): string | undefined {
   const match = /(\d+\.\d+\.\d+)$/.exec((tag ?? "").trim());
@@ -275,6 +277,17 @@ export function classify(input: ClassifyInput): CheckResult {
 }
 
 /**
+ * Which service an outage message is about ("RPC unreachable (503)" -> "rpc").
+ * The fingerprint keys on what failed, not how: a timeout, a 502 and a 503
+ * from the same service are one outage, and the sync message's block delta
+ * changes every run.
+ */
+export function failingService(message: string): string {
+  const match = /\b(rpc|indexer|proof[- ]server)\b/i.exec(message);
+  return match ? match[1]!.toLowerCase().replace(" ", "-") : "";
+}
+
+/**
  * Exit code for a result. Without upstream data a drift verdict is incomplete
  * (upstream-ahead findings vanish), so it must not open, edit or close the
  * issue: report an error instead. An outage is still reported as such.
@@ -287,8 +300,25 @@ export function exitCodeFor(result: CheckResult): number {
 
 /** Stable across runs as long as the findings themselves don't change. */
 export function fingerprint(result: CheckResult): string {
+  // An outage is still synced when the upstream fetch fails, and a failed
+  // fetch drops every upstream-derived finding and field. During an outage,
+  // leave those out so a flaky fetch can't rewrite an unchanged issue, while
+  // drift that doesn't depend on upstream (node upgrade, protocol split) still
+  // updates it. Otherwise upstream is always present: the check exits 2
+  // without it.
+  const outage = result.status === "outage";
   const key = result.findings
-    .map((f) => [f.kind, f.component, f.bundled, f.live, f.upstream].join("|"))
+    .filter((f) => (outage ? !UPSTREAM_KINDS.has(f.kind) : f.kind !== "upstream-unavailable"))
+    .map((f) =>
+      [
+        f.kind,
+        f.component,
+        f.bundled,
+        f.live,
+        outage ? "" : f.upstream,
+        f.kind === "outage" ? failingService(f.message) : "",
+      ].join("|"),
+    )
     .sort()
     .join("\n");
   return createHash("sha256").update(`${result.status}\n${key}`).digest("hex").slice(0, 16);
