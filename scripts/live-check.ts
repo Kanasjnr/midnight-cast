@@ -191,6 +191,16 @@ export function matrixRowMismatch(shipped: MatrixNetwork, used: MatrixNetwork): 
     : "the CLI loaded a different support matrix than src/data/support-matrix.json (user override in the config directory, or a stale build: run npm run build)";
 }
 
+/**
+ * The shipped matrix has a row for every network we check, so a CLI that
+ * reports none loaded a different matrix (override or stale build).
+ */
+export function cliMatrixLacksNetwork(error: string | undefined): string | undefined {
+  return error?.startsWith("No support matrix entry for network")
+    ? `${error}: the CLI loaded a different support matrix than src/data/support-matrix.json (user override in the config directory, or a stale build: run npm run build)`
+    : undefined;
+}
+
 /** Component versions from one matrix row. */
 export function rowVersions(net: MatrixNetwork): ComponentVersions {
   const compactRuntime = Object.entries(net.packages ?? {}).find(([name]) =>
@@ -540,7 +550,9 @@ async function main(): Promise<number> {
     // The verdict must be about the matrix that ships. If the CLI judged a
     // different one, its checks don't apply: refuse rather than mislead.
     const used = versions?.data?.expected;
-    const mismatch = used ? matrixRowMismatch(matrix.networks[network]!, used) : undefined;
+    const mismatch = used
+      ? matrixRowMismatch(matrix.networks[network]!, used)
+      : cliMatrixLacksNetwork(versions?.error ?? health?.error);
     if (mismatch) {
       console.error(`live-check: ${mismatch}`);
       return EXIT.error;

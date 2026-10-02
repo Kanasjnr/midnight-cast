@@ -8,6 +8,7 @@ import {
   releaseBlockers,
   rowVersions,
   matrixRowMismatch,
+  cliMatrixLacksNetwork,
   parseArgs,
   parseUpstreamMatrix,
   redact,
@@ -142,6 +143,14 @@ describe("live-check tag and matrix parsing", () => {
 
   it("reads component versions from a matrix row", () => {
     expect(rowVersions(matrix.networks.preprod!)).toEqual(bundledVersions(matrix, "preprod"));
+  });
+
+  it("treats a CLI matrix without the network as a different matrix, not an outage", () => {
+    expect(cliMatrixLacksNetwork('No support matrix entry for network "preview". Known: preprod')).toMatch(
+      /different support matrix/,
+    );
+    expect(cliMatrixLacksNetwork("RPC unreachable")).toBeUndefined();
+    expect(cliMatrixLacksNetwork(undefined)).toBeUndefined();
   });
 
   it("detects when the CLI used a different matrix row than the shipped one", () => {
