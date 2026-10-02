@@ -18,6 +18,54 @@ describe("runServiceChecks", () => {
     expect(rpc?.status).toBe("FAIL");
   });
 
+  it("falls back to chain_getHeader when a gateway blocks system_health", async () => {
+    const fetchMock = vi.fn(async (_url: string, init: RequestInit) => {
+      const { method, query } = JSON.parse(String(init.body)) as { method?: string; query?: string };
+      if (method === "system_health") return new Response("", { status: 405 });
+      if (method === "chain_getHeader") {
+        return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: { number: "0x1" } }));
+      }
+      if (query) return new Response(JSON.stringify({ data: { block: { height: 1 } } }));
+      throw new Error("unexpected request");
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const results = await runServiceChecks({ rpc: "http://rpc", indexerHttp: "http://idx" });
+    expect(results.find((r) => r.service === "rpc")?.status).toBe("OK");
+  });
+
+  it("doesn't fall back after gateway errors that outlasted the retries", async () => {
+    const methods: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init: RequestInit) => {
+        const { method } = JSON.parse(String(init.body)) as { method?: string };
+        if (method) methods.push(method);
+        return new Response("", { status: 504 });
+      }),
+    );
+
+    const results = await runServiceChecks({ rpc: "http://rpc", indexerHttp: "http://idx" });
+    expect(results.find((r) => r.service === "rpc")).toMatchObject({ status: "FAIL", detail: "RPC unreachable (504)" });
+    expect(methods.every((m) => m === "system_health")).toBe(true);
+  });
+
+  it("doesn't retry an unreachable RPC through the fallback", async () => {
+    const methods: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init: RequestInit) => {
+        const { method } = JSON.parse(String(init.body)) as { method?: string };
+        if (method) methods.push(method);
+        throw new Error("ECONNREFUSED");
+      }),
+    );
+
+    const results = await runServiceChecks({ rpc: "http://rpc", indexerHttp: "http://idx" });
+    expect(results.find((r) => r.service === "rpc")).toMatchObject({ status: "FAIL", detail: "RPC unreachable" });
+    expect(methods.every((m) => m === "system_health")).toBe(true);
+  });
+
   it("skips proof-server when URL omitted", async () => {
     vi.stubGlobal(
       "fetch",
