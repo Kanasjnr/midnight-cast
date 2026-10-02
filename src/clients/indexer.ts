@@ -2,6 +2,7 @@ import { createClient, type Client } from "graphql-ws";
 import WebSocket from "ws";
 import type { NetworkEndpoints } from "../networks.js";
 import { postJson, readJson } from "../lib/http.js";
+import { blockfrostHttpError, isBlockfrostUrl, takeProjectId } from "../lib/blockfrost.js";
 
 const DEFAULT_TIMEOUT_MS = 10_000;
 
@@ -16,15 +17,23 @@ export async function gqlPost<T>(
   variables?: Record<string, unknown>,
   timeoutMs = DEFAULT_TIMEOUT_MS,
 ): Promise<T> {
+  const { url: target, projectId } = takeProjectId(url);
   let response: Response;
   try {
-    response = await postJson(url, { query, variables }, { timeoutMs });
+    response = await postJson(
+      target,
+      { query, variables },
+      { timeoutMs, headers: projectId ? { project_id: projectId } : {} },
+    );
   } catch {
     throw new Error("Indexer unreachable");
   }
 
   if (!response.ok) {
-    throw new Error(`Indexer unreachable (${response.status})`);
+    throw new Error(
+      (isBlockfrostUrl(target) && blockfrostHttpError("Indexer", response.status)) ||
+        `Indexer unreachable (${response.status})`,
+    );
   }
 
   const body = await readJson<GqlResponse<T>>(response, "Indexer");

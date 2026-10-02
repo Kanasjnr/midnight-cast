@@ -5,6 +5,7 @@ import { jsonRpc } from "../clients/rpc.js";
 import { gqlPost } from "../clients/indexer.js";
 import { loadDataJson } from "./data-path.js";
 import { sanitizeForOutput } from "./sanitize.js";
+import { isBlockfrostUrl } from "./blockfrost.js";
 
 export interface MatrixNetwork {
   /** Recommended node release for running your own node. */
@@ -136,6 +137,8 @@ export function nodeSatisfies(expected: MatrixNetwork, liveNodeVersion: string):
 }
 
 export function detectIndexerApi(indexerHttp: string): string {
+  // Blockfrost serves the same v4 indexer API under /api/v0.
+  if (isBlockfrostUrl(indexerHttp) && /\/api\/v0(\/|\?|$)/.test(indexerHttp)) return "v4";
   if (indexerHttp.includes("/api/v4/")) return "v4";
   if (indexerHttp.includes("/api/v3/")) return "v3";
   if (indexerHttp.includes("/api/v1/")) return "v1";

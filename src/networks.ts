@@ -31,10 +31,10 @@ export const BUILTIN_NETWORKS: Record<string, NetworkEndpoints> = {
   },
   mainnet: {
     networkId: "mainnet",
-    rpc: "https://rpc.mainnet.midnight.network",
-    rpcWs: "wss://rpc.mainnet.midnight.network",
-    indexerHttp: indexerHttp("mainnet"),
-    indexerWs: indexerWs("mainnet"),
+    rpc: "https://rpc.midnight-mainnet.blockfrost.io",
+    rpcWs: "wss://rpc.midnight-mainnet.blockfrost.io",
+    indexerHttp: "https://midnight-mainnet.blockfrost.io/api/v0",
+    indexerWs: "wss://midnight-mainnet.blockfrost.io/api/v0/ws",
   },
   local: {
     networkId: "local",

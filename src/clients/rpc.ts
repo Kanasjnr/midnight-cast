@@ -1,5 +1,6 @@
 import { postJson, readJson } from "../lib/http.js";
 import { sanitizeForOutput } from "../lib/sanitize.js";
+import { blockfrostHttpError, isBlockfrostUrl, takeProjectId } from "../lib/blockfrost.js";
 
 const DEFAULT_TIMEOUT_MS = 10_000;
 
@@ -24,19 +25,23 @@ export async function jsonRpc<T>(
   params: unknown[] = [],
   { timeoutMs = DEFAULT_TIMEOUT_MS, attempts }: { timeoutMs?: number; attempts?: number } = {},
 ): Promise<T> {
+  const { url: target, projectId } = takeProjectId(url);
   let response: Response;
   try {
     response = await postJson(
-      url,
+      target,
       { jsonrpc: "2.0", method, params, id: 1 },
-      { timeoutMs, attempts },
+      { timeoutMs, attempts, headers: projectId ? { project_id: projectId } : {} },
     );
   } catch {
     throw new Error("RPC unreachable");
   }
 
   if (!response.ok) {
-    throw new Error(`RPC unreachable (${response.status})`);
+    throw new Error(
+      (isBlockfrostUrl(target) && blockfrostHttpError("RPC", response.status)) ||
+        `RPC unreachable (${response.status})`,
+    );
   }
 
   const body = await readJson<JsonRpcResponse<T>>(response, "RPC");
