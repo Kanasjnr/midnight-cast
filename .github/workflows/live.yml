@@ -79,8 +79,7 @@ jobs:
         uses: ./.github/actions/blockfrost-mainnet
         with:
           project-id: ${{ secrets.BLOCKFROST_MAINNET_PROJECT_ID }}
-          # On a release PR mainnet must actually be checked, not skipped.
-          required: ${{ github.event_name == 'pull_request' }}
+          required: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
 
       - name: Check ${{ matrix.network }}
         id: check
@@ -130,11 +129,9 @@ jobs:
             *) echo "::error::live-check exited with $CODE"; exit 1 ;;
           esac
 
-  # Full live smoke suite on a schedule too, so indexer/RPC schema changes
-  # are caught even when nobody is pushing.
   smoke:
-    name: Live smoke
-    if: github.event_name != 'pull_request'
+    name: Smoke (live preview, preprod, mainnet)
+    if: github.event_name != 'workflow_dispatch' || inputs.network == 'all'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -153,6 +150,7 @@ jobs:
         uses: ./.github/actions/blockfrost-mainnet
         with:
           project-id: ${{ secrets.BLOCKFROST_MAINNET_PROJECT_ID }}
+          required: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
 
       - name: Run live smoke tests
         run: npm run test:smoke
