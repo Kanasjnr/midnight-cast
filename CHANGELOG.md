@@ -1,5 +1,27 @@
 # Changelog
 
+## Unreleased
+
+### Tests & CI
+- Scheduled live network check (`live.yml`, every 6h, on push to `main` and on demand) compares each network's live versions against the bundled and upstream support matrices, and keeps one `live-check` issue per network in sync (opens on drift or outage, closes when clean)
+- Mainnet joins the live checks via Blockfrost using the `BLOCKFROST_MAINNET_PROJECT_ID` secret; skipped (not passed) on scheduled runs without it, and mandatory on release PRs
+- Live checks are a release gate: they run only for `main` (release PRs and pushes) as required checks, so PRs into `next-release` stay off the network, and a release can't ship during an outage or with a stale support matrix
+- Live smoke tests assert live-stack invariants instead of bundled-matrix equality
+- Unit tests run on Linux, macOS and Windows × Node 20/22/24, plus a typecheck of `src/` and `scripts/`
+
+### Changes
+- `versions` and `health` check the node against a minimum version (`minNode`) and the runtime `spec_version` exactly (`runtimeSpec`), instead of requiring one exact node version. Different operators run different compatible builds: Midnight's endpoints report node 1.0.400 and Blockfrost's mainnet node 2.1.0, both on runtime 1000300
+- Support matrix refreshed for runtime 1.0.300 on all networks: node >= 1.0.300 (recommended 1.0.300, the newest public release), spec_version 1000300, ledger 8.1.2, indexer 4.3.5 (preview) and 4.3.302 (preprod/mainnet), `midnight-js-indexer-public-data-provider` 4.1.1
+- Error map stamped for ledger 8.1.2 and gains code 211 (`MerkleTreeError`, system transactions); the node's code table is otherwise unchanged since node 0.22.5
+- Live check: node and proof-server numbers in Midnight's matrix that differ from the bundled ones are reported as `upstream-differs` (info), since those components are checked against the live network
+
+### Fixes
+- Matrix staleness test no longer depends on the current date (`isMatrixStale` accepts an injectable clock)
+- Config path test passes on Windows
+
+### Docs
+- `docs/LIVE-CHECKS.md`: how CI tests live networks and how to enable mainnet
+
 ## 0.1.6
 
 ### Fixes

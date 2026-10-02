@@ -5,6 +5,8 @@ import { join } from "node:path";
 
 const execFileAsync = promisify(execFile);
 const cli = join(process.cwd(), "dist", "cli.js");
+// Unit tests stay off the network: endpoints that fail fast, locally.
+const CLOSED_PORT = "http://127.0.0.1:9";
 
 async function runMn(args: string[]): Promise<{
   stdout: string;
@@ -29,8 +31,17 @@ async function runMn(args: string[]): Promise<{
 describe("cli positional network", () => {
   it("tx accepts network as second positional arg", async () => {
     const hash = "0x" + "00".repeat(32);
-    const { stderr } = await runMn(["tx", hash, "preprod", "--json"]);
+    const { stdout, stderr } = await runMn([
+      "tx",
+      hash,
+      "preprod",
+      "--json",
+      "--indexer-http",
+      CLOSED_PORT,
+    ]);
     expect(stderr).not.toContain("too many arguments");
+    // Parsing succeeded and the command ran; the closed port keeps it offline.
+    expect(JSON.parse(stdout)).toMatchObject({ ok: false, error: "Indexer unreachable" });
   });
 
   it("decode accepts network as second positional arg", async () => {
@@ -45,17 +56,19 @@ describe("cli positional network", () => {
       data: { network: string; ledger: string };
     };
     expect(parsed.data.network).toBe("preview");
-    expect(parsed.data.ledger).toBe("8.0.3");
+    expect(parsed.data.ledger).toBe("8.1.2");
   });
 
   it("rpc accepts network when params omitted", async () => {
-    const { stderr, code } = await runMn([
+    const { stdout, stderr } = await runMn([
       "rpc",
       "chain_getHeader",
       "preprod",
       "--json",
+      "--rpc",
+      CLOSED_PORT,
     ]);
     expect(stderr).not.toContain("too many arguments");
-    expect(code).toBe(0);
+    expect(JSON.parse(stdout)).toMatchObject({ ok: false, error: "RPC unreachable" });
   });
 });

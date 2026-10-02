@@ -6,6 +6,7 @@ Extended docs for the `mn` CLI. **GitHub only** — not included in the npm pack
 |-----|-------------|
 | [WORKFLOWS.md](./WORKFLOWS.md) | Scenario-based guides with real sample output (`health`, tx failure, 1010, DUST, version skew) |
 | [COMMANDS.md](./COMMANDS.md) | Reference-style command docs with examples and output snippets |
+| [LIVE-CHECKS.md](./LIVE-CHECKS.md) | How CI tests against the live networks, the scheduled drift check, and the mainnet Blockfrost secret |
 
 Quick start lives in the repo [README](../README.md).
 

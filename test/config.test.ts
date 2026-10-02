@@ -29,7 +29,7 @@ describe("config", () => {
 
   it("init writes config and resolve merges defaults", () => {
     const path = initConfig({ network: "preprod" });
-    expect(path).toContain("midnight-cast/config.toml");
+    expect(path).toContain(join("midnight-cast", "config.toml"));
 
     const resolved = resolveNetwork("preprod");
     expect(resolved.rpc).toContain("preprod");

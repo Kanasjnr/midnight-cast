@@ -1,3 +1,6 @@
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { decodeCommand } from "../src/commands/decode.js";
 
@@ -16,9 +19,52 @@ describe("decodeCommand", () => {
     expect(data.kind).toBe("ledger");
     expect(data.code).toBe(170);
     expect(data.name).toBe("InvalidDustSpendProof");
-    expect(data.ledger).toBe("8.0.3");
-    expect(data.networkLedger).toBe("8.1.0");
-    expect(data.mapMismatch).toContain("8.1.0");
+    // Bundled map and every network are on ledger 8.1.2: no mismatch.
+    expect(data.ledger).toBe("8.1.2");
+    expect(data.networkLedger).toBe("8.1.2");
+    expect(data.mapMismatch).toBeUndefined();
+  });
+
+  it("warns when the network's ledger differs from the bundled error map", () => {
+    // A user override matrix (as loadSupportMatrix reads it) puts preview on
+    // a ledger the bundled map wasn't built for.
+    const dir = mkdtempSync(join(tmpdir(), "midnight-cast-decode-"));
+    const previous = process.env.XDG_CONFIG_HOME;
+    try {
+      mkdirSync(join(dir, "midnight-cast"), { recursive: true });
+      writeFileSync(
+        join(dir, "midnight-cast", "support-matrix.json"),
+        JSON.stringify({
+          docUrl: "https://example.com",
+          updated: "2026-10",
+          networks: {
+            preview: {
+              node: "1.0.300",
+              ledger: "9.0.0",
+              indexer: "4.3.5",
+              indexerApi: "v4",
+              proofServer: "8.0.3",
+              onChainRuntime: "3.0.0",
+            },
+          },
+        }),
+      );
+      process.env.XDG_CONFIG_HOME = dir;
+      const result = decodeCommand(["170"], { json: true, network: "preview" });
+      const data = result.data as { networkLedger?: string; mapMismatch?: string };
+      expect(data.networkLedger).toBe("9.0.0");
+      expect(data.mapMismatch).toContain("9.0.0");
+    } finally {
+      if (previous === undefined) delete process.env.XDG_CONFIG_HOME;
+      else process.env.XDG_CONFIG_HOME = previous;
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("decodes system transaction code 211 (added in ledger 8.1)", () => {
+    const result = decodeCommand(["211"], { json: true });
+    expect(result.ok).toBe(true);
+    expect((result.data as { name: string }).name).toBe("MerkleTreeError");
   });
 
   it("decodes hex ledger code 0xAA", () => {
