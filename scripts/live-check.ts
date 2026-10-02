@@ -274,10 +274,20 @@ export function classify(input: ClassifyInput): CheckResult {
   return { network, status, findings, live, bundled, upstream: upstream?.versions };
 }
 
+/**
+ * Exit code for a result. Without upstream data a drift verdict is incomplete
+ * (upstream-ahead findings vanish), so it must not open, edit or close the
+ * issue: report an error instead. An outage is still reported as such.
+ */
+export function exitCodeFor(result: CheckResult): number {
+  if (result.status === "outage") return EXIT.outage;
+  if (!result.upstream) return EXIT.error;
+  return EXIT[result.status];
+}
+
 /** Stable across runs as long as the findings themselves don't change. */
 export function fingerprint(result: CheckResult): string {
   const key = result.findings
-    .filter((f) => f.kind !== "upstream-unavailable") // transient; don't churn the issue
     .map((f) => [f.kind, f.component, f.bundled, f.live, f.upstream].join("|"))
     .sort()
     .join("\n");
@@ -404,10 +414,14 @@ async function main(): Promise<number> {
 
   let upstream: UpstreamMatrix | undefined;
   let upstreamError: string | undefined;
-  try {
-    upstream = await fetchUpstream(network);
-  } catch (err) {
-    upstreamError = err instanceof Error ? err.message : String(err);
+  for (let attempt = 1; attempt <= opts.attempts && !upstream; attempt++) {
+    try {
+      upstream = await fetchUpstream(network);
+      upstreamError = undefined;
+    } catch (err) {
+      upstreamError = err instanceof Error ? err.message : String(err);
+      if (attempt < opts.attempts) await sleep(opts.delayMs);
+    }
   }
 
   // Retry so one slow response isn't reported as an outage.
@@ -448,7 +462,7 @@ async function main(): Promise<number> {
   }
 
   console.log(report);
-  return EXIT[result.status];
+  return exitCodeFor(result);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {

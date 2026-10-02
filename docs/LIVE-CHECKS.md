@@ -42,4 +42,4 @@ npm run live-check -- preprod --out live-check
 INTEGRATION=1 npm run test:smoke
 ```
 
-`live-check` exits 0 when clean, 10 on drift, 20 on an outage and 2 on a usage or internal error. To check mainnet locally, point your own `~/.config/midnight-cast/config.toml` at the Blockfrost URLs, and export `BLOCKFROST_PROJECT_ID` so it is redacted from the report.
+`live-check` exits 0 when clean, 10 on drift and 20 on an outage. It exits 2 on a usage or internal error, or when the upstream matrix still can't be fetched after retries: a verdict without it would be incomplete, so the issue is left unchanged. To check mainnet locally, point your own `~/.config/midnight-cast/config.toml` at the Blockfrost URLs, and export `BLOCKFROST_PROJECT_ID` so it is redacted from the report.

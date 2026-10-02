@@ -128,6 +128,7 @@ jobs:
                 exit 1
               fi ;;
             20) echo "::error title=${{ matrix.network }} outage::Public endpoints failed after retries."; exit 1 ;;
+            2) echo "::error title=${{ matrix.network }} incomplete::Check could not complete (upstream matrix unavailable or internal error); issue left unchanged."; exit 1 ;;
             *) echo "::error::live-check exited with $CODE"; exit 1 ;;
           esac
 

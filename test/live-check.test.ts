@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   bundledVersions,
   classify,
+  exitCodeFor,
   fingerprint,
   parseArgs,
   parseUpstreamMatrix,
@@ -251,15 +252,26 @@ describe("live-check fingerprint", () => {
     expect(fingerprint(drifted())).not.toBe(fingerprint(classify(input())));
   });
 
-  it("ignores a transient upstream fetch failure", () => {
-    const withUpstreamDown = drifted();
-    withUpstreamDown.findings.push({
-      kind: "upstream-unavailable",
-      severity: "info",
-      component: "upstream",
-      message: "timeout",
-    });
-    expect(fingerprint(withUpstreamDown)).toBe(fingerprint(drifted()));
+});
+
+describe("live-check exit code", () => {
+  it("maps clean, drift and outage to 0, 10 and 20", () => {
+    const base = input();
+    expect(exitCodeFor(classify(base))).toBe(0);
+    expect(exitCodeFor(classify({ ...base, bundled: { ...base.bundled, node: "1.0.2" } }))).toBe(10);
+    expect(exitCodeFor(classify(input({ health: { ok: false, error: "RPC unreachable" } })))).toBe(20);
+  });
+
+  it("refuses a verdict without upstream data, so the issue is left alone", () => {
+    // Bundled matches live, but upstream may be ahead: we can't call it clean.
+    expect(exitCodeFor(classify(input({ upstream: undefined, upstreamError: "HTTP 503" })))).toBe(2);
+  });
+
+  it("still reports an outage when upstream is also unavailable", () => {
+    const result = classify(
+      input({ upstream: undefined, upstreamError: "HTTP 503", health: { ok: false, error: "Indexer unreachable (503)" } }),
+    );
+    expect(exitCodeFor(result)).toBe(20);
   });
 });
 
