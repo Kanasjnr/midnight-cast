@@ -70,6 +70,7 @@ export async function versionsCommand(
     endpoints.network,
     matrix,
     live.nodeVersion,
+    live.runtimeSpecVersion,
   );
   const report: VersionsReport = {
     network: endpoints.network,

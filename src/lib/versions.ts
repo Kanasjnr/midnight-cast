@@ -7,7 +7,16 @@ import { loadDataJson } from "./data-path.js";
 import { sanitizeForOutput } from "./sanitize.js";
 
 export interface MatrixNetwork {
+  /** Recommended node release for running your own node. */
   node: string;
+  /**
+   * Oldest node that can follow this network. When set, the live check is
+   * "at least minNode" rather than an exact match: operators (Midnight,
+   * Blockfrost, self-hosted) run different builds of a compatible node.
+   */
+  minNode?: string;
+  /** Runtime spec_version the network runs; checked exactly when set. */
+  runtimeSpec?: number;
   ledger: string;
   indexer: string;
   indexerApi: string;
@@ -107,6 +116,25 @@ export function versionMatches(expected: string, live: string): boolean {
   return live === expected || live.startsWith(`${expected}-`);
 }
 
+/** Compare dotted numeric versions, ignoring any "-suffix". */
+export function compareVersions(a: string, b: string): number {
+  const parts = (v: string) => (v.split("-")[0] ?? v).split(".").map((n) => Number.parseInt(n, 10) || 0);
+  const pa = parts(a);
+  const pb = parts(b);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const d = (pa[i] ?? 0) - (pb[i] ?? 0);
+    if (d !== 0) return d < 0 ? -1 : 1;
+  }
+  return 0;
+}
+
+/** Whether a live node version satisfies the matrix row for its network. */
+export function nodeSatisfies(expected: MatrixNetwork, liveNodeVersion: string): boolean {
+  return expected.minNode
+    ? compareVersions(liveNodeVersion, expected.minNode) >= 0
+    : versionMatches(expected.node, liveNodeVersion);
+}
+
 export function detectIndexerApi(indexerHttp: string): string {
   if (indexerHttp.includes("/api/v4/")) return "v4";
   if (indexerHttp.includes("/api/v3/")) return "v3";
@@ -147,10 +175,22 @@ export function buildVersionChecks(
   const checks: VersionCheck[] = [
     {
       label: "node",
-      expected: expected.node,
+      expected: expected.minNode ? `>=${expected.minNode}` : expected.node,
       live: live.nodeVersion,
-      ok: versionMatches(expected.node, live.nodeVersion),
+      ok: nodeSatisfies(expected, live.nodeVersion),
+      ...(expected.minNode ? { note: `recommended ${expected.node}` } : {}),
     },
+    ...(expected.runtimeSpec !== undefined
+      ? [
+          {
+            label: "runtimeSpec",
+            expected: String(expected.runtimeSpec),
+            live: String(live.runtimeSpecVersion),
+            ok: live.runtimeSpecVersion === expected.runtimeSpec,
+            note: "node runtime spec_version vs matrix",
+          },
+        ]
+      : []),
     {
       label: "indexer-api",
       expected: expected.indexerApi,
@@ -184,28 +224,39 @@ export function buildNetworkMismatchWarning(
   selectedNetwork: string,
   matrix: SupportMatrixFile,
   liveNodeVersion: string,
+  liveRuntimeSpec?: number,
 ): string | undefined {
   const expected = matrix.networks[selectedNetwork];
   if (!expected) return undefined;
-  if (versionMatches(expected.node, liveNodeVersion)) return undefined;
+  const fits = (row: MatrixNetwork) =>
+    nodeSatisfies(row, liveNodeVersion) &&
+    (liveRuntimeSpec === undefined || row.runtimeSpec === undefined || row.runtimeSpec === liveRuntimeSpec);
+  if (fits(expected)) return undefined;
+
+  const wanted = expected.minNode ? `>=${expected.minNode}` : expected.node;
+  const live =
+    liveRuntimeSpec !== undefined && expected.runtimeSpec !== undefined
+      ? `Live node ${liveNodeVersion} (runtime spec ${liveRuntimeSpec})`
+      : `Live node ${liveNodeVersion}`;
+  const want =
+    expected.runtimeSpec !== undefined && liveRuntimeSpec !== undefined
+      ? `expected node ${wanted}, runtime spec ${expected.runtimeSpec}`
+      : `expected ${wanted}`;
 
   const otherMatches = Object.entries(matrix.networks)
-    .filter(
-      ([name, row]) =>
-        name !== selectedNetwork && versionMatches(row.node, liveNodeVersion),
-    )
+    .filter(([name, row]) => name !== selectedNetwork && fits(row))
     .map(([name]) => name);
 
   if (otherMatches.length > 0) {
     return (
-      `Live node ${liveNodeVersion} does not match "${selectedNetwork}" matrix ` +
-      `(expected ${expected.node}). Endpoints may point to ${otherMatches.join(" or ")}.`
+      `${live} does not match "${selectedNetwork}" matrix ` +
+      `(${want}). Endpoints may point to ${otherMatches.join(" or ")}.`
     );
   }
 
   return (
-    `Live node ${liveNodeVersion} does not match "${selectedNetwork}" matrix ` +
-    `(expected ${expected.node}). Check --network and endpoint URLs.`
+    `${live} does not match "${selectedNetwork}" matrix ` +
+    `(${want}). Check --network and endpoint URLs.`
   );
 }
 
@@ -289,7 +340,12 @@ export function formatVersionsHuman(report: VersionsReport): string {
   lines.push(
     "",
     "Expected (support matrix — reference):",
-    `  node:             ${report.expected.node}  [auto-checked]`,
+    report.expected.minNode
+      ? `  node:             >=${report.expected.minNode} (recommended ${report.expected.node})  [auto-checked]`
+      : `  node:             ${report.expected.node}  [auto-checked]`,
+    ...(report.expected.runtimeSpec !== undefined
+      ? [`  runtime spec:     ${report.expected.runtimeSpec}  [auto-checked]`]
+      : []),
     `  ledger:           ${report.expected.ledger}  [reference]`,
     `  indexer:          ${report.expected.indexer}  [reference]`,
     `  indexer-api:      ${report.expected.indexerApi}  [auto-checked]`,

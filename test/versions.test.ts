@@ -9,6 +9,8 @@ import {
   parseNodeVersion,
   versionMatches,
   fetchLiveVersions,
+  compareVersions,
+  nodeSatisfies,
 } from "../src/lib/versions.js";
 
 describe("versions helpers", () => {
@@ -146,6 +148,74 @@ describe("versions helpers", () => {
     const proof = checks.find((c) => c.label === "proof-server");
     expect(proof?.ok).toBe(true);
     expect(proof?.live).toBe("8.0.3");
+  });
+});
+
+describe("minimum node and runtime spec", () => {
+  // The Oct 2026 situation: runtime 1.0.300 needs node >= 1.0.300; Midnight's
+  // endpoints report 1.0.400 and Blockfrost's mainnet node reports 2.1.0.
+  const row = {
+    node: "1.0.300",
+    minNode: "1.0.300",
+    runtimeSpec: 1000300,
+    ledger: "8.1.2",
+    indexer: "4.3.302",
+    indexerApi: "v4",
+    proofServer: "8.1.0",
+    onChainRuntime: "3.0.0",
+  };
+  const live = (nodeVersion: string, spec = 1000300) => ({
+    nodeVersion,
+    runtimeSpecVersion: spec,
+    runtimeImplVersion: 0,
+    indexerProtocolVersion: spec,
+    indexerApi: "v4",
+  });
+
+  it("compares dotted versions numerically", () => {
+    expect(compareVersions("1.0.400", "1.0.300")).toBe(1);
+    expect(compareVersions("1.0.300", "1.0.300")).toBe(0);
+    expect(compareVersions("1.0.2", "1.0.300")).toBe(-1);
+    expect(compareVersions("2.1.0", "1.0.300")).toBe(1);
+    expect(compareVersions("1.0.300-abc", "1.0.300")).toBe(0);
+    expect(compareVersions("1.10.0", "1.9.0")).toBe(1);
+  });
+
+  it("accepts any node at or above the minimum", () => {
+    expect(nodeSatisfies(row, "1.0.300")).toBe(true);
+    expect(nodeSatisfies(row, "1.0.400")).toBe(true);
+    expect(nodeSatisfies(row, "2.1.0")).toBe(true);
+    expect(nodeSatisfies(row, "1.0.2")).toBe(false);
+  });
+
+  it("keeps exact matching when no minimum is set", () => {
+    const { minNode: _min, ...exact } = row;
+    expect(nodeSatisfies(exact, "1.0.300")).toBe(true);
+    expect(nodeSatisfies(exact, "1.0.400")).toBe(false);
+  });
+
+  it("passes Midnight's 1.0.400 and Blockfrost's 2.1.0, fails 1.0.2", () => {
+    for (const v of ["1.0.400", "2.1.0"]) {
+      expect(buildVersionChecks(row, live(v)).every((c) => c.ok)).toBe(true);
+    }
+    const old = buildVersionChecks(row, live("1.0.2"));
+    expect(old.find((c) => c.label === "node")).toMatchObject({ ok: false, expected: ">=1.0.300", live: "1.0.2" });
+  });
+
+  it("checks the runtime spec exactly", () => {
+    const checks = buildVersionChecks(row, live("1.0.400", 1000400));
+    expect(checks.find((c) => c.label === "runtimeSpec")).toMatchObject({
+      ok: false,
+      expected: "1000300",
+      live: "1000400",
+    });
+  });
+
+  it("warns about the network only when node or runtime spec don't fit", () => {
+    const matrix = { docUrl: "x", updated: "2026-10", networks: { mainnet: row } };
+    expect(buildNetworkMismatchWarning("mainnet", matrix, "2.1.0", 1000300)).toBeUndefined();
+    expect(buildNetworkMismatchWarning("mainnet", matrix, "1.0.2", 1000300)).toContain(">=1.0.300");
+    expect(buildNetworkMismatchWarning("mainnet", matrix, "1.0.400", 1000400)).toContain("runtime spec 1000300");
   });
 });
 
