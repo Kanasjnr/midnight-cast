@@ -102,6 +102,17 @@ function input(overrides: Partial<ClassifyInput> = {}): ClassifyInput {
   };
 }
 
+/**
+ * A network whose node no longer satisfies the bundled matrix, reported the
+ * way `midnight-cast versions` reports it: a failing node check.
+ */
+function nodeBehind(overrides: Partial<ClassifyInput> = {}): ClassifyInput {
+  const base = input(overrides);
+  base.bundled = { ...base.bundled, node: "1.0.500" };
+  base.versions!.data!.checks[0] = { label: "node", expected: ">=1.0.500", live: "1.0.400", ok: false };
+  return base;
+}
+
 describe("live-check tag and matrix parsing", () => {
   it("extracts versions from upstream tags", () => {
     expect(versionFromTag("node-1.0.400")).toBe("1.0.400");
@@ -151,19 +162,33 @@ describe("live-check classify", () => {
     expect(classify(input()).findings.some((f) => f.component === "proof-server")).toBe(false);
   });
 
-  it("flags bundled drift when the network upgrades past the bundled matrix", () => {
-    const base = input();
-    const result = classify({
-      ...base,
-      bundled: { ...base.bundled, node: "1.0.2" },
-    });
+  it("flags bundled drift when the CLI's node check fails", () => {
+    const result = classify(nodeBehind());
     expect(result.status).toBe("drift");
     expect(result.findings).toContainEqual(
-      expect.objectContaining({ kind: "bundled-drift", component: "node", live: "1.0.400", bundled: "1.0.2" }),
+      expect.objectContaining({ kind: "bundled-drift", component: "node", live: "1.0.400", bundled: ">=1.0.500" }),
     );
+  });
+
+  it("is clean when the live node satisfies the matrix minimum, whatever the recommended release", () => {
+    // Oct 2026: recommended 1.0.300 (newest public release), live 1.0.400,
+    // and Midnight's matrix lists 1.0.400. The CLI's node check passes.
+    const base = input();
+    const result = classify({ ...base, bundled: { ...base.bundled, node: "1.0.300" } });
+    expect(result.status).toBe("clean");
     expect(result.findings).toContainEqual(
-      expect.objectContaining({ kind: "upstream-ahead", component: "node", upstream: "1.0.400" }),
+      expect.objectContaining({ kind: "upstream-differs", severity: "info", component: "node" }),
     );
+  });
+
+  it("flags a runtime spec change as release-blocking drift", () => {
+    const base = input();
+    base.versions!.data!.checks.push({ label: "runtimeSpec", expected: "1000300", live: "1000400", ok: false });
+    const result = classify(base);
+    expect(result.findings).toContainEqual(
+      expect.objectContaining({ kind: "bundled-drift", component: "runtimeSpec", bundled: "1000300", live: "1000400" }),
+    );
+    expect(releaseBlockers(result).map((f) => f.component)).toContain("runtimeSpec");
   });
 
   it("accepts a live version with a build suffix", () => {
@@ -238,10 +263,7 @@ describe("live-check classify", () => {
 });
 
 describe("live-check fingerprint", () => {
-  const drifted = () => {
-    const base = input();
-    return classify({ ...base, bundled: { ...base.bundled, node: "1.0.2" } });
-  };
+  const drifted = () => classify(nodeBehind());
 
   it("is stable for identical findings regardless of order", () => {
     const a = drifted();
@@ -251,30 +273,25 @@ describe("live-check fingerprint", () => {
   });
 
   it("ignores the upstream fetch flapping during an outage, even alongside drift", () => {
-    const base = input();
     const outage = (upstreamUp: boolean) =>
-      classify({
-        ...base,
-        // bundled behind live and upstream: bundled-drift (with an upstream
-        // field) and upstream-ahead, both of which vanish without upstream
-        bundled: { ...base.bundled, node: "1.0.2" },
-        health: { ok: false, error: "Indexer unreachable (503)" },
-        ...(upstreamUp ? {} : { upstream: undefined, upstreamError: "HTTP 503" }),
-      });
+      classify(
+        nodeBehind({
+          // bundled-drift carries an upstream field, and upstream-differs
+          // exists, only while the upstream fetch works
+          health: { ok: false, error: "Indexer unreachable (503)" },
+          ...(upstreamUp ? {} : { upstream: undefined, upstreamError: "HTTP 503" }),
+        }),
+      );
     const up = outage(true);
     expect(up.findings.map((f) => f.kind)).toEqual(
-      expect.arrayContaining(["outage", "bundled-drift", "upstream-ahead"]),
+      expect.arrayContaining(["outage", "bundled-drift", "upstream-differs"]),
     );
     expect(fingerprint(outage(false))).toBe(fingerprint(up));
   });
 
   it("still updates an outage issue when drift unrelated to upstream changes", () => {
-    const outageWithNode = (node: string) => {
-      const base = input({ health: { ok: false, error: "Indexer unreachable (503)" } });
-      base.versions!.data!.live.nodeVersion = node;
-      return classify(base);
-    };
-    expect(fingerprint(outageWithNode("1.0.400"))).not.toBe(fingerprint(outageWithNode("2.1.0")));
+    const outage = { health: { ok: false, error: "Indexer unreachable (503)" } } as const;
+    expect(fingerprint(classify(input(outage)))).not.toBe(fingerprint(classify(nodeBehind(outage))));
   });
 
   it("keeps one outage's fingerprint stable as the failure mode varies", () => {
@@ -315,9 +332,7 @@ describe("live-check fingerprint", () => {
 
 describe("live-check release blockers", () => {
   it("blocks on disagreement with the live network", () => {
-    const base = input();
-    const result = classify({ ...base, bundled: { ...base.bundled, node: "1.0.2" } });
-    expect(releaseBlockers(result).map((f) => f.kind)).toContain("bundled-drift");
+    expect(releaseBlockers(classify(nodeBehind())).map((f) => f.kind)).toContain("bundled-drift");
   });
 
   it("blocks when upstream is ahead for a component the endpoints don't reveal", () => {
@@ -338,8 +353,8 @@ describe("live-check release blockers", () => {
       ...base,
       upstream: { versions: { ...base.upstream!.versions, node: "1.0.500" }, notes: [] },
     });
-    expect(result.status).toBe("drift");
-    expect(result.findings.map((f) => f.kind)).toContain("upstream-ahead");
+    expect(result.status).toBe("clean");
+    expect(result.findings.map((f) => f.kind)).toContain("upstream-differs");
     expect(releaseBlockers(result)).toEqual([]);
   });
 
@@ -351,7 +366,7 @@ describe("live-check release blockers", () => {
       upstream: { versions: { ...base.upstream!.versions, proofServer: "8.2.0" }, notes: [] },
     });
     expect(result.live.proofServer).toBeUndefined();
-    expect(result.findings.map((f) => f.kind)).toContain("upstream-ahead");
+    expect(result.findings.map((f) => f.kind)).toContain("upstream-differs");
     expect(releaseBlockers(result)).toEqual([]);
   });
 
@@ -367,7 +382,7 @@ describe("live-check exit code", () => {
   it("maps clean, drift and outage to 0, 10 and 20", () => {
     const base = input();
     expect(exitCodeFor(classify(base))).toBe(0);
-    expect(exitCodeFor(classify({ ...base, bundled: { ...base.bundled, node: "1.0.2" } }))).toBe(10);
+    expect(exitCodeFor(classify(nodeBehind()))).toBe(10);
     expect(exitCodeFor(classify(input({ health: { ok: false, error: "RPC unreachable" } })))).toBe(20);
   });
 
@@ -395,12 +410,11 @@ describe("live-check redact and render", () => {
   });
 
   it("renders a table with every component and the findings", () => {
-    const base = input();
-    const md = renderMarkdown(classify({ ...base, bundled: { ...base.bundled, node: "1.0.2" } }), {
+    const md = renderMarkdown(classify(nodeBehind()), {
       checkedAt: "2026-10-02T00:00:00Z",
     });
     expect(md).toContain("### ⚠️ preprod: drift");
-    expect(md).toContain("| node | `1.0.400` | `1.0.2` | `1.0.400` |");
+    expect(md).toContain("| node | `1.0.400` | `1.0.500` | `1.0.400` |");
     expect(md).toContain("| drift | bundled-drift | node |");
     expect(md).toContain("Checked at 2026-10-02T00:00:00Z.");
   });

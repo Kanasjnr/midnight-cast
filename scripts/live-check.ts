@@ -40,6 +40,7 @@ export type FindingKind =
   | "protocol-split"
   | "bundled-drift"
   | "upstream-ahead"
+  | "upstream-differs"
   | "upstream-lag"
   | "upstream-unavailable"
   | "indexer-api-undetected";
@@ -113,12 +114,25 @@ const SEVERITY: Record<FindingKind, Severity> = {
   "protocol-split": "drift",
   "bundled-drift": "drift",
   "upstream-ahead": "drift",
+  "upstream-differs": "info",
   "upstream-lag": "info",
   "upstream-unavailable": "info",
   "indexer-api-undetected": "info",
 };
 
-const UPSTREAM_KINDS = new Set<FindingKind>(["upstream-ahead", "upstream-lag", "upstream-unavailable"]);
+const UPSTREAM_KINDS = new Set<FindingKind>([
+  "upstream-ahead",
+  "upstream-differs",
+  "upstream-lag",
+  "upstream-unavailable",
+]);
+
+/**
+ * Never visible from the public endpoints, whatever a given run manages to
+ * reach. For these Midnight's published matrix is the only source of truth;
+ * node and proof server are checked against the live network instead.
+ */
+const UNOBSERVABLE = new Set<Component>(["indexer", "onChainRuntime", "compactRuntime"]);
 
 /** "node-1.0.400" / "midnight-indexer-4.3.302" -> "1.0.400" */
 export function versionFromTag(tag: string | undefined): string | undefined {
@@ -230,16 +244,24 @@ export function classify(input: ClassifyInput): CheckResult {
     add("outage", "versions", input.versions?.error ?? "versions check produced no usable output");
   }
 
-  for (const key of ["node", "proofServer"] as const) {
-    const mine = bundled[key];
-    const seen = live[key];
-    if (mine && seen && !versionMatches(mine, seen)) {
-      add("bundled-drift", key, `live ${seen}, bundled matrix ${mine}`, {
-        bundled: mine,
-        live: seen,
-        upstream: upstream?.versions[key],
-      });
-    }
+  // The CLI's own checks decide whether the live network satisfies the
+  // bundled matrix (node minimum, exact runtime spec, proof server), so the
+  // checker and `midnight-cast versions` can never disagree.
+  const checked = [
+    ["node", "node"],
+    ["runtimeSpec", "runtimeSpec"],
+    ["proof-server", "proofServer"],
+  ] as const;
+  for (const [label, component] of checked) {
+    const check = versions?.checks.find((c) => c.label === label);
+    if (!check || check.ok) continue;
+    // An unreachable optional proof server is not drift.
+    if (component === "proofServer" && !live.proofServer) continue;
+    add("bundled-drift", component, `live ${check.live}, bundled matrix ${check.expected}`, {
+      bundled: check.expected,
+      live: check.live,
+      upstream: component === "runtimeSpec" ? undefined : upstream?.versions[component],
+    });
   }
 
   if (!upstream) {
@@ -254,10 +276,14 @@ export function classify(input: ClassifyInput): CheckResult {
       if (!up) continue;
       const mine = bundled[key];
       if (mine && up !== mine) {
-        add("upstream-ahead", key, `upstream matrix ${up}, bundled matrix ${mine}`, {
-          bundled: mine,
-          upstream: up,
-        });
+        // Drift only where upstream is the sole source of truth; for observed
+        // components the live check above is what counts.
+        add(
+          UNOBSERVABLE.has(key) ? "upstream-ahead" : "upstream-differs",
+          key,
+          `upstream matrix ${up}, bundled matrix ${mine}`,
+          { bundled: mine, upstream: up },
+        );
       }
       const seen = live[key];
       if (seen && !versionMatches(up, seen)) {
@@ -289,26 +315,22 @@ export function failingService(message: string): string {
 
 /**
  * Findings that block a release. The live network is the truth where we can
- * see it: a release must not ship a bundled matrix that disagrees with what a
- * network runs, or while node and indexer disagree, or during an outage.
- *
- * upstream-ahead blocks only for components the endpoints don't reveal
- * (indexer, on-chain runtime, compact runtime), where Midnight's published
- * matrix is the only source of truth. For observed components (node, proof
- * server) it is a heads-up: Midnight can publish a version before a network
- * runs it, and blocking then would leave no bundled matrix that could pass.
+ * see it: a release must not ship a bundled matrix the network doesn't
+ * satisfy, or while node and indexer disagree, or during an outage. For
+ * components the endpoints don't reveal, Midnight's matrix being ahead of the
+ * bundled one (upstream-ahead) blocks too. For observed components a
+ * differing upstream number is only upstream-differs: Midnight can publish a
+ * version before a network runs it, or one that has no public release.
  */
-const RELEASE_BLOCKING = new Set<FindingKind>(["outage", "bundled-drift", "protocol-split"]);
-
-/** Never visible from the public endpoints, whatever a given run manages to reach. */
-const UNOBSERVABLE = new Set<Component>(["indexer", "onChainRuntime", "compactRuntime"]);
+const RELEASE_BLOCKING = new Set<FindingKind>([
+  "outage",
+  "bundled-drift",
+  "protocol-split",
+  "upstream-ahead",
+]);
 
 export function releaseBlockers(result: CheckResult): Finding[] {
-  return result.findings.filter(
-    (f) =>
-      RELEASE_BLOCKING.has(f.kind) ||
-      (f.kind === "upstream-ahead" && UNOBSERVABLE.has(f.component as Component)),
-  );
+  return result.findings.filter((f) => RELEASE_BLOCKING.has(f.kind));
 }
 
 /**
