@@ -70,10 +70,11 @@ export function parseMatrixUpdated(updated: string): Date | null {
 export function isMatrixStale(
   updated: string,
   maxAgeDays = MATRIX_STALE_DAYS,
+  now: number = Date.now(),
 ): boolean {
   const parsed = parseMatrixUpdated(updated);
   if (!parsed) return false;
-  const ageMs = Date.now() - parsed.getTime();
+  const ageMs = now - parsed.getTime();
   return ageMs > maxAgeDays * 24 * 60 * 60 * 1000;
 }
 

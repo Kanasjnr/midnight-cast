@@ -34,8 +34,10 @@ describe("versions helpers", () => {
   });
 
   it("detects stale matrix by age", () => {
-    expect(isMatrixStale("2026-08", 45)).toBe(false);
-    expect(isMatrixStale("2024-01", 45)).toBe(true);
+    const now = Date.UTC(2026, 8, 1); // 2026-09-01, fixed so the test never ages out
+    expect(isMatrixStale("2026-08", 45, now)).toBe(false);
+    expect(isMatrixStale("2026-07-01", 45, now)).toBe(true);
+    expect(isMatrixStale("2024-01", 45, now)).toBe(true);
   });
 
   it("builds local package checks against matrix pins", () => {
