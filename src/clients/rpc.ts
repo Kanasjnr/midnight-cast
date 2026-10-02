@@ -1,4 +1,4 @@
-import { postJson } from "../lib/http.js";
+import { postJson, readJson } from "../lib/http.js";
 import { sanitizeForOutput } from "../lib/sanitize.js";
 
 const DEFAULT_TIMEOUT_MS = 10_000;
@@ -39,7 +39,7 @@ export async function jsonRpc<T>(
     throw new Error(`RPC unreachable (${response.status})`);
   }
 
-  const body = (await response.json()) as JsonRpcResponse<T>;
+  const body = await readJson<JsonRpcResponse<T>>(response, "RPC");
   if (body.error) {
     throw new Error(`RPC error: ${sanitizeForOutput(body.error.message)}`);
   }

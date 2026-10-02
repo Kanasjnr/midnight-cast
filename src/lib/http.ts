@@ -46,3 +46,13 @@ export async function postJson(
     await sleep(delay);
   }
 }
+
+export async function readJson<T>(response: Response, service: "RPC" | "Indexer"): Promise<T> {
+  try {
+    return (await response.json()) as T;
+  } catch (err) {
+    throw new Error(
+      err instanceof SyntaxError ? `${service} unreachable (invalid response)` : `${service} unreachable`,
+    );
+  }
+}

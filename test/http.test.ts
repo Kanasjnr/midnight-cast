@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { postJson } from "../src/lib/http.js";
+import { postJson, readJson } from "../src/lib/http.js";
 import { jsonRpc } from "../src/clients/rpc.js";
 
 const ok = (body: unknown) => new Response(JSON.stringify(body), { status: 200 });
@@ -96,6 +96,26 @@ describe("postJson", () => {
     const [, init] = fetchMock.mock.calls[0]!;
     expect(init.body).toBe('{"query":"q"}');
     expect(init.headers).toMatchObject({ "Content-Type": "application/json", project_id: "p" });
+  });
+});
+
+describe("readJson", () => {
+  it("reports a body read cut off by the timeout as unreachable", async () => {
+    const response = new Response("{}");
+    vi.spyOn(response, "json").mockRejectedValue(Object.assign(new Error("aborted"), { name: "TimeoutError" }));
+    await expect(readJson(response, "RPC")).rejects.toThrow(/^RPC unreachable$/);
+  });
+
+  it("reports a connection dropped mid-body as unreachable", async () => {
+    const response = new Response("{}");
+    vi.spyOn(response, "json").mockRejectedValue(new TypeError("terminated"));
+    await expect(readJson(response, "RPC")).rejects.toThrow(/^RPC unreachable$/);
+  });
+
+  it("reports a body that isn't JSON as an invalid response", async () => {
+    await expect(readJson(new Response("<html>Bad Gateway</html>"), "Indexer")).rejects.toThrow(
+      "Indexer unreachable (invalid response)",
+    );
   });
 });
 

@@ -1,7 +1,7 @@
 import { createClient, type Client } from "graphql-ws";
 import WebSocket from "ws";
 import type { NetworkEndpoints } from "../networks.js";
-import { postJson } from "../lib/http.js";
+import { postJson, readJson } from "../lib/http.js";
 
 const DEFAULT_TIMEOUT_MS = 10_000;
 
@@ -27,7 +27,7 @@ export async function gqlPost<T>(
     throw new Error(`Indexer unreachable (${response.status})`);
   }
 
-  const body = (await response.json()) as GqlResponse<T>;
+  const body = await readJson<GqlResponse<T>>(response, "Indexer");
   if (body.errors?.length) {
     throw new Error(
       `Indexer unreachable: ${body.errors.map((e) => e.message).join("; ")}`,
