@@ -478,7 +478,7 @@ export function decodeCommand(
       network: validateDecodeNetwork(options.network),
     };
   } catch (err) {
-    return fail(err instanceof Error ? err.message : String(err));
+    return fail(err);
   }
 
   if (options.raw) {

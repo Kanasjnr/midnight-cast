@@ -31,14 +31,14 @@ export async function rpcCommand(
   try {
     endpoints = resolveNetwork(networkArg ?? flags.network, flags);
   } catch (err) {
-    return fail(err instanceof Error ? err.message : String(err));
+    return fail(err);
   }
 
   let params: unknown[];
   try {
     params = parseParams(paramsJson);
   } catch (err) {
-    return fail(err instanceof Error ? err.message : String(err));
+    return fail(err);
   }
 
   try {
@@ -57,6 +57,6 @@ export async function rpcCommand(
         : JSON.stringify(result, null, 2),
     };
   } catch (err) {
-    return fail(err instanceof Error ? err.message : "RPC unreachable");
+    return fail(err);
   }
 }

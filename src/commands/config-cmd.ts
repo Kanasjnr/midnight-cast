@@ -60,7 +60,7 @@ export async function configInitCommand(opts: {
         : {}),
     });
   } catch (err) {
-    return fail(err instanceof Error ? err.message : String(err));
+    return fail(err);
   }
 }
 
@@ -98,7 +98,7 @@ export function configShowCommand(
       .map(([k, v]) => `${k}: ${v ?? ""}`);
     return success(lines.join("\n"));
   } catch (err) {
-    return fail(err instanceof Error ? err.message : String(err));
+    return fail(err);
   }
 }
 

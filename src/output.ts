@@ -1,8 +1,11 @@
+import { NetworkError } from "./lib/network-error.js";
 import { sanitizeDeep, sanitizeForOutput } from "./lib/sanitize.js";
 
 export interface EmitResult<T = unknown> {
   ok: boolean;
   error?: string;
+  errorKind?: string;
+  hint?: string;
   data?: T;
   exitCode?: number;
 }
@@ -32,6 +35,7 @@ export function emit<T>(
   } else {
     if (safe.data !== undefined) printHuman(safe.data);
     if (!safe.ok && safe.error) console.error(safe.error);
+    if (!safe.ok && safe.hint) console.error(`Hint: ${safe.hint}`);
   }
 
   if (!safe.ok) {
@@ -44,6 +48,9 @@ function sanitizeEmitResult<T>(result: EmitResult<T>): EmitResult<T> {
   const next: EmitResult<T> = { ...result };
   if (next.error !== undefined) {
     next.error = sanitizeForOutput(next.error);
+  }
+  if (next.hint !== undefined) {
+    next.hint = sanitizeForOutput(next.hint);
   }
   if (next.data !== undefined) {
     next.data = sanitizeDeep(next.data);
@@ -101,10 +108,19 @@ function formatValue(value: unknown): string {
 }
 
 export function fail(
-  error: string,
+  error: unknown,
   exitCode = 1,
 ): EmitResult<never> {
-  return { ok: false, error, exitCode };
+  if (error instanceof NetworkError) {
+    return {
+      ok: false,
+      error: error.message,
+      errorKind: error.kind,
+      ...(error.hint ? { hint: error.hint } : {}),
+      exitCode,
+    };
+  }
+  return { ok: false, error: error instanceof Error ? error.message : String(error), exitCode };
 }
 
 export function success<T>(data: T, exitCode = 0): EmitResult<T> {

@@ -17,7 +17,7 @@ export async function tipCommand(
   try {
     endpoints = resolveNetwork(networkArg ?? flags.network, flags);
   } catch (err) {
-    return fail(err instanceof Error ? err.message : String(err));
+    return fail(err);
   }
 
   const threshold = flags.threshold ?? 100;
@@ -29,13 +29,13 @@ export async function tipCommand(
     const header = await chainGetHeader(endpoints.rpc);
     rpcHeight = parseBlockNumber(header.number);
   } catch (err) {
-    return fail(err instanceof Error ? err.message : "RPC unreachable");
+    return fail(err);
   }
 
   try {
     indexerHeight = await getLatestBlockHeight(endpoints.indexerHttp);
   } catch (err) {
-    return fail(err instanceof Error ? err.message : "Indexer unreachable");
+    return fail(err);
   }
 
   const delta = computeDelta(rpcHeight, indexerHeight);
