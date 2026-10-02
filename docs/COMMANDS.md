@@ -69,21 +69,21 @@ mn config show --network mainnet --json
 
 ## `mn ping [network]`
 
-Check RPC and indexer reachability. If a proof server URL is configured, also GET `/version` and compare it to the support matrix pin (for example `8.0.3`). Proof-server FAIL does not change the command exit code.
+Check RPC and indexer reachability. If a proof server URL is configured, also GET `/version` and compare it to the support matrix pin (for example `8.1.0`). Proof-server FAIL does not change the command exit code.
 
 ```bash
 mn ping preprod
 mn ping preview --json
 ```
 
-**Proof server row:** `version=8.0.3 (matches matrix 8.0.3)` or `version=… (expected …)` on mismatch. Unreachable hosts (e.g. mainnet DNS not live yet) show as FAIL with detail.
+**Proof server row:** `version=8.1.0 (matches matrix 8.1.0)` or `version=… (expected …)` on mismatch. Unreachable hosts (e.g. mainnet DNS not live yet) show as FAIL with detail.
 
 Example output:
 
 ```text
 service=rpc  status=OK  latencyMs=700
 service=indexer  status=OK  latencyMs=543
-service=proof-server  status=OK  latencyMs=1044  optional=true  version=8.0.3  detail=version=8.0.3 (matches matrix 8.0.3)
+service=proof-server  status=OK  latencyMs=1044  optional=true  version=8.1.0  detail=version=8.1.0 (matches matrix 8.1.0)
 ```
 
 **Exit code:** `0` if RPC and indexer OK; `1` otherwise.
@@ -115,22 +115,23 @@ Network: preprod
 Healthy: yes
 
 Services:
-  rpc: OK (1104ms)
-  indexer: OK (2226ms)
-  proof-server: OK (3902ms) (optional) — version=8.0.3 (matches matrix 8.0.3)
+  rpc: OK (668ms)
+  indexer: OK (1215ms)
+  proof-server: OK (1053ms) (optional) — version=8.1.0 (matches matrix 8.1.0)
 
 Sync:
-  RPC height:      1477767
-  Indexer height:  1477765
+  RPC height:      2805470
+  Indexer height:  2805468
   Delta:           2 (threshold 100)
   In sync:         yes
 
 Versions:
-  Matrix updated:  2026-06
-  node: OK (expected 0.22.5, live 0.22.5)
+  Matrix updated:  2026-10
+  node: OK (expected >=1.0.300, live 1.0.400)
+  runtimeSpec: OK (expected 1000300, live 1000300)
   indexer-api: OK (expected v4, live v4)
-  protocolVersion: OK (expected 22000, live 22000)
-  proof-server: OK (expected 8.0.3, live 8.0.3)
+  protocolVersion: OK (expected 1000300, live 1000300)
+  proof-server: OK (expected 8.1.0, live 8.1.0)
 ```
 
 **Exit code:** `0` when RPC and indexer are up and optional CI flags pass. Version mismatches are **warnings** unless `--fail-on-mismatch` is set. Proof server failure does not fail health by itself.
@@ -184,13 +185,13 @@ mn versions preprod --no-local
 | `--fail-on-mismatch` | Exit `1` if live checks fail (CI) |
 | `--no-local` | Do not read `package.json` in cwd |
 
-**Live checks:** node `system_version`, indexer API path (`v4`), RPC `specVersion` vs indexer `protocolVersion`, proof server `GET /version` when URL is configured.
+**Live checks:** node `system_version` against the matrix minimum (`>=minNode`; exact match for rows without one), node runtime `specVersion` against the matrix `runtimeSpec`, indexer API path (`v4`), RPC `specVersion` vs indexer `protocolVersion`, and proof server `GET /version` when a URL is configured. A minimum rather than an exact node version is used because different operators run different compatible builds: on 2 October 2026 Midnight's endpoints reported node 1.0.400 and Blockfrost's mainnet node 2.1.0, both on runtime 1000300.
 
 **Reference only:** ledger, indexer package version, and on-chain runtime are shown for manual comparison.
 
 **Local deps:** reads every `@midnight-ntwrk/*` package from `package.json`. When the matrix defines `packages` pins, compares local semver specs and reports **MISMATCH**.
 
-**Network warning:** if live `system_version` does not match the selected matrix row, warns that your endpoints may point at a different environment.
+**Network warning:** if the live node or runtime spec doesn't fit the selected matrix row, warns that your endpoints may point at a different environment.
 
 **Staleness:** warns when the bundled support matrix is older than 45 days (possible false mismatches).
 
@@ -200,10 +201,11 @@ Example output:
 
 ```text
 Checks:
-  node: expected=0.22.5 live=0.22.5 → OK
+  node: expected=>=1.0.300 live=1.0.400 → OK (recommended 1.0.300)
+  runtimeSpec: expected=1000300 live=1000300 → OK (node runtime spec_version vs matrix)
   indexer-api: expected=v4 live=v4 → OK (from configured indexer URL path)
-  protocolVersion: expected=22000 live=22000 → OK (RPC specVersion vs indexer latest block)
-  proof-server: expected=8.0.3 live=8.0.3 → OK (GET /version on configured proof server URL)
+  protocolVersion: expected=1000300 live=1000300 → OK (RPC specVersion vs indexer latest block)
+  proof-server: expected=8.1.0 live=8.1.0 → OK (GET /version on configured proof server URL)
 
 Summary: live stack matches matrix checks ✓
 ```

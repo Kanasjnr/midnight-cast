@@ -55,13 +55,13 @@ Network: preprod
 Healthy: yes
 
 Services:
-  rpc: OK (1104ms)
-  indexer: OK (2226ms)
-  proof-server: OK (3902ms) (optional) — version=8.0.3 (matches matrix 8.0.3)
+  rpc: OK (668ms)
+  indexer: OK (1215ms)
+  proof-server: OK (1053ms) (optional) — version=8.1.0 (matches matrix 8.1.0)
 
 Sync:
-  RPC height:      1477767
-  Indexer height:  1477765
+  RPC height:      2805470
+  Indexer height:  2805468
   Delta:           2 (threshold 100)
   In sync:         yes
 ```
@@ -101,10 +101,11 @@ Example output:
 
 ```text
 Checks:
-  node: expected=0.22.5 live=0.22.5 → OK
+  node: expected=>=1.0.300 live=1.0.400 → OK (recommended 1.0.300)
+  runtimeSpec: expected=1000300 live=1000300 → OK (node runtime spec_version vs matrix)
   indexer-api: expected=v4 live=v4 → OK (from configured indexer URL path)
-  protocolVersion: expected=22000 live=22000 → OK (RPC specVersion vs indexer latest block)
-  proof-server: expected=8.0.3 live=8.0.3 → OK (GET /version on configured proof server URL)
+  protocolVersion: expected=1000300 live=1000300 → OK (RPC specVersion vs indexer latest block)
+  proof-server: expected=8.1.0 live=8.1.0 → OK (GET /version on configured proof server URL)
 
 Summary: live stack matches matrix checks ✓
 ```
