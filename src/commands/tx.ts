@@ -9,6 +9,26 @@ import { resolveNetwork, type ResolveFlags } from "../config.js";
 import type { EmitResult, GlobalOptions } from "../output.js";
 import { fail } from "../output.js";
 
+/** Optional: warns when the endpoints' node or runtime don't fit the selected network. */
+async function networkWarningFor(
+  endpoints: { rpc: string; network: string },
+): Promise<string | undefined> {
+  try {
+    const [systemVersion, runtime] = await Promise.all([
+      jsonRpc<string>(endpoints.rpc, "system_version", []),
+      jsonRpc<{ specVersion: number }>(endpoints.rpc, "chain_getRuntimeVersion", []),
+    ]);
+    return buildNetworkMismatchWarning(
+      endpoints.network,
+      loadSupportMatrix(),
+      parseNodeVersion(systemVersion),
+      runtime.specVersion,
+    );
+  } catch {
+    return undefined; // optional warning only
+  }
+}
+
 export async function txCommand(
   hashOrId: string,
   networkArg: string | undefined,
@@ -35,22 +55,9 @@ export async function txCommand(
       return fail(`Transaction not found for ${kind}: ${hashOrId}`);
     }
 
+    const networkWarning = await networkWarningFor(endpoints);
+
     if (options.json) {
-      let networkWarning: string | undefined;
-      try {
-        const systemVersion = await jsonRpc<string>(
-          endpoints.rpc,
-          "system_version",
-          [],
-        );
-        networkWarning = buildNetworkMismatchWarning(
-          endpoints.network,
-          loadSupportMatrix(),
-          parseNodeVersion(systemVersion),
-        );
-      } catch {
-        // optional warning only
-      }
       return {
         ok: true,
         data: {
@@ -62,22 +69,8 @@ export async function txCommand(
     }
 
     let human = formatTransactionHuman(tx);
-    try {
-      const systemVersion = await jsonRpc<string>(
-        endpoints.rpc,
-        "system_version",
-        [],
-      );
-      const networkWarning = buildNetworkMismatchWarning(
-        endpoints.network,
-        loadSupportMatrix(),
-        parseNodeVersion(systemVersion),
-      );
-      if (networkWarning) {
-        human += `\n\nWarning:  ${networkWarning}`;
-      }
-    } catch {
-      // optional warning only
+    if (networkWarning) {
+      human += `\n\nWarning:  ${networkWarning}`;
     }
 
     return { ok: true, data: human };
