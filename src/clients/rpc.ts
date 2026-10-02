@@ -1,6 +1,7 @@
+import { postJson } from "../lib/http.js";
 import { sanitizeForOutput } from "../lib/sanitize.js";
 
-const DEFAULT_TIMEOUT_MS = 5000;
+const DEFAULT_TIMEOUT_MS = 10_000;
 
 export interface JsonRpcResponse<T = unknown> {
   jsonrpc: string;
@@ -21,21 +22,15 @@ export async function jsonRpc<T>(
   url: string,
   method: string,
   params: unknown[] = [],
-  timeoutMs = DEFAULT_TIMEOUT_MS,
+  { timeoutMs = DEFAULT_TIMEOUT_MS, attempts }: { timeoutMs?: number; attempts?: number } = {},
 ): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        method,
-        params,
-        id: 1,
-      }),
-      signal: AbortSignal.timeout(timeoutMs),
-    });
+    response = await postJson(
+      url,
+      { jsonrpc: "2.0", method, params, id: 1 },
+      { timeoutMs, attempts },
+    );
   } catch {
     throw new Error("RPC unreachable");
   }

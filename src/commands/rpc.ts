@@ -42,7 +42,8 @@ export async function rpcCommand(
   }
 
   try {
-    const result = await jsonRpc(endpoints.rpc, method, params);
+    // Any method can be called here, including ones that submit, so no retries.
+    const result = await jsonRpc(endpoints.rpc, method, params, { attempts: 1 });
 
     return {
       ok: true,
