@@ -3,6 +3,7 @@ import WebSocket from "ws";
 import type { NetworkEndpoints } from "../networks.js";
 import { postJson, readJson } from "../lib/http.js";
 import { blockfrostHttpError, isBlockfrostUrl, takeProjectId } from "../lib/blockfrost.js";
+import { NetworkError, statusKind, transportKind } from "../lib/network-error.js";
 
 const DEFAULT_TIMEOUT_MS = 10_000;
 
@@ -25,25 +26,30 @@ export async function gqlPost<T>(
       { query, variables },
       { timeoutMs, headers: projectId ? { project_id: projectId } : {} },
     );
-  } catch {
-    throw new Error("Indexer unreachable");
+  } catch (err) {
+    throw new NetworkError("Indexer unreachable", transportKind(err), "Indexer");
   }
 
   if (!response.ok) {
-    throw new Error(
+    throw new NetworkError(
       (isBlockfrostUrl(target) && blockfrostHttpError("Indexer", response.status)) ||
         `Indexer unreachable (${response.status})`,
+      statusKind(response.status),
+      "Indexer",
+      response.status,
     );
   }
 
   const body = await readJson<GqlResponse<T>>(response, "Indexer");
   if (body.errors?.length) {
-    throw new Error(
+    throw new NetworkError(
       `Indexer unreachable: ${body.errors.map((e) => e.message).join("; ")}`,
+      "graphql_error",
+      "Indexer",
     );
   }
   if (!body.data) {
-    throw new Error("Indexer unreachable (no data)");
+    throw new NetworkError("Indexer unreachable (no data)", "invalid_response", "Indexer");
   }
   return body.data;
 }
@@ -177,8 +183,10 @@ export async function subscribeDustEvents(
         },
         error: (err) => {
           finish(
-            new Error(
+            new NetworkError(
               `Indexer WS unreachable: ${err instanceof Error ? err.message : String(err)}`,
+              transportKind(err),
+              "Indexer",
             ),
           );
         },
