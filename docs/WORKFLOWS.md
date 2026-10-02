@@ -74,7 +74,7 @@ mn versions preprod
 | Result | Action |
 |--------|--------|
 | `health` / `ping` FAIL on RPC or indexer | Fix connectivity first |
-| `proof-server` FAIL or version mismatch | Check local proof server / SDK pin vs matrix; mainnet URL may not exist yet |
+| `proof-server` FAIL or version mismatch | Check local proof server / SDK pin vs matrix; on mainnet the proof server always runs locally |
 | `\|tip delta\|` ≥ threshold | Wait for indexer sync; don’t debug submissions yet |
 | `versions` MISMATCH | Check [support matrix](https://docs.midnight.network/relnotes/support-matrix) and your local deps |
 | **Network warning** on `versions` or `tx` | Endpoints may target wrong network — fix `--network` or RPC URL |
@@ -305,7 +305,7 @@ Use `--network` to target preview / preprod / mainnet.
 ```bash
 mn tip preview
 mn tip preprod
-mn tip mainnet
+mn tip mainnet   # needs BLOCKFROST_PROJECT_ID
 ```
 
 Or set once:

@@ -121,6 +121,15 @@ mn decode 170
 
 **Networks:** `preview`, `preprod`, `mainnet`, `local` — use `--network` or `MN_NETWORK`.
 
+**Mainnet** goes through Blockfrost, since Midnight retired its hosted mainnet endpoints on 30 September 2026. Create a free **Midnight Mainnet** project on [blockfrost.io](https://blockfrost.io), then:
+
+```bash
+export BLOCKFROST_PROJECT_ID=nightmainnet...
+npx midnight-cast health mainnet
+```
+
+The project ID is never printed. See [docs/COMMANDS.md](docs/COMMANDS.md#mainnet-and-blockfrost).
+
 ## Debug ladder
 
 When something breaks, run these in order:

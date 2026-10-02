@@ -35,7 +35,7 @@ Each finding is classified, and the classification decides what happens:
 
 Midnight retired its hosted mainnet RPC and indexer on 30 September 2026. Blockfrost now serves both, and every request needs a Midnight Mainnet project token. To enable the mainnet checks, create a project for the Midnight Mainnet network on [blockfrost.io](https://blockfrost.io). Then add its project ID as the repository secret `BLOCKFROST_MAINNET_PROJECT_ID` (Settings → Secrets and variables → Actions).
 
-The composite action `.github/actions/blockfrost-mainnet` writes a mainnet config pointing at Blockfrost into the runner's temp directory and masks the token in logs. Every report is also scrubbed of `project_id` values before it is written, uploaded or posted to an issue. On scheduled runs without the secret, mainnet is reported as skipped (a notice plus a line in the job summary), never as passed. On release pull requests the secret is mandatory, and its absence fails the check, so a required check can't pass without having looked at mainnet. Release pull requests come from `next-release` in this repository, so they have access to the secret.
+The composite action `.github/actions/blockfrost-mainnet` exports the secret as `BLOCKFROST_PROJECT_ID`, exactly as a user would, and masks it in logs. Every report is also scrubbed of `project_id` values before it is written, uploaded or posted to an issue. On scheduled runs without the secret, mainnet is reported as skipped (a notice plus a line in the job summary), never as passed. On release pull requests the secret is mandatory, and its absence fails the check, so a required check can't pass without having looked at mainnet. Release pull requests come from `next-release` in this repository, so they have access to the secret.
 
 None of this needs a wallet, DUST or NIGHT. midnight-cast only reads from the networks.
 
@@ -47,4 +47,4 @@ npm run live-check -- preprod --out live-check
 INTEGRATION=1 npm run test:smoke
 ```
 
-`live-check` exits 0 when clean, 10 on drift and 20 on an outage. It exits 2 on a usage or internal error, or when the upstream matrix still can't be fetched after retries: a verdict without it would be incomplete, so the issue is left unchanged. To check mainnet locally, point your own `~/.config/midnight-cast/config.toml` at the Blockfrost URLs, and export `BLOCKFROST_PROJECT_ID` so it is redacted from the report.
+`live-check` exits 0 when clean, 10 on drift and 20 on an outage. It exits 2 on a usage or internal error, or when the upstream matrix still can't be fetched after retries: a verdict without it would be incomplete, so the issue is left unchanged. To check mainnet locally, export `BLOCKFROST_PROJECT_ID`.
