@@ -23,7 +23,7 @@ Available on every command:
 
 | Flag | Description |
 |------|-------------|
-| `--json` | Machine-readable output (`{ ok, data?, error? }`) |
+| `--json` | Machine-readable output (`{ ok, data?, error?, errorKind?, hint? }`) |
 | `--network <name>` | `preview`, `preprod`, `mainnet`, or `local` |
 | `--rpc <url>` | Override node JSON-RPC URL |
 | `--indexer-http <url>` | Override indexer GraphQL HTTP URL |
@@ -456,9 +456,28 @@ Failures:
 ```json
 {
   "ok": false,
-  "error": "Indexer unreachable"
+  "error": "Indexer unreachable",
+  "errorKind": "timeout",
+  "hint": "The indexer didn't answer in time. Public endpoints can be slow, so try again, or point at another endpoint with --rpc / --indexer-http."
 }
 ```
+
+When an RPC or indexer request fails, `errorKind` says what went wrong. It is also set on failed rows in `ping` and `health`:
+
+| `errorKind` | Meaning |
+| --- | --- |
+| `dns` | The host name doesn't resolve |
+| `refused` | Nothing is listening at the URL |
+| `timeout` | No answer in time, after retries |
+| `tls` | The TLS handshake failed (certificate, proxy or clock) |
+| `network` | The connection dropped |
+| `http_4xx` | The endpoint rejected the request, e.g. a wrong path (404) or a missing token (403) |
+| `http_5xx` | The endpoint reported a server error, after retries |
+| `rpc_error` | The node rejected the JSON-RPC call |
+| `graphql_error` | The indexer rejected the GraphQL query |
+| `invalid_response` | The response wasn't the JSON expected |
+
+`hint` suggests a next step, and human mode prints it as a `Hint:` line under the error. `error` keeps its existing wording, so scripts matching on it keep working.
 
 Some commands also set non-zero exit codes for CI (`health --fail-on-lag`, `health --fail-on-mismatch`, `tip --fail-on-lag`, `versions --fail-on-mismatch`, `ping`).
 
