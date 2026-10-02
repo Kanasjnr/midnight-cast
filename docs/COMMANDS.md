@@ -190,7 +190,7 @@ mn versions preprod --no-local
 
 **Reference only:** ledger, indexer package version, and on-chain runtime are shown for manual comparison.
 
-**Local deps:** reads every `@midnight-ntwrk/*` package from `package.json`. When the matrix defines `packages` pins, compares local semver specs and reports **MISMATCH**.
+**Local deps:** reads every Midnight package from `package.json` under either npm scope, `@midnight-ntwrk/*` or `@midnightntwrk/*`, using the installed version from `package-lock.json` when there is one. Matrix `packages` pins apply to a package whichever scope it uses, and a mismatch is reported as **MISMATCH**. Midnight is moving its packages to `@midnightntwrk`, with the same API and only the name changed. If the same package is installed under both scopes, directly or through another dependency, a `scope:<package>` check fails, because two copies of one package can break `instanceof` checks and types. Packages you still use from the old scope that have a stable release under the new one are listed under **npm scope** as a rename hint. As of 2 October 2026 those are `ledger-v8`, `onchain-runtime-v3`, `zkir-v2` and the `wallet-sdk*` packages.
 
 **Network warning:** if the live node or runtime spec doesn't fit the selected matrix row, warns that your endpoints may point at a different environment.
 

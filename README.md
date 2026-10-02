@@ -153,7 +153,7 @@ mn tx <hash> --network preprod           # status, fees, segments; links dust-ev
 mn block 909000 preprod                  # header at height (+ hash)
 mn dust-events --from 565900 --limit 10 --network preprod
 mn rpc chain_getHeader --json
-mn versions preprod --fail-on-mismatch   # CI; local @midnight-ntwrk/* vs matrix pins
+mn versions preprod --fail-on-mismatch   # CI; local Midnight packages (either npm scope) vs matrix pins
 ```
 
 ## Community & support
