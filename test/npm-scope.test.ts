@@ -200,6 +200,28 @@ describe("unresolved versions", () => {
   });
 });
 
+describe("ranges without a lockfile", () => {
+  it("doesn't compare a range as if it were the installed version", () => {
+    const checks = buildLocalPackageChecks(row, { "@midnightntwrk/ledger-v8": "^8.1.0" });
+    expect(checks[0]).toMatchObject({ ok: true, live: "^8.1.0", note: "version not resolved: no npm lockfile entry" });
+  });
+
+  it("compares prereleases exactly", () => {
+    const rc = { ...row, packages: { "@midnight-ntwrk/ledger-v8": "8.1.0-rc.1" } };
+    expect(buildLocalPackageChecks(row, { "@midnightntwrk/ledger-v8": "8.1.2-rc.1" })[0]?.ok).toBe(false);
+    expect(buildLocalPackageChecks(rc, { "@midnightntwrk/ledger-v8": "8.1.0-rc.1" })[0]?.ok).toBe(true);
+  });
+
+  it("treats =8.1.2 and v8.1.2 as exact pins", () => {
+    expect(buildLocalPackageChecks(row, { "@midnightntwrk/ledger-v8": "=8.1.2" })[0]).toMatchObject({ ok: true, live: "8.1.2" });
+    expect(buildLocalPackageChecks(row, { "@midnightntwrk/ledger-v8": "v8.0.3" })[0]).toMatchObject({ ok: false, live: "8.0.3" });
+  });
+
+  it("still compares the exact version a lockfile reports", () => {
+    expect(buildLocalPackageChecks(row, { "@midnightntwrk/ledger-v8": "8.0.3" })[0]).toMatchObject({ ok: false, live: "8.0.3" });
+  });
+});
+
 describe("checkLocalPackages", () => {
   it("fails a double install that only comes through dependencies", () => {
     const dir = makeProject(

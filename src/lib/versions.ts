@@ -265,10 +265,6 @@ export function buildNetworkMismatchWarning(
   );
 }
 
-export function normalizePackageVersion(spec: string): string {
-  return spec.replace(/^[\^~>=<]+/, "").split("-")[0] ?? spec;
-}
-
 export function buildLocalPackageChecks(
   expected: MatrixNetwork,
   localPackages: Record<string, string>,
@@ -280,14 +276,14 @@ export function buildLocalPackageChecks(
 
   for (const [name, liveSpec] of Object.entries(localPackages)) {
     const pin = pinsByBase.get(packageBaseName(name) ?? name);
-    const live = normalizePackageVersion(liveSpec);
-    const resolved = /^\d+\.\d+\.\d+/.test(live);
+    const exact = liveSpec.trim().replace(/^[=v]/, "");
+    const resolved = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(exact);
     checks.push(
       !resolved
         ? { label: `pkg:${name}`, expected: pin ?? "(no matrix pin)", live: liveSpec, ok: true, note: "version not resolved: no npm lockfile entry" }
         : pin
-          ? { label: `pkg:${name}`, expected: pin, live, ok: versionMatches(pin, live) }
-          : { label: `pkg:${name}`, expected: "(no matrix pin)", live, ok: true, note: "listed only" },
+          ? { label: `pkg:${name}`, expected: pin, live: exact, ok: exact === pin }
+          : { label: `pkg:${name}`, expected: "(no matrix pin)", live: exact, ok: true, note: "listed only" },
     );
   }
 

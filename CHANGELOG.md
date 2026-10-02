@@ -21,6 +21,7 @@
 - Live check: node and proof-server numbers in Midnight's matrix that differ from the bundled ones are reported as `upstream-differs` (info), since those components are checked against the live network
 
 ### Fixes
+- Local package checks compare only exact versions (from `package-lock.json` or an exact pin) against the matrix. A range such as `^8.1.0` used to be compared as if it were the installed version; without a lockfile it is now listed as not resolved
 - RPC and indexer requests retry timeouts, network errors and 502/503/504 (up to 3 attempts, 10 s each, within 20 s per request) instead of failing on the first slow response. Preprod's RPC is load-balanced across nodes that sometimes lag (servicedesk#223). The generic `rpc` command still makes a single attempt, since it can call methods that submit
 - `ping` checks RPC, indexer and proof server in parallel, and reports a dead stack in about 20 s
 - Matrix staleness test no longer depends on the current date (`isMatrixStale` accepts an injectable clock)
