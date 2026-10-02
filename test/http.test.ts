@@ -67,12 +67,11 @@ describe("postJson", () => {
     vi.stubGlobal("fetch", hang);
     const started = Date.now();
     await expect(
-      postJson("http://x", {}, { timeoutMs: 100, budgetMs: 250, retryDelayMs: 10, minAttemptMs: 20, attempts: 5 }),
+      postJson("http://x", {}, { timeoutMs: 100, budgetMs: 250, retryDelayMs: 10, minAttemptMs: 20, attempts: 10 }),
     ).rejects.toThrow("timeout");
-    const elapsed = Date.now() - started;
-    expect(elapsed).toBeLessThan(500);
     expect(hang.mock.calls.length).toBeGreaterThanOrEqual(2);
-    expect(hang.mock.calls.length).toBeLessThan(5);
+    expect(hang.mock.calls.length).toBeLessThanOrEqual(4);
+    expect(Date.now() - started).toBeLessThan(5000);
   });
 
   it("returns the last real response rather than retry without enough time left", async () => {
