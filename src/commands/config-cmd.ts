@@ -8,6 +8,7 @@ import {
   type ResolveFlags,
 } from "../config.js";
 import { BUILTIN_NETWORKS, NETWORK_NAMES } from "../networks.js";
+import { BLOCKFROST_ENV, PROJECT_ID_SOURCES, isBlockfrostUrl, usesBlockfrost } from "../lib/blockfrost.js";
 import type { EmitResult, GlobalOptions } from "../output.js";
 import { fail, success } from "../output.js";
 
@@ -43,7 +44,21 @@ export async function configInitCommand(opts: {
       indexerWs: opts.indexerWs,
       proofServer: opts.proofServer,
     });
-    return success({ message: `Wrote config to ${path}`, network });
+    const needsToken =
+      isBlockfrostUrl(BUILTIN_NETWORKS[network]?.rpc) &&
+      !opts.rpc &&
+      !loadConfigFile().networks?.[network]?.blockfrost_project_id;
+    return success({
+      message: `Wrote config to ${path}`,
+      network,
+      ...(needsToken
+        ? {
+            next:
+              `${network} is served by Blockfrost: set ${BLOCKFROST_ENV}=<your Midnight Mainnet project ID> ` +
+              `(or add blockfrost_project_id under [networks.${network}] in ${path})`,
+          }
+        : {}),
+    });
   } catch (err) {
     return fail(err instanceof Error ? err.message : String(err));
   }
@@ -54,7 +69,7 @@ export function configShowCommand(
   options: GlobalOptions,
 ): EmitResult {
   try {
-    const resolved = resolveNetwork(flags.network, flags);
+    const resolved = resolveNetwork(flags.network, flags, { requireProjectId: false });
     const file = loadConfigFile();
     const payload = {
       configPath: configPath(),
@@ -66,6 +81,11 @@ export function configShowCommand(
       indexerHttp: resolved.indexerHttp,
       indexerWs: resolved.indexerWs,
       proofServer: resolved.proofServer,
+      ...(resolved.projectIdSource
+        ? { blockfrostProjectId: `set (from ${projectIdSourceLabel(resolved.projectIdSource)})` }
+        : usesBlockfrost(resolved)
+          ? { blockfrostProjectId: `not set (read from ${PROJECT_ID_SOURCES})` }
+          : {}),
       builtin: BUILTIN_NETWORKS[resolved.network] !== undefined,
     };
 
@@ -80,4 +100,10 @@ export function configShowCommand(
   } catch (err) {
     return fail(err instanceof Error ? err.message : String(err));
   }
+}
+
+function projectIdSourceLabel(source: string): string {
+  return (
+    { flag: "--project-id", env: BLOCKFROST_ENV, config: "config file", url: "configured URL" } as Record<string, string>
+  )[source] ?? source;
 }

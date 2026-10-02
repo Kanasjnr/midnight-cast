@@ -29,8 +29,9 @@ Available on every command:
 | `--indexer-http <url>` | Override indexer GraphQL HTTP URL |
 | `--indexer-ws <url>` | Override indexer WebSocket URL |
 | `--proof-server <url>` | Override proof server URL (ping / health) |
+| `--project-id <id>` | Blockfrost project ID for mainnet |
 
-Environment: `MN_NETWORK` sets the default network (same as `--network`).
+Environment: `MN_NETWORK` sets the default network (same as `--network`). `BLOCKFROST_PROJECT_ID` supplies the Blockfrost project ID for any Blockfrost network that has none in its config section; `--project-id` overrides both.
 
 **Version:** `mn --version` or `mn -V` prints the CLI package version.
 
@@ -469,9 +470,27 @@ Some commands also set non-zero exit codes for CI (`health --fail-on-lag`, `heal
 |---------|----------|---------|
 | `preview` | `https://rpc.preview.midnight.network` | `.../api/v4/graphql` |
 | `preprod` | `https://rpc.preprod.midnight.network` | `.../api/v4/graphql` |
-| `mainnet` | `https://rpc.mainnet.midnight.network` | `.../api/v4/graphql` |
+| `mainnet` | `https://rpc.midnight-mainnet.blockfrost.io` | `https://midnight-mainnet.blockfrost.io/api/v0` |
 | `local` | `http://127.0.0.1:9944` | user-configured |
 
-Built-in proof server URLs: `https://proof-server.<network>.midnight.network` (`GET /` health, `GET /version` for ledger pin). **Mainnet** proof-server DNS may not resolve yet — `ping` will show FAIL until it is live.
+Built-in proof server URLs: `https://proof-server.<network>.midnight.network` (`GET /` health, `GET /version` for ledger pin). Mainnet has no public proof server; it always runs locally.
+
+### Mainnet and Blockfrost
+
+Midnight retired its hosted mainnet RPC and indexer on 30 September 2026, and Blockfrost serves them now. Every request needs a project ID from a **Midnight Mainnet** project on [blockfrost.io](https://blockfrost.io) (it starts with `nightmainnet`). Pass it with `--project-id`, set it in the network's config section (as `blockfrost_project_id`, or as `project_id` in its URLs), or export `BLOCKFROST_PROJECT_ID`, in that order of precedence. The environment variable applies to every Blockfrost network, so a network's own config wins over it:
+
+```bash
+mn health mainnet --project-id nightmainnet...
+export BLOCKFROST_PROJECT_ID=nightmainnet...   # then: mn health mainnet
+```
+
+You can also put it in the config file:
+
+```toml
+[networks.mainnet]
+blockfrost_project_id = "nightmainnet..."
+```
+
+Without a project ID, mainnet commands stop before making any request and say how to get one. midnight-cast sends the ID in Blockfrost's `project_id` header and never prints it: `config show` reports where it came from, and every output is scrubbed of it. A `403` from Blockfrost means the ID is missing, invalid, or for another network. A config file that still points at `rpc.mainnet.midnight.network` or `indexer.mainnet.midnight.network` gets a warning on stderr. Run `mn config init --network mainnet` to switch it to Blockfrost.
 
 Override any endpoint in config or with flags. See [Midnight network docs](https://docs.midnight.network/relnotes/network).

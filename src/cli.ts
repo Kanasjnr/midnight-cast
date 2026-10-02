@@ -36,7 +36,11 @@ program
   .option("--rpc <url>", "Override RPC URL")
   .option("--indexer-http <url>", "Override indexer HTTP URL")
   .option("--indexer-ws <url>", "Override indexer WebSocket URL")
-  .option("--proof-server <url>", "Override proof server URL");
+  .option("--proof-server <url>", "Override proof server URL")
+  .option(
+    "--project-id <id>",
+    "Blockfrost project ID for mainnet (or set BLOCKFROST_PROJECT_ID)",
+  );
 
 function globalOpts(cmd: Command): GlobalOptions {
   const o = cmd.optsWithGlobals();
@@ -71,6 +75,7 @@ function resolveFlags(cmd: Command): ResolveFlags {
     indexerHttp: o.indexerHttp,
     indexerWs: o.indexerWs,
     proofServer: o.proofServer,
+    projectId: o.projectId,
   };
 }
 

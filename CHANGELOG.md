@@ -4,12 +4,15 @@
 
 ### Tests & CI
 - Scheduled live network check (`live.yml`, every 6h, on push to `main` and on demand) compares each network's live versions against the bundled and upstream support matrices, and keeps one `live-check` issue per network in sync (opens on drift or outage, closes when clean)
-- Mainnet joins the live checks via Blockfrost using the `BLOCKFROST_MAINNET_PROJECT_ID` secret; skipped (not passed) on scheduled runs without it, and mandatory on release PRs
+- Mainnet joins the live checks via Blockfrost using the `BLOCKFROST_MAINNET_PROJECT_ID` secret, exported as `BLOCKFROST_PROJECT_ID` the way users set it; skipped (not passed) on scheduled runs without it, and mandatory on release PRs
 - Live checks are a release gate: they run only for `main` (release PRs and pushes) as required checks, so PRs into `next-release` stay off the network, and a release can't ship during an outage or with a stale support matrix
 - Live smoke tests assert live-stack invariants instead of bundled-matrix equality
 - Unit tests run on Linux, macOS and Windows × Node 20/22/24, plus a typecheck of `src/` and `scripts/`
 
 ### Changes
+- Mainnet works again, through Blockfrost. Midnight retired `rpc.mainnet.midnight.network` and `indexer.mainnet.midnight.network` on 2026-09-30, so the built-in mainnet endpoints are now Blockfrost's. The project ID comes from `--project-id`, the network's config section (`blockfrost_project_id`, or `project_id` in its URLs), or `BLOCKFROST_PROJECT_ID`, in that order. It is sent in the `project_id` header (in the URL only for WebSockets) and redacted from all output. Without one, mainnet commands stop before any request and explain how to get one
+- Blockfrost errors are explained: a `403` means a missing, invalid or wrong-network project ID, and `402`/`429` mean a plan limit. The v4 indexer API under Blockfrost's `/api/v0` is recognised
+- A config that still points at the retired mainnet hosts gets a warning on stderr. `config show` reports where the project ID came from, and `config init --network mainnet` says how to set it
 - `versions` and `health` check the node against a minimum version (`minNode`) and the runtime `spec_version` exactly (`runtimeSpec`), instead of requiring one exact node version. Different operators run different compatible builds: Midnight's endpoints report node 1.0.400 and Blockfrost's mainnet node 2.1.0, both on runtime 1000300
 - Support matrix refreshed for runtime 1.0.300 on all networks: node >= 1.0.300 (recommended 1.0.300, the newest public release), spec_version 1000300, ledger 8.1.2, indexer 4.3.5 (preview) and 4.3.302 (preprod/mainnet), `midnight-js-indexer-public-data-provider` 4.1.1
 - Error map stamped for ledger 8.1.2 and gains code 211 (`MerkleTreeError`, system transactions); the node's code table is otherwise unchanged since node 0.22.5

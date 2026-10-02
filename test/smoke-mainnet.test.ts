@@ -4,9 +4,7 @@ import { promisify } from "node:util";
 import { join } from "node:path";
 
 const execFileAsync = promisify(execFile);
-// Mainnet RPC/indexer are served by Blockfrost and need a project token, so this
-// suite only runs when CI has written a mainnet config
-const enabled = process.env.INTEGRATION === "1" && process.env.MN_MAINNET_SMOKE === "1";
+const enabled = process.env.INTEGRATION === "1" && Boolean(process.env.BLOCKFROST_PROJECT_ID);
 const cli = join(process.cwd(), "dist", "cli.js");
 
 async function runMn(
@@ -49,8 +47,6 @@ describe.skipIf(!enabled)("smoke (live mainnet via Blockfrost)", () => {
     expect(parsed.data.indexerHeight).toBeGreaterThan(0);
   });
 
-  // indexer-api is not asserted: Blockfrost serves the v4 API under /api/v0,
-  // which midnight-cast does not recognise yet.
   it("mn versions mainnet reports a consistent live stack", async () => {
     const { stdout } = await runMn(["versions", "mainnet", "--json", "--no-local"]);
     const parsed = JSON.parse(stdout) as {
@@ -58,11 +54,13 @@ describe.skipIf(!enabled)("smoke (live mainnet via Blockfrost)", () => {
       data: {
         network: string;
         live: { nodeVersion: string; runtimeSpecVersion: number; indexerProtocolVersion: number };
+        checks: Array<{ label: string; ok: boolean }>;
       };
     };
     expect(parsed.data, parsed.error).toBeDefined();
     expect(parsed.data.network).toBe("mainnet");
     expect(parsed.data.live.nodeVersion).toMatch(/^\d+\.\d+\.\d+/);
     expect(parsed.data.live.indexerProtocolVersion).toBe(parsed.data.live.runtimeSpecVersion);
+    expect(parsed.data.checks.find((c) => c.label === "indexer-api")?.ok).toBe(true);
   });
 });

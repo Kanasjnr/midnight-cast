@@ -7,6 +7,19 @@ import {
   NETWORK_NAMES,
   type NetworkEndpoints,
 } from "./networks.js";
+import {
+  BLOCKFROST_ENV,
+  hasProjectId,
+  isBlockfrostUrl,
+  isRetiredUrl,
+  missingProjectIdError,
+  retiredEndpointWarning,
+  takeProjectId,
+  usesBlockfrost,
+  withProjectId,
+} from "./lib/blockfrost.js";
+import { registerSecret } from "./lib/sanitize.js";
+import { warn } from "./output.js";
 
 export interface ConfigFile {
   networks?: Record<string, TomlNetworkSection>;
@@ -20,6 +33,7 @@ interface TomlNetworkSection {
   indexer_http?: string;
   indexer_ws?: string;
   proof_server?: string;
+  blockfrost_project_id?: string;
 }
 
 export interface ResolveFlags {
@@ -29,7 +43,10 @@ export interface ResolveFlags {
   indexerHttp?: string;
   indexerWs?: string;
   proofServer?: string;
+  projectId?: string;
 }
+
+export type ProjectIdSource = "flag" | "env" | "config" | "url";
 
 export function configPath(): string {
   const base =
@@ -85,7 +102,8 @@ export function writeConfigFile(config: ConfigFile): void {
 export function resolveNetwork(
   name?: string,
   flags: ResolveFlags = {},
-): NetworkEndpoints & { network: string } {
+  { requireProjectId = true }: { requireProjectId?: boolean } = {},
+): NetworkEndpoints & { network: string; projectIdSource?: ProjectIdSource } {
   const file = loadConfigFile();
   const networkName =
     flags.network ??
@@ -123,7 +141,52 @@ export function resolveNetwork(
     );
   }
 
-  return { ...merged, network: networkName };
+  const retired = [merged.rpc, merged.indexerHttp].filter(isRetiredUrl);
+  if (retired.length > 0) warn(retiredEndpointWarning(networkName, retired));
+
+  const projectIdSource = attachProjectId(merged, networkName, flags, fromFile, requireProjectId);
+  return {
+    ...merged,
+    network: networkName,
+    ...(projectIdSource ? { projectIdSource } : {}),
+  };
+}
+
+function attachProjectId(
+  endpoints: NetworkEndpoints,
+  network: string,
+  flags: ResolveFlags,
+  section: TomlNetworkSection | undefined,
+  required: boolean,
+): ProjectIdSource | undefined {
+  if (!usesBlockfrost(endpoints)) return undefined;
+  const keys = ["rpc", "rpcWs", "indexerHttp", "indexerWs"] as const;
+  const blockfrost = keys.filter((k) => isBlockfrostUrl(endpoints[k]));
+
+  const fromUrl = blockfrost
+    .map((k) => takeProjectId(endpoints[k]!).projectId)
+    .find((id) => id !== undefined);
+  const candidates: Array<[ProjectIdSource, string | undefined]> = [
+    ["flag", flags.projectId],
+    ["config", section?.blockfrost_project_id],
+    ["url", fromUrl],
+    ["env", process.env[BLOCKFROST_ENV]],
+  ];
+  const found = candidates.find(([, value]) => value && value.trim() !== "");
+  if (!found) {
+    if (required) throw new Error(missingProjectIdError(network));
+    return undefined;
+  }
+
+  const [source, raw] = found;
+  const projectId = raw!.trim();
+  registerSecret(projectId);
+  for (const k of blockfrost) {
+    const url = endpoints[k]!;
+    // A flag, env or config token overrides one already written into a URL.
+    if (source !== "url" || !hasProjectId(url)) endpoints[k] = withProjectId(url, projectId);
+  }
+  return source;
 }
 
 export function initConfig(options: {
@@ -152,7 +215,11 @@ export function initConfig(options: {
   const file = loadConfigFile();
   file.defaults = { network: options.network };
   file.networks = file.networks ?? {};
-  file.networks[options.network] = endpointsToSection(endpoints);
+  const projectId = file.networks[options.network]?.blockfrost_project_id;
+  file.networks[options.network] = {
+    ...endpointsToSection(endpoints),
+    ...(projectId ? { blockfrost_project_id: projectId } : {}),
+  };
 
   writeConfigFile(file);
   return configPath();
