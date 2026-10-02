@@ -281,10 +281,13 @@ export function buildLocalPackageChecks(
   for (const [name, liveSpec] of Object.entries(localPackages)) {
     const pin = pinsByBase.get(packageBaseName(name) ?? name);
     const live = normalizePackageVersion(liveSpec);
+    const resolved = /^\d+\.\d+\.\d+/.test(live);
     checks.push(
-      pin
-        ? { label: `pkg:${name}`, expected: pin, live, ok: versionMatches(pin, live) }
-        : { label: `pkg:${name}`, expected: "(no matrix pin)", live, ok: true, note: "listed only" },
+      !resolved
+        ? { label: `pkg:${name}`, expected: pin ?? "(no matrix pin)", live: liveSpec, ok: true, note: "version not resolved: no npm lockfile entry" }
+        : pin
+          ? { label: `pkg:${name}`, expected: pin, live, ok: versionMatches(pin, live) }
+          : { label: `pkg:${name}`, expected: "(no matrix pin)", live, ok: true, note: "listed only" },
     );
   }
 
@@ -302,13 +305,16 @@ export function readInstalledMidnightPackages(cwd = process.cwd()): InstalledPac
   if (!existsSync(path)) return [];
   try {
     const lock = JSON.parse(readFileSync(path, "utf8")) as {
-      packages?: Record<string, { version?: string }>;
+      packages?: Record<string, { name?: string; version?: string }>;
     };
     const installed: InstalledPackage[] = [];
     for (const [key, entry] of Object.entries(lock.packages ?? {})) {
-      const match = /(?:^|\/)node_modules\/(@midnight-?ntwrk\/[^/]+)$/.exec(key);
-      if (match && entry.version && isMidnightPackage(match[1]!)) {
-        installed.push({ name: match[1]!, version: entry.version, path: key });
+      const folder = /(?:^|\/)node_modules\/((?:@[^/]+\/)?[^/]+)$/.exec(key)?.[1];
+      if (!folder) continue;
+      // npm records the real package in `name` when the folder is an alias.
+      const name = entry.name ?? folder;
+      if (name && entry.version && isMidnightPackage(name)) {
+        installed.push({ name, version: entry.version, path: key });
       }
     }
     return installed;
@@ -330,12 +336,13 @@ export function readLocalMidnightPackages(
       devDependencies?: Record<string, string>;
     };
     const all = { ...pkg.dependencies, ...pkg.devDependencies };
-    const topLevel = new Map(
-      installed.filter((p) => p.path === `node_modules/${p.name}`).map((p) => [p.name, p.version]),
-    );
+    const installedAt = new Map(installed.map((p) => [p.path, p.version]));
     const found: Record<string, string> = {};
-    for (const [name, spec] of Object.entries(all)) {
-      if (isMidnightPackage(name)) found[name] = topLevel.get(name) ?? spec;
+    for (const [declared, spec] of Object.entries(all)) {
+      const alias = /^npm:((?:@[^/]+\/)?[^@]+)(?:@(.+))?$/.exec(spec);
+      const name = alias ? alias[1]! : declared;
+      if (!isMidnightPackage(name)) continue;
+      found[name] = installedAt.get(`node_modules/${declared}`) ?? alias?.[2] ?? spec;
     }
     return Object.keys(found).length > 0
       ? Object.fromEntries(Object.entries(found).sort(([a], [b]) => a.localeCompare(b)))
@@ -356,7 +363,7 @@ export function buildScopeConflictChecks(
     const scope = name.startsWith(NEW_SCOPE) ? NEW_SCOPE : OLD_SCOPE;
     scopesByBase.set(base, (scopesByBase.get(base) ?? new Set()).add(scope));
   }
-  return [...scopesByBase]
+  const crossScope = [...scopesByBase]
     .filter(([, scopes]) => scopes.size > 1)
     .map(([base]) => ({
       label: `scope:${base}`,
@@ -364,8 +371,71 @@ export function buildScopeConflictChecks(
       live: `${OLD_SCOPE}${base} and ${NEW_SCOPE}${base}`,
       ok: false,
       note: "two copies of the same package can break instanceof checks and types; depend on one scope only",
-    }))
-    .sort((a, b) => a.label.localeCompare(b.label));
+    }));
+
+  const topLevelFolders = new Map<string, string[]>();
+  for (const p of installed.filter((p) => /^node_modules\/(?:@[^/]+\/)?[^/]+$/.test(p.path))) {
+    topLevelFolders.set(p.name, [...(topLevelFolders.get(p.name) ?? []), p.path]);
+  }
+  const declaredTwice = [...topLevelFolders]
+    .filter(([, paths]) => paths.length > 1)
+    .map(([name, paths]) => ({
+      label: `twice:${name}`,
+      expected: "one copy",
+      live: paths.join(", "),
+      ok: false,
+      note: "the same package is installed under two names (an npm: alias and a direct dependency); keep one",
+    }));
+
+  return [...crossScope, ...declaredTwice].sort((a, b) => a.label.localeCompare(b.label));
+}
+
+export function readDeclaredDuplicates(cwd = process.cwd()): VersionCheck[] {
+  const path = join(cwd, "package.json");
+  if (!existsSync(path)) return [];
+  try {
+    const pkg = JSON.parse(readFileSync(path, "utf8")) as {
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+    };
+    const declaredAs = new Map<string, string[]>();
+    for (const [declared, spec] of Object.entries({ ...pkg.dependencies, ...pkg.devDependencies })) {
+      const name = /^npm:((?:@[^/]+\/)?[^@]+)/.exec(spec)?.[1] ?? declared;
+      if (isMidnightPackage(name)) declaredAs.set(name, [...(declaredAs.get(name) ?? []), declared]);
+    }
+    return [...declaredAs]
+      .filter(([, names]) => names.length > 1)
+      .map(([name, names]) => ({
+        label: `twice:${name}`,
+        expected: "one copy",
+        live: names.join(", "),
+        ok: false,
+        note: "the same package is installed under two names (an npm: alias and a direct dependency); keep one",
+      }));
+  } catch {
+    return [];
+  }
+}
+
+export function checkLocalPackages(
+  expected: MatrixNetwork,
+  cwd = process.cwd(),
+): Pick<VersionsReport, "localPackages" | "localPackageChecks" | "scopeHints"> {
+  const installed = readInstalledMidnightPackages(cwd);
+  const localPackages = readLocalMidnightPackages(cwd, installed);
+  const conflicts = buildScopeConflictChecks(localPackages ?? {}, installed);
+  const conflictLabels = new Set(conflicts.map((c) => c.label));
+  const checks = [
+    ...(localPackages ? buildLocalPackageChecks(expected, localPackages) : []),
+    ...conflicts,
+    ...readDeclaredDuplicates(cwd).filter((c) => !conflictLabels.has(c.label)),
+  ];
+  const scopeHints = localPackages ? buildScopeHints(localPackages) : [];
+  return {
+    ...(localPackages ? { localPackages } : {}),
+    ...(checks.length ? { localPackageChecks: checks } : {}),
+    ...(scopeHints.length ? { scopeHints } : {}),
+  };
 }
 
 export function buildScopeHints(

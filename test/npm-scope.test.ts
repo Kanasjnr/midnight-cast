@@ -7,6 +7,7 @@ import {
   buildLocalPackageChecks,
   buildScopeConflictChecks,
   buildScopeHints,
+  checkLocalPackages,
   formatVersionsHuman,
   readInstalledMidnightPackages,
   readLocalMidnightPackages,
@@ -101,6 +102,140 @@ describe("reading local packages", () => {
         path: "node_modules/some-sdk/node_modules/@midnight-ntwrk/ledger-v8",
       },
     ]);
+  });
+});
+
+describe("npm aliases", () => {
+  it("uses the real package behind an npm: alias", () => {
+    const dir = makeProject(
+      { dependencies: { "@midnight-ntwrk/ledger-v8": "npm:@midnightntwrk/ledger-v8@8.1.2" } },
+      { packages: { "node_modules/@midnight-ntwrk/ledger-v8": { name: "@midnightntwrk/ledger-v8", version: "8.1.2" } } },
+    );
+    expect(readLocalMidnightPackages(dir)).toEqual({ "@midnightntwrk/ledger-v8": "8.1.2" });
+    expect(readInstalledMidnightPackages(dir)[0]?.name).toBe("@midnightntwrk/ledger-v8");
+  });
+
+  it("catches an aliased new-scope package next to a real old-scope copy", () => {
+    const dir = makeProject(
+      { dependencies: { "@midnight-ntwrk/ledger-v8": "npm:@midnightntwrk/ledger-v8@8.1.2", "sdk-a": "1.0.0" } },
+      {
+        packages: {
+          "node_modules/@midnight-ntwrk/ledger-v8": { name: "@midnightntwrk/ledger-v8", version: "8.1.2" },
+          "node_modules/sdk-a/node_modules/@midnight-ntwrk/ledger-v8": { version: "8.0.3" },
+        },
+      },
+    );
+    const result = checkLocalPackages(row, dir);
+    expect(result.localPackageChecks?.map((c) => c.label)).toContain("scope:ledger-v8");
+    expect(result.scopeHints).toBeUndefined();
+  });
+});
+
+describe("one package declared twice", () => {
+  it("fails when an npm: alias and a direct dependency install the same package", () => {
+    const dir = makeProject(
+      {
+        dependencies: {
+          "@midnight-ntwrk/ledger-v8": "npm:@midnightntwrk/ledger-v8@8.0.3",
+          "@midnightntwrk/ledger-v8": "8.1.2",
+        },
+      },
+      {
+        packages: {
+          "node_modules/@midnight-ntwrk/ledger-v8": { name: "@midnightntwrk/ledger-v8", version: "8.0.3" },
+          "node_modules/@midnightntwrk/ledger-v8": { version: "8.1.2" },
+        },
+      },
+    );
+    const check = checkLocalPackages(row, dir).localPackageChecks?.find((c) => c.label.startsWith("twice:"));
+    expect(check).toMatchObject({
+      label: "twice:@midnightntwrk/ledger-v8",
+      ok: false,
+      live: "node_modules/@midnight-ntwrk/ledger-v8, node_modules/@midnightntwrk/ledger-v8",
+    });
+  });
+
+  it("fails a package declared twice even without a lockfile", () => {
+    const dir = makeProject({
+      dependencies: {
+        "@midnight-ntwrk/ledger-v8": "npm:@midnightntwrk/ledger-v8@8.0.3",
+        "@midnightntwrk/ledger-v8": "8.1.2",
+      },
+    });
+    const twice = checkLocalPackages(row, dir).localPackageChecks?.filter((c) => c.label.startsWith("twice:"));
+    expect(twice).toEqual([
+      expect.objectContaining({ label: "twice:@midnightntwrk/ledger-v8", ok: false, live: "@midnight-ntwrk/ledger-v8, @midnightntwrk/ledger-v8" }),
+    ]);
+  });
+
+  it("doesn't count a workspace's own copy as declared twice", () => {
+    const checks = buildScopeConflictChecks({}, [
+      { name: "@midnightntwrk/ledger-v8", version: "8.1.2", path: "node_modules/@midnightntwrk/ledger-v8" },
+      { name: "@midnightntwrk/ledger-v8", version: "8.1.1", path: "apps/web/node_modules/@midnightntwrk/ledger-v8" },
+      { name: "@midnightntwrk/ledger-v8", version: "8.1.0", path: "packages/a/node_modules/@midnightntwrk/ledger-v8" },
+    ]);
+    expect(checks).toEqual([]);
+  });
+
+  it("doesn't count nested copies under dependencies as declared twice", () => {
+    const checks = buildScopeConflictChecks({}, [
+      { name: "@midnightntwrk/ledger-v8", version: "8.1.2", path: "node_modules/@midnightntwrk/ledger-v8" },
+      { name: "@midnightntwrk/ledger-v8", version: "8.1.1", path: "node_modules/sdk-a/node_modules/@midnightntwrk/ledger-v8" },
+    ]);
+    expect(checks).toEqual([]);
+  });
+});
+
+describe("unresolved versions", () => {
+  it("lists a dependency without a concrete version instead of failing it", () => {
+    const dir = makeProject({
+      dependencies: { "@midnight-ntwrk/ledger-v8": "npm:@midnightntwrk/ledger-v8", "@midnight-ntwrk/compact-runtime": "latest" },
+    });
+    const checks = checkLocalPackages(row, dir).localPackageChecks ?? [];
+    expect(checks.every((c) => c.ok)).toBe(true);
+    expect(checks.find((c) => c.label === "pkg:@midnightntwrk/ledger-v8")).toMatchObject({
+      live: "npm:@midnightntwrk/ledger-v8",
+      note: "version not resolved: no npm lockfile entry",
+    });
+  });
+});
+
+describe("checkLocalPackages", () => {
+  it("fails a double install that only comes through dependencies", () => {
+    const dir = makeProject(
+      { dependencies: { "sdk-a": "1.0.0", "sdk-b": "1.0.0" } },
+      {
+        packages: {
+          "node_modules/sdk-a/node_modules/@midnight-ntwrk/ledger-v8": { version: "8.0.3" },
+          "node_modules/sdk-b/node_modules/@midnightntwrk/ledger-v8": { version: "8.1.2" },
+        },
+      },
+    );
+    const result = checkLocalPackages(row, dir);
+    expect(result.localPackages).toBeUndefined();
+    expect(result.localPackageChecks).toEqual([expect.objectContaining({ label: "scope:ledger-v8", ok: false })]);
+  });
+
+  it("ignores the project's own root and workspace entries in the lockfile", () => {
+    const dir = makeProject(
+      { name: "@midnightntwrk/ledger-v8" },
+      {
+        packages: {
+          "": { name: "@midnightntwrk/ledger-v8", version: "8.1.2" },
+          "packages/tools": { name: "@midnightntwrk/ledger-v8-tools", version: "0.1.0" },
+          "node_modules/sdk-a/node_modules/@midnight-ntwrk/ledger-v8": { version: "8.0.3" },
+        },
+      },
+    );
+    expect(readInstalledMidnightPackages(dir).map((p) => p.path)).toEqual([
+      "node_modules/sdk-a/node_modules/@midnight-ntwrk/ledger-v8",
+    ]);
+    expect(checkLocalPackages(row, dir).localPackageChecks).toBeUndefined();
+  });
+
+  it("reports nothing for a project without Midnight packages", () => {
+    const dir = makeProject({ dependencies: { react: "19.0.0" } }, { packages: { "node_modules/react": { version: "19.0.0" } } });
+    expect(checkLocalPackages(row, dir)).toEqual({});
   });
 });
 
