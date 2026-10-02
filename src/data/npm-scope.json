@@ -1,0 +1,24 @@
+{
+  "checked": "2026-10-02",
+  "source": "npm registry: @midnight-ntwrk packages that also have a stable release under @midnightntwrk",
+  "migrated": [
+    "ledger-v8",
+    "onchain-runtime-v3",
+    "wallet-sdk",
+    "wallet-sdk-abstractions",
+    "wallet-sdk-address-format",
+    "wallet-sdk-capabilities",
+    "wallet-sdk-dust-wallet",
+    "wallet-sdk-facade",
+    "wallet-sdk-hd",
+    "wallet-sdk-indexer-client",
+    "wallet-sdk-node-client",
+    "wallet-sdk-prover-client",
+    "wallet-sdk-runtime",
+    "wallet-sdk-shielded",
+    "wallet-sdk-testkit",
+    "wallet-sdk-unshielded-wallet",
+    "wallet-sdk-utilities",
+    "zkir-v2"
+  ]
+}
