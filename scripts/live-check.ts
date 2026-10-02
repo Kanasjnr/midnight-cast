@@ -167,6 +167,30 @@ export function bundledVersions(
   return net ? rowVersions(net) : undefined;
 }
 
+/** JSON with object keys sorted at every level, for order-insensitive equality. */
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  if (value && typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .filter(([, v]) => v !== undefined)
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+    return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${canonicalJson(v)}`).join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
+/**
+ * Why the CLI's matrix row differs from the shipped one, or undefined if it
+ * doesn't. A user override (~/.config/midnight-cast/support-matrix.json) or a
+ * stale build would otherwise make the verdict judge a matrix that isn't
+ * being shipped.
+ */
+export function matrixRowMismatch(shipped: MatrixNetwork, used: MatrixNetwork): string | undefined {
+  return canonicalJson(shipped) === canonicalJson(used)
+    ? undefined
+    : "the CLI loaded a different support matrix than src/data/support-matrix.json (user override in the config directory, or a stale build: run npm run build)";
+}
+
 /** Component versions from one matrix row. */
 export function rowVersions(net: MatrixNetwork): ComponentVersions {
   const compactRuntime = Object.entries(net.packages ?? {}).find(([name]) =>
@@ -513,10 +537,15 @@ async function main(): Promise<number> {
       runCli<HealthReport>(["health", network, "--json"]),
       runCli<VersionsReport>(["versions", network, "--json", "--no-local"]),
     ]);
-    // Judge and report against the matrix row the CLI actually used (it may
-    // come from a user override or a different build), not a separate read.
-    const used = versions?.data?.expected ? rowVersions(versions.data.expected) : bundled;
-    result = classify({ network, health, versions, upstream, upstreamError, bundled: used });
+    // The verdict must be about the matrix that ships. If the CLI judged a
+    // different one, its checks don't apply: refuse rather than mislead.
+    const used = versions?.data?.expected;
+    const mismatch = used ? matrixRowMismatch(matrix.networks[network]!, used) : undefined;
+    if (mismatch) {
+      console.error(`live-check: ${mismatch}`);
+      return EXIT.error;
+    }
+    result = classify({ network, health, versions, upstream, upstreamError, bundled });
     if (result.status !== "outage" || attempt === opts.attempts) break;
     console.error(
       `attempt ${attempt}/${opts.attempts}: outage, retrying in ${opts.delayMs / 1000}s`,

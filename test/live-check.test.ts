@@ -7,6 +7,7 @@ import {
   fingerprint,
   releaseBlockers,
   rowVersions,
+  matrixRowMismatch,
   parseArgs,
   parseUpstreamMatrix,
   redact,
@@ -139,8 +140,20 @@ describe("live-check tag and matrix parsing", () => {
     expect(parseUpstreamMatrix({ components: "nope" }, "preprod").versions).toEqual({});
   });
 
-  it("reads component versions from the matrix row the CLI reports", () => {
+  it("reads component versions from a matrix row", () => {
     expect(rowVersions(matrix.networks.preprod!)).toEqual(bundledVersions(matrix, "preprod"));
+  });
+
+  it("detects when the CLI used a different matrix row than the shipped one", () => {
+    const shipped = matrix.networks.preprod!;
+    // Same content, different key order: not a mismatch.
+    const reordered = Object.fromEntries(Object.entries(shipped).reverse()) as typeof shipped;
+    expect(matrixRowMismatch(shipped, reordered)).toBeUndefined();
+    expect(matrixRowMismatch(shipped, { ...shipped, indexer: "4.4.0" })).toMatch(/different support matrix/);
+    // A difference inside the nested package pins counts too.
+    expect(
+      matrixRowMismatch(shipped, { ...shipped, packages: { "@midnight-ntwrk/compact-runtime": "0.20.0" } }),
+    ).toMatch(/different support matrix/);
   });
 
   it("reads bundled versions, taking compact-runtime from either npm scope", () => {
