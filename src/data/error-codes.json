@@ -1,7 +1,7 @@
 {
   "docUrl": "https://docs.midnight.network/nodes/error-codes",
-  "ledger": "8.0.3",
-  "updated": "2026-06",
+  "ledger": "8.1.2",
+  "updated": "2026-10",
   "source": "https://docs.midnight.network/nodes/error-codes",
   "codes": {
     "0": {
@@ -593,6 +593,11 @@
       "name": "TreasuryDisabled",
       "description": "Treasury disabled",
       "fix": "Treasury feature not enabled"
+    },
+    "211": {
+      "name": "MerkleTreeError",
+      "description": "System transaction made an invalid Merkle tree update",
+      "fix": "Raised by system transactions, not user-submitted ones; check node logs and report it if it persists"
     },
     "255": {
       "name": "HostApiError",

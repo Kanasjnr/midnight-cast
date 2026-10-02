@@ -108,9 +108,9 @@ describe.skipIf(!integration)("smoke (live preview)", () => {
     };
     expect(parsed.data.name).toBe("InvalidDustSpendProof");
     expect(parsed.data.network).toBe("preview");
-    expect(parsed.data.ledger).toBe("8.0.3");
+    expect(parsed.data.ledger).toBe("8.1.2");
     expect(
       (parsed.data as { networkLedger?: string }).networkLedger,
-    ).toBe("8.1.0");
+    ).toBe("8.1.2");
   });
 });
