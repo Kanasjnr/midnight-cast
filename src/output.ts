@@ -11,10 +11,19 @@ export interface GlobalOptions {
   json?: boolean;
 }
 
+const pendingWarnings: string[] = [];
+
+export function warn(message: string): void {
+  if (!pendingWarnings.includes(message)) pendingWarnings.push(message);
+}
+
 export function emit<T>(
   result: EmitResult<T>,
   options: GlobalOptions,
 ): number {
+  for (const message of pendingWarnings.splice(0)) {
+    console.error(sanitizeForOutput(message));
+  }
   const safe = sanitizeEmitResult(result);
 
   if (options.json) {
