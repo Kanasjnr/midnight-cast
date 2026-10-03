@@ -581,8 +581,8 @@
     },
     "208": {
       "name": "InvalidBasisPoints",
-      "description": "Bridge fee basis points >= 10000",
-      "fix": "Use 0-9999 basis points"
+      "description": "Bridge fee basis points above 10000 in an OverwriteParameters system transaction",
+      "fix": "Use 0-10000 basis points"
     },
     "209": {
       "name": "InvariantViolation",
