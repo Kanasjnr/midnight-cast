@@ -80,7 +80,7 @@ export function parseRawErrorMessage(raw: string): ParsedRawError {
   if (ledgerCodes.length === 0) {
     ledgerCodes.push(...extractStandaloneHexCodes(raw));
     const hintPattern =
-      /\b(?:ledger|custom)\s*[=:#]?\s*(\d{1,3})\b/gi;
+      /\b(?:ledger\s+(?:error|code)|custom)\s*[=:#]?\s*(\d{1,3})\b(?!\.\d)/gi;
     for (const match of raw.matchAll(hintPattern)) {
       if (match[1]) addLedgerCode(ledgerCodes, match[1]);
     }

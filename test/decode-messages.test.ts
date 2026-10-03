@@ -68,8 +68,12 @@ describe("decode --raw recognises messages from current tooling", () => {
     expect(result.decodings[1]).toMatchObject({ code: 1, relatedHint: expect.stringContaining("8.1.2") });
   });
 
-  it("leaves \"ledger 9\" to the ledger code parser", () => {
-    expect(decodeRaw("ledger 9").decodings).toEqual([expect.objectContaining({ kind: "ledger", code: 9 })]);
+  it("reads \"ledger N\" as a code only when the text says it is one", () => {
+    expect(decodeRaw("ledger error 9").decodings).toEqual([expect.objectContaining({ kind: "ledger", code: 9 })]);
+    expect(decodeRaw("compact-runtime 0.20.0 targets ledger 9").decodings).toEqual([
+      expect.objectContaining({ id: "compact-ledger-9" }),
+    ]);
+    expect(decodeRaw("rejected by ledger 8.1.2").ok).toBe(false);
   });
 
   it("still fails for text it doesn't know", () => {
