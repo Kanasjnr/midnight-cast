@@ -82,12 +82,29 @@ const DUST_SUBSCRIPTION = `
   }
 `;
 
-function createWsClient(indexerWs: string): Client {
-  return createClient({
+function createWsClient(indexerWs: string, keepTrying: () => boolean): { client: Client; close: () => void } {
+  const sockets = new Set<WebSocket>();
+  class TrackedWebSocket extends WebSocket {
+    constructor(...args: ConstructorParameters<typeof WebSocket>) {
+      super(...args);
+      sockets.add(this);
+    }
+  }
+  const client = createClient({
     url: indexerWs,
-    webSocketImpl: WebSocket,
+    webSocketImpl: TrackedWebSocket,
     connectionParams: {},
+    shouldRetry: keepTrying,
   });
+  return {
+    client,
+    // dispose() waits on a pending connect and rejects if it failed, so the
+    // sockets are terminated directly to let the process exit.
+    close: () => {
+      Promise.resolve(client.dispose()).catch(() => {});
+      for (const socket of sockets) socket.terminate();
+    },
+  };
 }
 
 export async function subscribeDustEvents(
@@ -105,13 +122,15 @@ export async function subscribeDustEvents(
   const fromId = options.fromId ?? options.targetId;
 
   return new Promise((resolve, reject) => {
-    const client = createWsClient(endpoints.indexerWs);
     let settled = false;
+    const { client, close } = createWsClient(endpoints.indexerWs, () => !settled);
+    let unsubscribe = () => {};
 
     const timer = setTimeout(() => {
       if (!settled) {
         settled = true;
-        client.dispose();
+        unsubscribe();
+        close();
         if (events.length === 0) {
           reject(new Error("Event not received within timeout"));
         } else {
@@ -124,7 +143,8 @@ export async function subscribeDustEvents(
       if (settled) return;
       settled = true;
       clearTimeout(timer);
-      client.dispose();
+      unsubscribe();
+      close();
       if (err) {
         reject(err);
       } else {
@@ -132,7 +152,7 @@ export async function subscribeDustEvents(
       }
     };
 
-    client.subscribe(
+    unsubscribe = client.subscribe(
       {
         query: DUST_SUBSCRIPTION,
         variables: fromId !== undefined ? { id: fromId } : {},
