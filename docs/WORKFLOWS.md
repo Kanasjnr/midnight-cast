@@ -1,19 +1,19 @@
 # Developer workflows
 
-Use `mn` in real debugging sessions, with sample output you can compare against.
+Use midnight-cast in real debugging sessions, with sample output you can compare against.
 
 ## The debug ladder
 
 Run these in order when something breaks:
 
 ```
-0. mn health        →  Ping + tip + versions in one command (optional shortcut)
-1. mn ping          →  Are RPC and indexer up?
-2. mn tip           →  Is the indexer caught up?
-3. mn versions      →  Is the live stack aligned with the support matrix?
-4. mn decode …      →  What does the error code mean?
-5. mn tx <hash>     →  What happened to this transaction?
-6. mn dust-event(s) →  Ledger event / sync detail
+0. midnight-cast health        →  Ping + tip + versions in one command (optional shortcut)
+1. midnight-cast ping          →  Are RPC and indexer up?
+2. midnight-cast tip           →  Is the indexer caught up?
+3. midnight-cast versions      →  Is the live stack aligned with the support matrix?
+4. midnight-cast decode …      →  What does the error code mean?
+5. midnight-cast tx <hash>     →  What happened to this transaction?
+6. midnight-cast dust-event(s) →  Ledger event / sync detail
 ```
 
 Skip step 3 (or the versions section in `health`) and you may end up debugging proofs when the real issue is network skew or indexer lag.
@@ -25,15 +25,15 @@ Skip step 3 (or the versions section in `health`) and you may end up debugging p
 ```bash
 npm i -g midnight-cast
 
-mn config init
-mn health preprod
-mn decode 170
-mn decode 1010
+midnight-cast config init
+midnight-cast health preprod
+midnight-cast decode 170
+midnight-cast decode 1010
 ```
 
 You should see RPC/indexer OK, a small tip delta, passing version checks, and a decode result for Custom 170.
 
-Or run the ladder manually: `mn ping`, `mn tip`, `mn versions`.
+Or run the ladder manually: `midnight-cast ping`, `midnight-cast tip`, `midnight-cast versions`.
 
 ---
 
@@ -42,7 +42,7 @@ Or run the ladder manually: `mn ping`, `mn tip`, `mn versions`.
 Before writing repro scripts or opening Discord:
 
 ```bash
-mn health preprod
+midnight-cast health preprod
 ```
 
 Example output:
@@ -66,9 +66,9 @@ Sync:
 Or:
 
 ```bash
-mn ping preprod
-mn tip preprod
-mn versions preprod
+midnight-cast ping preprod
+midnight-cast tip preprod
+midnight-cast versions preprod
 ```
 
 | Result | Action |
@@ -82,10 +82,10 @@ mn versions preprod
 **CI example:**
 
 ```bash
-mn health preprod --fail-on-lag --fail-on-mismatch
+midnight-cast health preprod --fail-on-lag --fail-on-mismatch
 # or separately:
-mn tip preprod --fail-on-lag --threshold 500
-mn versions preprod --fail-on-mismatch
+midnight-cast tip preprod --fail-on-lag --threshold 500
+midnight-cast versions preprod --fail-on-mismatch
 ```
 
 ---
@@ -95,9 +95,9 @@ mn versions preprod --fail-on-mismatch
 Custom 170 = DUST spend proof failed at the ledger.
 
 ```bash
-mn decode 170
-mn tip preprod
-mn versions preprod
+midnight-cast decode 170
+midnight-cast tip preprod
+midnight-cast versions preprod
 ```
 
 If `tip` shows lag or `versions` shows mismatch, fix the environment before regenerating proofs.
@@ -105,7 +105,7 @@ If `tip` shows lag or `versions` shows mismatch, fix the environment before rege
 If stack looks healthy:
 
 ```bash
-mn tx <your-tx-hash> --network preprod
+midnight-cast tx <your-tx-hash> --network preprod
 ```
 
 Example output:
@@ -120,13 +120,13 @@ Status:   PARTIAL_SUCCESS
 Fees:     paid=1 estimated=1
 Segments: 0:ok, 20003:ok, 35012:fail
 Failure:  indexer v4 exposes segment success only (no failure reason)
-Hint:     paste wallet/node error → mn decode --raw "<error>"
+Hint:     paste wallet/node error → midnight-cast decode --raw "<error>"
 Actions:  ContractCall
 DUST:     665110:DustSpendProcessed
-          → mn dust-event 665110
+          → midnight-cast dust-event 665110
 ```
 
-Check segment failures and DUST events on the transaction. Human output links `mn dust-event <id>` for each DUST event. If a segment shows `fail`, the indexer does not include the reason, so use `mn decode --raw` with the wallet or node error.
+Check segment failures and DUST events on the transaction. Human output links `midnight-cast dust-event <id>` for each DUST event. If a segment shows `fail`, the indexer does not include the reason, so use `midnight-cast decode --raw` with the wallet or node error.
 
 ---
 
@@ -137,7 +137,7 @@ Check segment failures and DUST events on the transaction. Human output links `m
 **Fast path** — paste the full error:
 
 ```bash
-mn decode --raw "1010: Invalid Transaction: Custom error: 186"
+midnight-cast decode --raw "1010: Invalid Transaction: Custom error: 186"
 ```
 
 Example output:
@@ -150,17 +150,17 @@ Desc:  Substrate transaction pool rejected the extrinsic. This is an envelope co
 
 Next steps:
   1. Find Custom error: N in the error message (u8, 0–255).
-  2. Run: mn decode ledger N   (or: mn decode N)
-  3. If DispatchError::Module { index, error }, run: mn decode pallet <index> <error>
+  2. Run: midnight-cast decode ledger N   (or: midnight-cast decode N)
+  3. If DispatchError::Module { index, error }, run: midnight-cast decode pallet <index> <error>
   4. If there is no inner Custom(N), rejection was upstream Substrate validation (nonce, fee, size, etc.).
 ```
 
 **Manual path:**
 
 ```bash
-mn decode 1010
-mn decode N          # after you find Custom error: N
-mn decode pallet <index> <error>   # if DispatchError::Module
+midnight-cast decode 1010
+midnight-cast decode N          # after you find Custom error: N
+midnight-cast decode pallet <index> <error>   # if DispatchError::Module
 ```
 
 If there is **no** inner `Custom(N)`, the rejection was upstream (nonce, fee, mortality, size) — not ledger logic.
@@ -172,10 +172,10 @@ If there is **no** inner `Custom(N)`, the rejection was upstream (nonce, fee, mo
 This is almost always version skew between proof server, ledger, and SDK:
 
 ```bash
-mn decode 179
-mn decode 180
-mn decode 181
-mn versions preprod
+midnight-cast decode 179
+midnight-cast decode 180
+midnight-cast decode 181
+midnight-cast versions preprod
 ```
 
 Each of 179–181 shows related transcript/proof codes in the decode hint. Use `--network preview` or `--network preprod` so the ledger map matches the target environment.
@@ -184,7 +184,7 @@ From your dApp directory (reads `package.json` and compares to matrix **package 
 
 ```bash
 cd my-midnight-app
-mn versions preprod
+midnight-cast versions preprod
 ```
 
 Look for **Local package checks** — `ledger-v8`, `compact-runtime`, `onchain-runtime-v3`, `midnight-js-indexer-public-data-provider` vs matrix.
@@ -202,18 +202,18 @@ Checks:
 Summary: live stack matches matrix checks ✓
 ```
 
-**Proof server:** `mn ping` and `mn versions` read `GET https://proof-server.<network>.midnight.network/version` when configured. Mismatch on 179–181 often means proof server or ledger skew, not just npm deps.
+**Proof server:** `midnight-cast ping` and `midnight-cast versions` read `GET https://proof-server.<network>.midnight.network/version` when configured. Mismatch on 179–181 often means proof server or ledger skew, not just npm deps.
 
 ---
 
 ## Indexer lag / “tx not found”
 
 ```bash
-mn tip preprod --json
-mn ping preprod
+midnight-cast tip preprod --json
+midnight-cast ping preprod
 ```
 
-If RPC height is far ahead of indexer height, the indexer has not reached your tx yet. Wait and re-run `mn tx`.
+If RPC height is far ahead of indexer height, the indexer has not reached your tx yet. Wait and re-run `midnight-cast tx`.
 
 ---
 
@@ -224,7 +224,7 @@ Indexer v4 exposes DUST events via **WebSocket subscription only**.
 **Find valid event ids:**
 
 ```bash
-mn dust-events --network preprod --from 565900 --limit 10
+midnight-cast dust-events --network preprod --from 565900 --limit 10
 ```
 
 Example output:
@@ -238,14 +238,14 @@ id=565902  typename=DustInitialUtxo  protocolVersion=22000  raw=0x6d69646e696768
 **Inspect one event:**
 
 ```bash
-mn dust-event 565975 --network preprod
+midnight-cast dust-event 565975 --network preprod
 ```
 
 **Known good preprod example:** event `565975` (if still in retention).
 
 **Preview note:** event ids differ per network. If `dust-event 12345` fails, the CLI suggests browsing with `dust-events --from` — use that to discover valid ids.
 
-**From a transaction:** `mn tx <hash>` lists DUST event ids and prints `mn dust-event <id>` hints for each.
+**From a transaction:** `midnight-cast tx <hash>` lists DUST event ids and prints `midnight-cast dust-event <id>` hints for each.
 
 **Fields to watch:**
 
@@ -256,18 +256,18 @@ mn dust-event 565975 --network preprod
 Static background:
 
 ```bash
-mn explain dust
+midnight-cast explain dust
 ```
 
 ---
 
 ## Block at height
 
-When you know the block number (from `mn tx` or an explorer) and want the RPC header fields:
+When you know the block number (from `midnight-cast tx` or an explorer) and want the RPC header fields:
 
 ```bash
-mn block 909000 preprod
-mn block latest preprod
+midnight-cast block 909000 preprod
+midnight-cast block latest preprod
 ```
 
 `latest` and `<height>` both return `hash`, `parentHash`, `stateRoot`, and `extrinsicsRoot`.
@@ -287,13 +287,13 @@ extrinsicsRoot: 0x3a61ec7982b80286f7908e90b481548e9f07240f80fb2dbd9f02205b05f493
 
 ## Raw node introspection
 
-When you need something `mn` does not wrap yet:
+When you need something midnight-cast does not wrap yet:
 
 ```bash
-mn rpc chain_getHeader
-mn rpc chain_getRuntimeVersion --json
-mn rpc system_version
-mn rpc rpc_methods
+midnight-cast rpc chain_getHeader
+midnight-cast rpc chain_getRuntimeVersion --json
+midnight-cast rpc system_version
+midnight-cast rpc rpc_methods
 ```
 
 Use `--network` to target preview / preprod / mainnet.
@@ -303,45 +303,45 @@ Use `--network` to target preview / preprod / mainnet.
 ## Switching networks
 
 ```bash
-mn tip preview
-mn tip preprod
-mn tip mainnet   # needs BLOCKFROST_PROJECT_ID
+midnight-cast tip preview
+midnight-cast tip preprod
+midnight-cast tip mainnet   # needs BLOCKFROST_PROJECT_ID
 ```
 
 Or set once:
 
 ```bash
 export MN_NETWORK=preprod
-mn tip
-mn versions
+midnight-cast tip
+midnight-cast versions
 ```
 
 Config default:
 
 ```bash
-mn config init -y --network preprod
+midnight-cast config init -y --network preprod
 ```
 
 ---
 
-## Cast ↔ mn (mental model)
+## Cast ↔ midnight-cast (mental model)
 
 | You want… | Command |
 |-----------|---------|
-| Full stack check | `mn health` |
-| Is the node up? | `mn ping` |
-| Latest block | `mn block latest` |
-| Block at height | `mn block <height>` |
-| Raw RPC | `mn rpc` |
-| What does error N mean? | `mn decode` |
-| What happened to my tx? | `mn tx` |
-| Event stream debug | `mn dust-events` |
-| Version alignment | `mn versions` |
-| Send a transaction | **Not mn** — use wallet / Lace / testkit |
+| Full stack check | `midnight-cast health` |
+| Is the node up? | `midnight-cast ping` |
+| Latest block | `midnight-cast block latest` |
+| Block at height | `midnight-cast block <height>` |
+| Raw RPC | `midnight-cast rpc` |
+| What does error N mean? | `midnight-cast decode` |
+| What happened to my tx? | `midnight-cast tx` |
+| Event stream debug | `midnight-cast dust-events` |
+| Version alignment | `midnight-cast versions` |
+| Send a transaction | **Not midnight-cast** — use wallet / Lace / testkit |
 
 ---
 
-## What mn is not
+## What midnight-cast is not
 
 - Not a wallet (no keys, no signing, no proving)
 - Not a replacement for `testkit-js` or Compact tooling
@@ -351,7 +351,7 @@ mn config init -y --network preprod
 
 ## Getting help
 
-### midnight-cast (`mn`)
+### midnight-cast
 
 | Need | Where |
 |------|--------|
@@ -362,11 +362,11 @@ mn config init -y --network preprod
 
 | Need | Where |
 |------|--------|
-| Errors not in `mn decode`, network outages, SDK questions | [Midnight Discord](https://discord.gg/Ap2QZ7yq) |
+| Errors not in `midnight-cast decode`, network outages, SDK questions | [Midnight Discord](https://discord.gg/Ap2QZ7yq) |
 | Official reference | [Midnight docs](https://docs.midnight.network/) |
 | Version pins | [Support matrix](https://docs.midnight.network/relnotes/support-matrix) |
 
-**Before Discord:** run `mn health` (or the debug ladder) and paste output — same signals core devs use in threads.
+**Before Discord:** run `midnight-cast health` (or the debug ladder) and paste output — same signals core devs use in threads.
 
 ### Docs
 
