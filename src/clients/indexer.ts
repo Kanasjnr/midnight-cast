@@ -82,6 +82,10 @@ const DUST_SUBSCRIPTION = `
   }
 `;
 
+function isCloseEvent(value: unknown): boolean {
+  return typeof value === "object" && value !== null && "code" in value && "reason" in value;
+}
+
 function createWsClient(indexerWs: string, keepTrying: () => boolean): { client: Client; close: () => void } {
   const sockets = new Set<WebSocket>();
   class TrackedWebSocket extends WebSocket {
@@ -90,11 +94,23 @@ function createWsClient(indexerWs: string, keepTrying: () => boolean): { client:
       sockets.add(this);
     }
   }
+  let everConnected = false;
   const client = createClient({
     url: indexerWs,
     webSocketImpl: TrackedWebSocket,
     connectionParams: {},
-    shouldRetry: keepTrying,
+    on: {
+      connected: () => {
+        everConnected = true;
+      },
+    },
+    // Before the first connection an error (refused, DNS, handshake) is final;
+    // after it, a dropped connection is retried like a close.
+    shouldRetry: (errOrClose) => keepTrying() && (everConnected || isCloseEvent(errOrClose)),
+    retryWait: (retries) =>
+      new Promise((resolve) => {
+        setTimeout(resolve, 2 ** retries * 1000 + 300 + Math.floor(Math.random() * 2700)).unref();
+      }),
   });
   return {
     client,
@@ -198,7 +214,7 @@ export async function subscribeDustEvents(
         error: (err) => {
           finish(
             new Error(
-              `Indexer WS unreachable: ${err instanceof Error ? err.message : String(err)}`,
+              `Indexer WS unreachable: ${String((err as { message?: unknown })?.message || "connection failed")}`,
             ),
           );
         },
