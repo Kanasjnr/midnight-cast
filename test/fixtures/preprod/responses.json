@@ -1,0 +1,112 @@
+{
+  "network": "preprod",
+  "recordedAt": "2026-10-03T19:54:13.740Z",
+  "inputs": {
+    "txHash": "9bc5ba56595c694eccd00722c739f8fadedbf90ff30884704651bb9e398926ca",
+    "blockHeight": 2823233,
+    "dustEventId": 1586607
+  },
+  "exchanges": [
+    {
+      "key": "indexer query { block { height } } {}",
+      "status": 200,
+      "contentType": "application/graphql-response+json",
+      "body": "{\"data\":{\"block\":{\"height\":2823235}}}"
+    },
+    {
+      "key": "indexer query { block { protocolVersion } } {}",
+      "status": 200,
+      "contentType": "application/graphql-response+json",
+      "body": "{\"data\":{\"block\":{\"protocolVersion\":1000300}}}"
+    },
+    {
+      "key": "indexer query TransactionLookup($offset: TransactionOffset!) { transactions(offset: $offset) { __typename id hash protocolVersion ... on RegularTransaction { transactionResult { status segments { id success } } fees { paidFees estimatedFees } identifiers startIndex endIndex } block { height hash } dustLedgerEvents { id __typename } zswapLedgerEvents { id __typename } contractActions { __typename } } } {\"offset\":{\"hash\":\"0x9bc5ba56595c694eccd00722c739f8fadedbf90ff30884704651bb9e398926ca\"}}",
+      "status": 200,
+      "contentType": "application/graphql-response+json",
+      "body": "{\"data\":{\"transactions\":[{\"__typename\":\"RegularTransaction\",\"id\":638969,\"hash\":\"9bc5ba56595c694eccd00722c739f8fadedbf90ff30884704651bb9e398926ca\",\"protocolVersion\":1000300,\"transactionResult\":{\"status\":\"PARTIAL_SUCCESS\",\"segments\":[{\"id\":0,\"success\":true},{\"id\":1,\"success\":true},{\"id\":8886,\"success\":false}]},\"fees\":{\"paidFees\":\"1\",\"estimatedFees\":\"1\"},\"identifiers\":[\"0033e841db059f94bc2d815fe332d94cd5420eea784224cf212ffd48108c6bb3d9\",\"00d75ecf35a29071fa2f9db602efae412d9916225568b9c1b3b2fef181617763f2\"],\"startIndex\":23162,\"endIndex\":23162,\"dustLedgerEvents\":[{\"id\":1586607,\"__typename\":\"DustSpendProcessed\"}],\"zswapLedgerEvents\":[],\"contractActions\":[],\"block\":{\"height\":2823233,\"hash\":\"522bb6bb2d934529ca1149534486b622bf1a924afb02dd4603dd2bb1c126e9ee\"}}]}}"
+    },
+    {
+      "key": "proof-server GET /",
+      "status": 200,
+      "contentType": "application/json",
+      "body": "{\"status\":\"ok\",\"timestamp\":\"2026-10-03 19:53:47.440750114 +00:00:00\"}"
+    },
+    {
+      "key": "proof-server GET /version",
+      "status": 200,
+      "contentType": "text/plain; charset=utf-8",
+      "body": "8.1.0"
+    },
+    {
+      "key": "rpc chain_getBlockHash [\"0x2b1441\"]",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":\"0x522bb6bb2d934529ca1149534486b622bf1a924afb02dd4603dd2bb1c126e9ee\"}"
+    },
+    {
+      "key": "rpc chain_getBlockHash []",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":\"0x692af94389d8f2ee5530cba38447f614ce5a2de8a9ef0af0e1490fefc704240d\"}"
+    },
+    {
+      "key": "rpc chain_getHeader [\"0x522bb6bb2d934529ca1149534486b622bf1a924afb02dd4603dd2bb1c126e9ee\"]",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"parentHash\":\"0xdeb0f68d5abeecf09da774840cd6bd6b246b415ae7871e6b12aa6e303851397d\",\"number\":\"0x2b1441\",\"stateRoot\":\"0x7eb7781bac9815804d91a810cdf7efc422447c7c5a54f8d83f5649fc060c8da2\",\"extrinsicsRoot\":\"0x27de75b1a57e2f699c07e735c73c612d4b5ae183951819f6df6c095f10e107b2\",\"digest\":{\"logs\":[\"0x066175726120dee4ca1100000000\",\"0x066d637368808ad70773a778e9ae15d8affba858c4a0edc40874969129117947317c31658db5\",\"0x044d4e5356106c430f00\",\"0x0442454546840349706985fecddb3279059c1db9948933c2b35ea4cf2e911d3f292dcb09ed99f5\",\"0x056175726101011254e7a52bb96ff60a1bb302438d620e98366b7d74570c58181e1d521cf17e074f7b92698bb6b2a8f96801d331550edc07c7d0091ae03977fbe536055c2dde87\"]}}}"
+    },
+    {
+      "key": "rpc chain_getHeader []",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"parentHash\":\"0xb41f930b753672b6e373674ec442e5156388bad7d9a89e7e23e9e21d67931fa8\",\"number\":\"0x2b1445\",\"stateRoot\":\"0x67fc477a2cf9b98a4531d992f8df6c9ce62afdf3b55f4a3c1ca78608e90afe2f\",\"extrinsicsRoot\":\"0xd8b28528a2b760b625da31651e3f22c56ef81d9e4f2e90ce8540b1786121039a\",\"digest\":{\"logs\":[\"0x066175726120e2e4ca1100000000\",\"0x066d6373688065bbf484ec10c9d88ae2b10969df706175523714d75414a8df2ccfab3d150100\",\"0x044d4e5356106c430f00\",\"0x04424545468403a1c1357742ac9210da66a9d99ff15772ea8efedf515af3fa8b91afc992340429\",\"0x056175726101010caee810234a98c06ae006fe2b5d32e84512aa5d5573821326205d88a5c7d11c517a7d32a3f332fc9a7db89a2a6f8fb6300b925798617668db4a46955d609487\"]}}}"
+    },
+    {
+      "key": "rpc chain_getRuntimeVersion []",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"specName\":\"midnight\",\"implName\":\"midnight\",\"authoringVersion\":1,\"specVersion\":1000300,\"implVersion\":0,\"apis\":[[\"0xa0c89371ec56244c\",1],[\"0xf78b278be53f454c\",2],[\"0x91d5df18b0d2cf58\",3],[\"0xd9bc84ac3bfb8a0c\",1],[\"0x7d699da8a672e867\",5],[\"0x393b2599ea57bca2\",1],[\"0xbc9d89904f5b923f\",1],[\"0x49eaaf1b548a0cb0\",6],[\"0x40fe3ad401f8959a\",6],[\"0x2a5e924655399e60\",1],[\"0xdd718d5cc53262d4\",1],[\"0xc3c222f40af6f42b\",1],[\"0xc7805fd5ec973a86\",1],[\"0x279a32908e96410d\",1],[\"0xfbc577b9d747efd6\",1],[\"0x22a0eaa81c05f0d3\",1],[\"0x19dba14093498f16\",2],[\"0x0093e736d7484c30\",1],[\"0x37e397fc7c91f5e4\",2],[\"0xd2bc9897eed08f15\",3],[\"0xab3c0572291feb8b\",2],[\"0xa897625b130086bd\",1],[\"0xed99c5acb25eedf5\",3],[\"0xdf6acb689907609b\",5]],\"transactionVersion\":3,\"systemVersion\":3,\"stateVersion\":3}}"
+    },
+    {
+      "key": "rpc system_health []",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"peers\":13,\"isSyncing\":false,\"shouldHavePeers\":true}}"
+    },
+    {
+      "key": "rpc system_version []",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":\"1.0.400-c338b9ac\"}"
+    }
+  ],
+  "dust": {
+    "variables": {
+      "id": 1586607
+    },
+    "payloads": [
+      {
+        "data": {
+          "dustLedgerEvents": {
+            "__typename": "DustSpendProcessed",
+            "id": 1586607,
+            "protocolVersion": 1000300,
+            "raw": "6d69646e696768743a6576656e745b76395d3a0400dd019bc5ba56595c694eccd00722c739f8fadedbf90ff30884704651bb9e398926ca000001000773ae6b7532a25c98abb0301daf5fd0e6dd2076a19639006aa407e83a7847bd25454206480073607d9355dd5f786983a24ae66873713384ccac9a6c705478c46b3adea283aa0fa50f03165dc16a03345dc16a",
+            "maxId": 1586608
+          }
+        }
+      },
+      {
+        "data": {
+          "dustLedgerEvents": {
+            "__typename": "DustSpendProcessed",
+            "id": 1586608,
+            "protocolVersion": 1000300,
+            "raw": "6d69646e696768743a6576656e745b76395d3a0400f501265b435692044eb1b997cad9c3856722f8cb62a78640fa68697cdd76a401ea0d0000c2df077358f77fc1057e2bb9cd3536f382e04ee377b768f456548af5b04ccebd69b59c5e4606480073d9a739a844273dea2e81fc480a3a351f18f0ea8051572536786cfae48e2545630f01c06e31d9100103165dc16a03345dc16a",
+            "maxId": 1586608
+          }
+        }
+      }
+    ]
+  }
+}

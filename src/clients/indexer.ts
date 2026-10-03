@@ -80,7 +80,7 @@ const DUST_EVENT_FIELDS = `
   maxId
 `;
 
-const DUST_SUBSCRIPTION = `
+export const DUST_SUBSCRIPTION = `
   subscription DustEvents($id: Int) {
     dustLedgerEvents(id: $id) {
       ${DUST_EVENT_FIELDS}

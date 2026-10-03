@@ -49,10 +49,15 @@
 - Codes 117 (NotNormalized), 138 (BalanceCheckOverspend) and 170 (InvalidDustSpendProof) carry the fuller, devnet-verified descriptions and fixes from Midnight Expert's status-codes catalog, credited in `NOTICE`
 - Code 208 (InvalidBasisPoints) said the valid range was 0-9999; the ledger accepts up to 10000
 
+### Tests & CI (recorded responses)
+- Recorded preview, preprod and mainnet (Blockfrost) responses for every request midnight-cast makes, plus each indexer's GraphQL schema, live in `test/fixtures/` and are replayed through the real commands in the unit tests. Every output is checked against the published JSON Schemas and every indexer query against the recorded schema. `npm run fixtures` re-records them
+- `live.yml` re-records on the usual triggers and fails on schema drift: a request no longer made or newly made, a changed status, a field that disappeared or changed type, or a changed indexer schema
+
 ### Tests & CI (error codes)
 - `npm run error-codes` checks the ledger error map against midnight-node at the release the support matrix names, and against a pinned Midnight Expert catalog. It runs with the live checks, so a runtime upgrade that changes the code table fails before a release. Midnight Expert's entries for seven codes still live on runtime 1.0.300 are marked retired upstream; that is reported as midnightntwrk/midnight-expert#272
 
 ### Fixes
+- `tx --json` printed `"segments": null` for successful transactions, because the indexer returns null rather than an empty list, and that broke the published `tx` schema. `segments` is now left out when there are none. Found by the recorded preview responses
 - `decode --raw` no longer reads short words as hex codes ("a block" decoded as code 10, and "after 10 retries" as code 16), and no longer decodes "Invalid Transaction" as ledger code 1 `Transaction`. "Ledger N" counts as a code only when labelled ("ledger error 9", "ledger code 9"), so "targets ledger 9" and "ledger 8.1.2" are no longer read as codes
 - An HTTP 429 from an RPC or indexer endpoint gets a rate-limiting hint instead of the generic "rejected the request"
 - `dust-event` and `dust-events` no longer repeat "Indexer WS unreachable" twice in their error
