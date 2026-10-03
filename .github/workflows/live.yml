@@ -174,3 +174,21 @@ jobs:
 
       - name: Compare the ledger error map with the deployed node
         run: npm run error-codes
+
+  response-shapes:
+    name: Response shapes (preview, preprod)
+    if: github.event_name != 'workflow_dispatch' || inputs.network == 'all'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+
+      - name: Compare live responses and the indexer schema with the recorded fixtures
+        run: npm run fixtures -- --check
