@@ -53,7 +53,7 @@ Support matrix / versions
 =========================
 
 midnight-cast versions compares live node, runtime spec, indexer API,
-protocolVersion and optional proof-server against the bundled support matrix.
+protocolVersion and optional proof-server against the support matrix.
 With a package.json present it also checks local Midnight packages under
 either npm scope (@midnight-ntwrk or @midnightntwrk) against the matrix pins,
 fails if one package is installed under both scopes, and notes packages that
@@ -62,9 +62,15 @@ have moved to @midnightntwrk.
 Useful flags:
   --fail-on-mismatch   exit 1 when live checks fail (CI)
   --no-local           skip cwd package.json checks
+  --refresh-matrix     fetch Midnight's published matrix now
+  --offline            use the matrix bundled with this release
+
+The matrix is Midnight's published one (cached for 6h), with node, proof
+server, runtime spec and ledger kept from the bundled copy, since those are
+checked against the live network. A support-matrix.json in
+~/.config/midnight-cast/ overrides both.
 
 health treats version mismatches as warnings unless --fail-on-mismatch is set.
-Override the matrix with ~/.config/midnight-cast/support-matrix.json
 
 Docs:
   https://docs.midnight.network/relnotes/support-matrix

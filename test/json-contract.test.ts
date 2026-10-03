@@ -96,7 +96,7 @@ describe("next steps", () => {
       expect(code, command).toBe(0);
       expect(envelope.ok, command).toBe(true);
     }
-  });
+  }, 60000);
 });
 
 describe("explain --json catalog", () => {

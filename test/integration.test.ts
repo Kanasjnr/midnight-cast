@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { execFile } from "node:child_process";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { promisify } from "node:util";
 import { join } from "node:path";
 import { loadSupportMatrix } from "../src/lib/versions.js";
@@ -9,10 +11,14 @@ const execFileAsync = promisify(execFile);
 const integration = process.env.INTEGRATION === "1";
 const cli = join(process.cwd(), "dist", "cli.js");
 
-async function runMn(args: string[]): Promise<{ stdout: string; stderr: string; code: number }> {
+async function runMn(
+  args: string[],
+  env: NodeJS.ProcessEnv = process.env,
+): Promise<{ stdout: string; stderr: string; code: number }> {
   try {
     const { stdout, stderr } = await execFileAsync("node", [cli, ...args], {
       timeout: 30000,
+      env,
     });
     return { stdout, stderr, code: 0 };
   } catch (err: unknown) {
@@ -65,6 +71,16 @@ describe.skipIf(!integration)("integration (live preprod)", () => {
 
   // Bundled-matrix vs live drift is a network event, not a code regression:
   // Here we only assert invariants that hold regardless of the matrix.
+  it("midnight-cast versions preprod judges against Midnight's published matrix", async () => {
+    const { MN_OFFLINE: _, ...online } = process.env;
+    const env = { ...online, XDG_CACHE_HOME: mkdtempSync(join(tmpdir(), "mc-cache-")) };
+    const { stdout } = await runMn(["versions", "preprod", "--json", "--no-local"], env);
+    const parsed = parseEnvelope(stdout) as { data: { matrixSource: { kind: string } } };
+    expect(parsed.data.matrixSource.kind).toBe("upstream");
+    const again = parseEnvelope((await runMn(["versions", "preprod", "--json", "--no-local"], env)).stdout) as typeof parsed;
+    expect(again.data.matrixSource.kind).toBe("cache");
+  });
+
   it("midnight-cast versions preprod reports a consistent live stack", async () => {
     const expectedNode = loadSupportMatrix().networks.preprod!.node;
     const { stdout } = await runMn(["versions", "preprod", "--json", "--no-local"]);

@@ -7,10 +7,11 @@ import {
   buildVersionChecks,
   fetchLiveVersions,
   isMatrixStale,
-  loadSupportMatrix,
   matrixStalenessWarning,
 } from "../lib/versions.js";
 import { runServiceChecks } from "./ping.js";
+import { describeMatrixSource, resolveSupportMatrix, type MatrixSource } from "../lib/upstream-matrix.js";
+import { settle } from "../lib/settle.js";
 import type { EmitResult, GlobalOptions } from "../output.js";
 import { fail, failReaching } from "../output.js";
 import { EXPLAIN_VERSIONS, checkEndpoints, narrowDown } from "../lib/next-steps.js";
@@ -36,6 +37,8 @@ export interface HealthReport {
     matrixUpdated: string;
     matrixStale: boolean;
     matrixWarning?: string;
+    matrixSource?: MatrixSource;
+    matrixNotes?: string[];
     allOk: boolean;
     checks: Array<{ label: string; ok: boolean; expected?: string; live?: string; note?: string }>;
   };
@@ -73,7 +76,10 @@ function formatHealthHuman(report: HealthReport): string {
     `  In sync:         ${report.sync.inSync ? "yes" : "no"}`,
     "",
     "Versions:",
-    `  Matrix updated:  ${report.versions.matrixUpdated}${report.versions.matrixStale ? " (stale)" : ""}`,
+    report.versions.matrixSource
+      ? `  Matrix:          ${describeMatrixSource(report.versions.matrixSource)}`
+      : `  Matrix updated:  ${report.versions.matrixUpdated}${report.versions.matrixStale ? " (stale)" : ""}`,
+    ...(report.versions.matrixNotes ?? []).map((note) => `  Note: published matrix: ${note}`),
   );
 
   if (report.versions.matrixWarning) {
@@ -96,6 +102,8 @@ export async function healthCommand(
     threshold?: number;
     failOnLag?: boolean;
     failOnMismatch?: boolean;
+    offline?: boolean;
+    refreshMatrix?: boolean;
   },
   options: GlobalOptions,
 ): Promise<EmitResult> {
@@ -107,8 +115,13 @@ export async function healthCommand(
   }
 
   const threshold = flags.threshold ?? 100;
-  const matrix = loadSupportMatrix();
+  const liveResult = settle(fetchLiveVersions(endpoints.rpc, endpoints.indexerHttp));
+  const { matrix, source: matrixSource, notes } = await resolveSupportMatrix({
+    offline: flags.offline,
+    refresh: flags.refreshMatrix,
+  });
   const expected = matrix.networks[endpoints.network];
+  const matrixNotes = notes[endpoints.network] ?? [];
 
   if (!expected) {
     return fail(
@@ -144,12 +157,9 @@ export async function healthCommand(
   const inSync = Math.abs(delta) < threshold;
   syncOk = tipExitCode(delta, threshold, flags.failOnLag) === 0;
 
-  let live;
-  try {
-    live = await fetchLiveVersions(endpoints.rpc, endpoints.indexerHttp);
-  } catch (err) {
-    return failReaching(err, endpoints.network, flags);
-  }
+  const liveOutcome = await liveResult;
+  if (!liveOutcome.ok) return failReaching(liveOutcome.error, endpoints.network, flags);
+  const live = liveOutcome.value;
 
   let liveProofServer: string | undefined;
   if (endpoints.proofServer) {
@@ -192,6 +202,8 @@ export async function healthCommand(
       matrixUpdated: matrix.updated,
       matrixStale,
       matrixWarning: matrixStalenessWarning(matrix.updated, matrix.docUrl),
+      matrixSource,
+      ...(matrixNotes.length ? { matrixNotes } : {}),
       allOk: versionsOk,
       checks: versionChecks.map((c) => ({
         label: c.label,

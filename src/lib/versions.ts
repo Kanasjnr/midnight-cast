@@ -7,6 +7,7 @@ import { loadDataJson } from "./data-path.js";
 import { sanitizeForOutput } from "./sanitize.js";
 import { isBlockfrostUrl } from "./blockfrost.js";
 import { NEW_SCOPE, OLD_SCOPE, isMidnightPackage, loadMigratedPackages, packageBaseName } from "./npm-scope.js";
+import { describeMatrixSource, type MatrixSource } from "./upstream-matrix.js";
 
 export interface MatrixNetwork {
   /** Recommended node release for running your own node. */
@@ -54,6 +55,9 @@ export interface VersionsReport {
   matrixUpdated: string;
   matrixStale: boolean;
   matrixWarning?: string;
+  matrixSource?: MatrixSource;
+  /** Inconsistencies inside Midnight's published matrix, such as tag vs containerTag. */
+  matrixNotes?: string[];
   networkWarning?: string;
   docUrl: string;
   expected: MatrixNetwork;
@@ -448,7 +452,10 @@ export function buildScopeHints(
 export function formatVersionsHuman(report: VersionsReport): string {
   const lines = [
     `Network:  ${report.network}`,
-    `Matrix:   ${report.docUrl} (updated ${report.matrixUpdated})`,
+    report.matrixSource
+      ? `Matrix:   ${describeMatrixSource(report.matrixSource)}`
+      : `Matrix:   ${report.docUrl} (updated ${report.matrixUpdated})`,
+    ...(report.matrixNotes ?? []).map((note) => `Note:     published matrix: ${note}`),
   ];
 
   if (report.matrixWarning) {
