@@ -23,7 +23,7 @@ Available on every command:
 
 | Flag | Description |
 |------|-------------|
-| `--json` | Machine-readable output (`{ ok, data?, error?, errorKind?, hint? }`) |
+| `--json` | Machine-readable output in a versioned envelope (see [JSON output](#json-output)) |
 | `--network <name>` | `preview`, `preprod`, `mainnet`, or `local` |
 | `--rpc <url>` | Override node JSON-RPC URL |
 | `--indexer-http <url>` | Override indexer GraphQL HTTP URL |
@@ -430,56 +430,80 @@ id=565902  typename=DustInitialUtxo  protocolVersion=22000  raw=0x6d69646e696768
 
 ---
 
-## `mn explain <topic>`
+## `mn explain [topic]`
 
-Static help (no network).
+Static help (no network). Topics: `dust`, `1010`, `versions`, `transcript`.
 
 ```bash
 mn explain dust
+mn explain --json
 ```
+
+With `--json` and no topic, `explain` returns a catalog of the whole CLI, built from the command definitions so it can't drift from them. It lists every command with its usage, arguments and options, whether it is read-only (only `config init` writes, to the config file), and a link to the schema of its output, plus the global options, the topics, the exit codes and the error kinds. An agent can learn what midnight-cast does from that one call.
 
 ---
 
 ## JSON output
 
-With `--json`, successful commands print:
+With `--json`, every command prints one envelope on stdout:
 
 ```json
 {
-  "ok": true,
-  "data": { ... }
-}
-```
-
-Failures:
-
-```json
-{
+  "schemaVersion": 1,
   "ok": false,
-  "error": "Indexer unreachable",
-  "errorKind": "timeout",
-  "hint": "The indexer didn't answer in time. Public endpoints can be slow, so try again, or point at another endpoint with --rpc / --indexer-http."
+  "command": "tip",
+  "network": "preprod",
+  "data": null,
+  "warnings": [],
+  "error": {
+    "message": "Indexer unreachable",
+    "kind": "timeout",
+    "hint": "The indexer didn't answer in time. Public endpoints can be slow, so try again, or point at another endpoint with --rpc / --indexer-http."
+  },
+  "next": [
+    {
+      "command": "midnight-cast config show --network preprod",
+      "reason": "Check the configured endpoints; a wrong or retired URL is the usual cause"
+    }
+  ]
 }
 ```
 
-When an RPC or indexer request fails, `errorKind` says what went wrong. It is also set on failed rows in `ping` and `health`:
+`command` is the command path, such as `decode ledger`, and is `null` only for a usage error. `network` is the network the command ran against, when it has one. `data` holds the command's result and `error` is `null` whenever `ok` is true. Some failed checks keep their report in `data`: a failed `ping` still lists every service, and an unhealthy `health` keeps the full report. Warnings that human mode prints on stderr, such as a config that still points at a retired mainnet host, are collected in `warnings`.
 
-| `errorKind` | Meaning |
+`next` lists follow-up commands, always spelled `midnight-cast …`. They are the same suggestions human output gives as hints: `decode 1010` points at `decode ledger <N>` and `explain 1010`, `tx` points at `decode --raw` when a segment failed and at `dust-event <id>` for each DUST event, a failed `health` points at `ping` or `tip`, and a request that can't reach its endpoint points at `config show`. A placeholder in angle brackets, such as `<N>`, has to be filled in before running the command.
+
+`error.kind` says what went wrong. The network kinds are also set on failed rows in `ping` and `health`:
+
+| `kind` | Meaning |
 | --- | --- |
+| `usage` | The command line was invalid |
 | `dns` | The host name doesn't resolve |
 | `refused` | Nothing is listening at the URL |
 | `timeout` | No answer in time, after retries |
 | `tls` | The TLS handshake failed (certificate, proxy or clock) |
 | `network` | The connection dropped |
-| `http_4xx` | The endpoint rejected the request, e.g. a wrong path (404) or a missing token (403) |
+| `http_4xx` | The endpoint rejected the request, e.g. a wrong path (404), a missing token (403) or rate limiting (429) |
 | `http_5xx` | The endpoint reported a server error, after retries |
 | `rpc_error` | The node rejected the JSON-RPC call |
 | `graphql_error` | The indexer rejected the GraphQL query |
 | `invalid_response` | The response wasn't the JSON expected |
 
-`hint` suggests a next step, and human mode prints it as a `Hint:` line under the error. `error` keeps its existing wording, so scripts matching on it keep working.
+Other failures, such as an unknown ledger code or a transaction that isn't found, have a `kind` of `null`. `error.hint` suggests what to do, and human mode prints it as a `Hint:` line under the error.
 
-Some commands also set non-zero exit codes for CI (`health --fail-on-lag`, `health --fail-on-mismatch`, `tip --fail-on-lag`, `versions --fail-on-mismatch`, `ping`).
+### Exit codes
+
+| Code | Meaning |
+| --- | --- |
+| `0` | Success |
+| `1` | The command ran and failed: a service is unreachable, a check failed, or a request was rejected |
+| `2` | Usage error: an unknown command or option, or a missing argument |
+
+`ping` exits `1` when the RPC or indexer is down. `tip --fail-on-lag`, `health --fail-on-lag`, `health --fail-on-mismatch` and `versions --fail-on-mismatch` exit `1` when their check fails; without those flags they only report.
+
+### Schemas and versioning
+
+JSON Schemas (draft 2020-12) for the envelope and for each command's `data` are in [`schemas/`](../schemas) and ship in the npm package. The `explain --json` catalog links each command to its schema. Data schemas require only the fields that are always present and allow others, so new fields can appear in any release. Removing or renaming a field, or changing its type, is a breaking change: it bumps `schemaVersion` and is called out in the changelog. Check `schemaVersion` before reading the rest.
 
 ---
 

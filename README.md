@@ -156,6 +156,15 @@ mn rpc chain_getHeader --json
 mn versions preprod --fail-on-mismatch   # CI; local Midnight packages (either npm scope) vs matrix pins
 ```
 
+## For agents and scripts
+
+Add `--json` to any command for one stable envelope: `ok`, `data`, a structured `error` with a `kind` and `hint`, any `warnings`, and `next`, the follow-up commands an expert would run. `midnight-cast explain --json` describes every command, option, exit code and error kind in one call, and [`schemas/`](schemas) has a JSON Schema for each command's output. Exit codes are `0` for success, `1` for a failed check and `2` for a usage error. See [JSON output](docs/COMMANDS.md#json-output).
+
+```bash
+midnight-cast decode --raw "1010: Invalid Transaction: Custom error: 186" --json
+midnight-cast explain --json
+```
+
 ## Community & support
 
 | Need | Where |
