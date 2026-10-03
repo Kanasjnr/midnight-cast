@@ -3,6 +3,7 @@ import {
   findLedgerCodesByName,
   parseRawErrorMessage,
 } from "../lib/error-parse.js";
+import { matchKnownMessages, type KnownMessage } from "../lib/known-messages.js";
 import { loadSupportMatrix } from "../lib/versions.js";
 import { NETWORK_NAMES } from "../networks.js";
 import type { EmitResult, GlobalOptions, NextStep } from "../output.js";
@@ -436,6 +437,10 @@ function decodeRaw(raw: string, options: DecodeOptions): EmitResult {
     else if (r.error) failures.push(r.error);
   }
 
+  for (const message of matchKnownMessages(raw)) {
+    appendDecodeResult(parts, sections, decodeKnownMessage(message, options), options.json);
+  }
+
   if (parts.length === 0) {
     const fallbackLedger = decodeLedger(raw.trim(), options);
     if (fallbackLedger.ok) {
@@ -476,6 +481,22 @@ function decodeRaw(raw: string, options: DecodeOptions): EmitResult {
   }
 
   return { ...success(sections.join("\n").trimEnd()), next };
+}
+
+function decodeKnownMessage(message: KnownMessage, options: DecodeOptions): EmitResult {
+  const next = message.next.map((step) =>
+    options.network ? { ...step, command: step.command.replace("<network>", options.network) } : step,
+  );
+  if (options.json) {
+    const { next: _, ...rest } = message;
+    return { ...success({ kind: "message" as const, ...rest }), next };
+  }
+  const text = [
+    `Kind:   message (${message.name})`,
+    `Desc:   ${message.description}`,
+    `Fix:    ${message.fix}`,
+  ].join("\n");
+  return { ...success(text), next };
 }
 
 // The raw decoder has already tried every decode route, so suggesting one again would loop.
