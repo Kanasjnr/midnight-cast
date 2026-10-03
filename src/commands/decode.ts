@@ -5,7 +5,7 @@ import {
 } from "../lib/error-parse.js";
 import { loadSupportMatrix } from "../lib/versions.js";
 import { NETWORK_NAMES } from "../networks.js";
-import type { EmitResult, GlobalOptions } from "../output.js";
+import type { EmitResult, GlobalOptions, NextStep } from "../output.js";
 import { fail, success } from "../output.js";
 
 const MAX_RAW_ERROR_LENGTH = 16_384;
@@ -181,9 +181,12 @@ function decodeLedger(input: string, options: DecodeOptions): EmitResult {
     ...(mapMismatch ? { mapMismatch } : {}),
     ...(transcriptHint ? { relatedHint: transcriptHint } : {}),
   };
+  const next: NextStep[] = transcriptHint
+    ? [{ command: "midnight-cast explain transcript", reason: "Why proof and transcript versions get rejected" }]
+    : [];
 
   if (options.json) {
-    return success(payload);
+    return { ...success(payload), next };
   }
 
   const meta = ledgerMeta;
@@ -199,7 +202,7 @@ function decodeLedger(input: string, options: DecodeOptions): EmitResult {
     `Docs:   ${data.docUrl}`,
   ].join("\n");
 
-  return success(text);
+  return { ...success(text), next };
 }
 
 function findPalletIndex(
@@ -261,9 +264,12 @@ function decodePallet(
     docUrl: data.docUrl,
     ...(innerHint ? { innerHint } : {}),
   };
+  const next: NextStep[] = innerHint
+    ? [{ command: 'midnight-cast decode --raw "<full error message>"', reason: "Decode the inner Custom(N) ledger error" }]
+    : [];
 
   if (options.json) {
-    return success(payload);
+    return { ...success(payload), next };
   }
 
   const text = [
@@ -276,7 +282,7 @@ function decodePallet(
     `Docs:    ${data.docUrl}`,
   ].join("\n");
 
-  return success(text);
+  return { ...success(text), next };
 }
 
 function validateDecodeNetwork(network?: string): string | undefined {
@@ -325,9 +331,14 @@ function decodeJsonRpc(codeArg: string, options: DecodeOptions): EmitResult {
   return success(text);
 }
 
+const NEXT_AFTER_1010: NextStep[] = [
+  { command: "midnight-cast decode ledger <N>", reason: "Decode the Custom error: N inside the rejection" },
+  { command: "midnight-cast explain 1010", reason: "How to read a 1010 rejection" },
+];
+
 function decode1010(options: DecodeOptions): EmitResult {
   if (options.json) {
-    return success(SUBSTRATE_1010);
+    return { ...success(SUBSTRATE_1010), next: NEXT_AFTER_1010 };
   }
 
   const text = [
@@ -341,7 +352,7 @@ function decode1010(options: DecodeOptions): EmitResult {
     `Ledger codes: ${SUBSTRATE_1010.ledgerDocUrl}`,
   ].join("\n");
 
-  return success(text);
+  return { ...success(text), next: NEXT_AFTER_1010 };
 }
 
 function appendDecodeResult(
@@ -420,13 +431,18 @@ function decodeRaw(raw: string, options: DecodeOptions): EmitResult {
     );
   }
 
+  const next = followUpsAfterRaw(parts);
+
   if (options.json) {
-    return success({
-      raw,
+    return {
+      ...success({
+        raw,
       parsed: { ...parsed, ledgerCodes, ledgerNames: nameCodes },
-      decodings: parts.map((p) => p.data),
-      ...(failures.length > 0 ? { warnings: failures } : {}),
-    });
+        decodings: parts.map((p) => p.data),
+        ...(failures.length > 0 ? { warnings: failures } : {}),
+      }),
+      next,
+    };
   }
 
   if (failures.length > 0) {
@@ -436,7 +452,13 @@ function decodeRaw(raw: string, options: DecodeOptions): EmitResult {
     );
   }
 
-  return success(sections.join("\n").trimEnd());
+  return { ...success(sections.join("\n").trimEnd()), next };
+}
+
+// The raw decoder has already tried every decode route, so suggesting one again would loop.
+function followUpsAfterRaw(parts: EmitResult[]): NextStep[] {
+  const steps = parts.flatMap((p) => p.next ?? []).filter((s) => !s.command.startsWith("midnight-cast decode"));
+  return steps.filter((s, i) => steps.findIndex((t) => t.command === s.command) === i);
 }
 
 function otherErrorRouterHint(raw: string): string | undefined {
