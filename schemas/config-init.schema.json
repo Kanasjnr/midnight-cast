@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/main/schemas/config-init.schema.json",
+  "title": "config init data",
+  "type": "object",
+  "required": [
+    "message",
+    "network"
+  ],
+  "properties": {
+    "message": {
+      "type": "string"
+    },
+    "network": {
+      "type": "string"
+    },
+    "next": {
+      "type": "string",
+      "description": "Setup instruction, e.g. how to supply a Blockfrost project ID"
+    }
+  }
+}

@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/main/schemas/tx.schema.json",
+  "title": "tx data",
+  "type": "object",
+  "required": [
+    "network",
+    "hash",
+    "status",
+    "dustLedgerEvents",
+    "zswapLedgerEvents",
+    "contractActions"
+  ],
+  "properties": {
+    "network": {
+      "type": "string"
+    },
+    "networkWarning": {
+      "type": "string"
+    },
+    "typename": {
+      "type": "string"
+    },
+    "id": {
+      "type": "integer"
+    },
+    "hash": {
+      "type": "string"
+    },
+    "protocolVersion": {
+      "type": "integer"
+    },
+    "blockHeight": {
+      "type": "integer"
+    },
+    "blockHash": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string"
+    },
+    "segments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "success"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "success": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "fees": {
+      "type": "object",
+      "required": [
+        "paidFees",
+        "estimatedFees"
+      ],
+      "properties": {
+        "paidFees": {
+          "type": "string"
+        },
+        "estimatedFees": {
+          "type": "string"
+        }
+      }
+    },
+    "dustLedgerEvents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "typename"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "typename": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "zswapLedgerEvents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "typename"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "typename": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "contractActions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "typename"
+        ],
+        "properties": {
+          "typename": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "identifiers": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

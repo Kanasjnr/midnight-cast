@@ -1,4 +1,5 @@
 import type { Command, Option } from "commander";
+import type { NetworkErrorKind } from "./network-error.js";
 import { SCHEMA_VERSION } from "../output.js";
 
 export interface CatalogOption {
@@ -13,6 +14,8 @@ export interface CatalogCommand {
   description: string;
   arguments: Array<{ name: string; required: boolean; variadic: boolean }>;
   options: CatalogOption[];
+  readOnly: boolean;
+  outputSchema: string;
 }
 
 export interface Catalog {
@@ -32,7 +35,7 @@ const EXIT_CODES = {
   "2": "Usage error: unknown command or option, or a missing argument",
 };
 
-const ERROR_KINDS = {
+const ERROR_KINDS: Record<NetworkErrorKind | "usage", string> = {
   usage: "The command line was invalid",
   dns: "The host name doesn't resolve",
   refused: "Nothing is listening at the URL",
@@ -45,6 +48,15 @@ const ERROR_KINDS = {
   graphql_error: "The indexer rejected the GraphQL query",
   invalid_response: "The response wasn't the JSON expected",
 };
+
+const SCHEMA_BASE = "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/main/schemas/";
+const WRITES_FILES = new Set(["config init"]);
+
+export function outputSchemaFor(command: string): string {
+  const [first = "", second] = command.split(" ");
+  const file = first === "config" ? `config-${second}` : first === "matrix" ? "versions" : first;
+  return `${SCHEMA_BASE}${file}.schema.json`;
+}
 
 function describeOption(option: Option): CatalogOption {
   return {
@@ -90,6 +102,8 @@ function walk(cmd: Command, prefix: string[]): CatalogCommand[] {
               description: sub.description(),
               arguments: args,
               options,
+              readOnly: !WRITES_FILES.has(path.join(" ")),
+              outputSchema: outputSchemaFor(path.join(" ")),
             },
           ]
         : [];

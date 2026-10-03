@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/main/schemas/ping.schema.json",
+  "title": "ping data",
+  "type": "object",
+  "required": [
+    "network",
+    "table"
+  ],
+  "properties": {
+    "network": {
+      "type": "string"
+    },
+    "table": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "service",
+          "status",
+          "latencyMs"
+        ],
+        "properties": {
+          "service": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "OK",
+              "FAIL"
+            ]
+          },
+          "latencyMs": {
+            "type": "integer"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "errorKind": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "optional": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  }
+}
