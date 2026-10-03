@@ -35,7 +35,8 @@
     "test:smoke": "INTEGRATION=1 vitest run",
     "prepublishOnly": "npm run build",
     "typecheck": "tsc --noEmit && tsc -p tsconfig.scripts.json",
-    "live-check": "tsx scripts/live-check.ts"
+    "live-check": "tsx scripts/live-check.ts",
+    "error-codes": "tsx scripts/error-code-parity.ts"
   },
   "keywords": [
     "midnight",
