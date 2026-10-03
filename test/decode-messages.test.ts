@@ -17,7 +17,7 @@ describe("decode --raw recognises messages from current tooling", () => {
   });
 
   it("the indexer's wording of the same error, for another runtime", () => {
-    const result = decodeRaw("indexer received a block made with unsupported node version 2000000");
+    const result = decodeRaw("Unsupported node version 2000000");
     expect(result.decodings).toEqual([
       expect.objectContaining({ id: "unsupported-block-version", description: expect.stringContaining("2000000") }),
     ]);
@@ -28,12 +28,13 @@ describe("decode --raw recognises messages from current tooling", () => {
       '{"error":"Forbidden","message":"Missing project token. Please include project_id in your request.","status_code":403}',
     );
     expect(result.decodings).toEqual([expect.objectContaining({ id: "blockfrost-missing-token" })]);
-    expect(result.next).toEqual(["midnight-cast config show --network mainnet"]);
+    expect(result.next).toEqual(["midnight-cast config show --network <network>"]);
   });
 
   it("Blockfrost with a wrong or other-network token", () => {
-    const result = decodeRaw('{"error":"Forbidden","message":"Invalid project token.","status_code":403}');
+    const result = decodeRaw('{"error":"Forbidden","message":"Invalid project token.","status_code":403}', "preprod");
     expect(result.decodings).toEqual([expect.objectContaining({ id: "blockfrost-invalid-token" })]);
+    expect(result.next).toEqual(["midnight-cast config show --network preprod"]);
   });
 
   it("a failure from a retired mainnet host", () => {
@@ -48,6 +49,8 @@ describe("decode --raw recognises messages from current tooling", () => {
       "proof server does not support ZKIR 3.1",
       "TypeError: ContractModuleProvider.resolve is not a function",
       "Cannot find module '@midnight-ntwrk/ledger-v9'",
+      '"@midnight-ntwrk/compact-runtime": "^0.20.0"',
+      "compact-runtime@~0.20.1",
     ]) {
       expect(decodeRaw(raw).decodings, raw).toEqual([expect.objectContaining({ id: "compact-ledger-9" })]);
     }

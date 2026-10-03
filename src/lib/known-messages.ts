@@ -1,3 +1,4 @@
+import { RETIRED_HOSTS } from "./blockfrost.js";
 import type { NextStep } from "../output.js";
 
 export interface KnownMessage {
@@ -17,7 +18,7 @@ const CURRENT_SPEC_VERSION = 1_000_300;
 
 const PATTERNS: Pattern[] = [
   {
-    test: /UnsupportedBlockVersion\((\d+)\)|unsupported node version (\d+)/,
+    test: /UnsupportedBlockVersion\((\d+)\)|unsupported node version (\d+)/i,
     describe: (match) => {
       const spec = Number(match[1] ?? match[2]);
       return {
@@ -42,7 +43,7 @@ const PATTERNS: Pattern[] = [
       name: "Blockfrost: missing project token",
       description: "Blockfrost served the request but no project ID was sent with it.",
       fix: "Set BLOCKFROST_PROJECT_ID, pass --project-id, or add blockfrost_project_id to the network's config section.",
-      next: [{ command: "midnight-cast config show --network mainnet", reason: "See whether a project ID is configured and where it comes from" }],
+      next: [{ command: "midnight-cast config show --network <network>", reason: "See whether a project ID is configured and where it comes from" }],
     }),
   },
   {
@@ -51,12 +52,12 @@ const PATTERNS: Pattern[] = [
       id: "blockfrost-invalid-token",
       name: "Blockfrost: invalid project token",
       description: "Blockfrost rejected the project ID: it is wrong, revoked, or for a different network.",
-      fix: 'Mainnet needs a Midnight Mainnet project ID, which starts with "nightmainnet". Copy it again from the Blockfrost dashboard.',
-      next: [{ command: "midnight-cast config show --network mainnet", reason: "See which project ID is used and where it comes from" }],
+      fix: 'Use a project ID created for the same network; Midnight Mainnet IDs start with "nightmainnet". Copy it again from the Blockfrost dashboard.',
+      next: [{ command: "midnight-cast config show --network <network>", reason: "See which project ID is used and where it comes from" }],
     }),
   },
   {
-    test: /\b(?:rpc|indexer)\.mainnet\.midnight\.network\b/i,
+    test: new RegExp([...RETIRED_HOSTS].map((host) => `\\b${host.replaceAll(".", "\\.")}\\b`).join("|"), "i"),
     describe: () => ({
       id: "retired-mainnet-host",
       name: "Retired mainnet endpoint",
@@ -67,7 +68,7 @@ const PATTERNS: Pattern[] = [
     }),
   },
   {
-    test: /--feature-zkir-v3|\bZKIR 3\.1\b|ContractModuleProvider|ModuleThunk|declaredInterfaces|circuitSignatures|\bledger-v9\b|compact-runtime@?\s*\^?0\.20\./i,
+    test: /--feature-zkir-v3|\bZKIR 3\.1\b|ContractModuleProvider|ModuleThunk|declaredInterfaces|circuitSignatures|\bledger-v9\b|compact-runtime["']?\s*[:@]?\s*["']?[\^~]?0\.20\./i,
     describe: () => ({
       id: "compact-ledger-9",
       name: "Contract built for ledger 9",
