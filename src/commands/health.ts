@@ -2,7 +2,7 @@ import { chainGetHeader, parseBlockNumber } from "../clients/rpc.js";
 import { getLatestBlockHeight } from "../clients/indexer.js";
 import { fetchProofServerVersion } from "../clients/proof-server.js";
 import { resolveNetwork, type ResolveFlags } from "../config.js";
-import { computeDelta, tipExitCode } from "../lib/delta.js";
+import { computeDelta, describeLag, tipExitCode } from "../lib/delta.js";
 import {
   buildVersionChecks,
   fetchLiveVersions,
@@ -203,10 +203,24 @@ export async function healthCommand(
   };
 
   const exitCode = healthy ? 0 : 1;
+  const error = healthy ? undefined : unhealthyReason(report, { syncOk, versionsCount: flags.failOnMismatch ?? false });
 
   if (options.json) {
-    return { ok: healthy, data: report, exitCode };
+    return { ok: healthy, data: report, exitCode, ...(error ? { error } : {}) };
   }
 
-  return { ok: healthy, data: formatHealthHuman(report), exitCode };
+  return { ok: healthy, data: formatHealthHuman(report), exitCode, ...(error ? { error } : {}) };
+}
+
+function unhealthyReason(report: HealthReport, gates: { syncOk: boolean; versionsCount: boolean }): string {
+  const reasons = report.services
+    .filter((s) => !s.optional && s.status !== "OK")
+    .map((s) => `${s.service} unreachable`);
+  if (!gates.syncOk) {
+    reasons.push(describeLag(report.sync.delta, report.sync.threshold));
+  }
+  if (gates.versionsCount) {
+    reasons.push(...report.versions.checks.filter((c) => !c.ok).map((c) => `${c.label} mismatch`));
+  }
+  return `Unhealthy: ${reasons.join(", ") || "see the report"}`;
 }

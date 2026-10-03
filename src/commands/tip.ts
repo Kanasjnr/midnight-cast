@@ -1,7 +1,7 @@
 import { chainGetHeader, parseBlockNumber } from "../clients/rpc.js";
 import { getLatestBlockHeight } from "../clients/indexer.js";
 import { resolveNetwork, type ResolveFlags } from "../config.js";
-import { computeDelta, tipExitCode } from "../lib/delta.js";
+import { computeDelta, describeLag, tipExitCode } from "../lib/delta.js";
 import type { EmitResult, GlobalOptions } from "../output.js";
 import { fail } from "../output.js";
 
@@ -44,6 +44,7 @@ export async function tipCommand(
 
   return {
     ok: exitCode === 0,
+    ...(exitCode === 0 ? {} : { error: describeLag(delta, threshold) }),
     data: {
       network: endpoints.network,
       rpcHeight,

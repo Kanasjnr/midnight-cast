@@ -82,17 +82,15 @@ export async function versionsCommand(
     allOk,
   };
 
-  if (options.json) {
-    return {
-      ok: !flags.failOnMismatch || allOk,
-      data: report,
-      exitCode: flags.failOnMismatch && !allOk ? 1 : 0,
-    };
-  }
+  const failing = flags.failOnMismatch && !allOk;
+  const error = failing
+    ? `Version checks failed: ${[...checks, ...(local.localPackageChecks ?? [])].filter((c) => !c.ok).map((c) => c.label).join(", ")}`
+    : undefined;
 
   return {
-    ok: !flags.failOnMismatch || allOk,
-    data: formatVersionsHuman(report),
-    exitCode: flags.failOnMismatch && !allOk ? 1 : 0,
+    ok: !failing,
+    data: options.json ? report : formatVersionsHuman(report),
+    exitCode: failing ? 1 : 0,
+    ...(error ? { error } : {}),
   };
 }

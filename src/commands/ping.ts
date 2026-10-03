@@ -188,8 +188,15 @@ export async function pingCommand(
     .filter((r) => r.service === "rpc" || r.service === "indexer")
     .every((r) => r.status === "OK");
 
+  const failed = results.filter((r) => (r.service === "rpc" || r.service === "indexer") && r.status !== "OK");
   return {
     ok: requiredOk,
+    ...(failed.length
+      ? {
+          error: `Required services unreachable: ${failed.map((r) => r.service).join(", ")}`,
+          ...(failed[0]?.errorKind ? { errorKind: failed[0].errorKind } : {}),
+        }
+      : {}),
     data: {
       network: endpoints.network,
       table: results.map((r) => ({
