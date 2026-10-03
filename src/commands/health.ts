@@ -13,7 +13,7 @@ import {
 import { runServiceChecks } from "./ping.js";
 import type { EmitResult, GlobalOptions } from "../output.js";
 import { fail, failReaching } from "../output.js";
-import { EXPLAIN_VERSIONS, checkEndpoints } from "../lib/next-steps.js";
+import { EXPLAIN_VERSIONS, checkEndpoints, narrowDown } from "../lib/next-steps.js";
 
 export interface HealthReport {
   network: string;
@@ -206,6 +206,7 @@ export async function healthCommand(
   const exitCode = healthy ? 0 : 1;
   const error = healthy ? undefined : unhealthyReason(report, { syncOk, versionsCount: flags.failOnMismatch ?? false });
   const next = [
+    ...narrowDown(endpoints.network, { services: !servicesOk, sync: !inSync }),
     ...(servicesOk ? [] : [checkEndpoints(endpoints.network)]),
     ...(versionsOk ? [] : [EXPLAIN_VERSIONS]),
   ];
