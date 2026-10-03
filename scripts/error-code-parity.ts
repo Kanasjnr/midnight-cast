@@ -14,7 +14,12 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 const NODE_RAW = "https://raw.githubusercontent.com/midnightntwrk/midnight-node";
 // The LedgerApiError -> u8 table moved into per-ledger modules after node 1.0.300.
-const CODE_TABLE_PATHS = ["ledger/src/versions/common/types.rs", "ledger/src/ledger_8/types.rs"];
+function codeTablePaths(ledger: string): string[] {
+  return ["ledger/src/versions/common/types.rs", `ledger/src/ledger_${ledger.split(".")[0]}/types.rs`];
+}
+
+// The map serves every network, so it follows mainnet; a network ahead of it during a rollout is noted.
+const REFERENCE_NETWORK = "mainnet";
 
 export const MIDNIGHT_EXPERT_REF = "caabc67ee232cb2ea44d293fbee4f12acd08a0f0";
 const MIDNIGHT_EXPERT_CODES =
@@ -46,6 +51,12 @@ export function parseCodeTable(source: string): CodeTable {
     const code = Number(match[2]);
     table.set(code, [...(table.get(code) ?? []), match[1]!]);
   }
+  return table;
+}
+
+export function requireCodeTable(source: string, where: string): CodeTable {
+  const table = parseCodeTable(source);
+  if (table.size === 0) throw new Error(`${where} has no ledger error table; the parser needs updating`);
   return table;
 }
 
@@ -110,37 +121,72 @@ export function formatReport(report: ParityReport): string {
   return lines.join("\n");
 }
 
-export function deployedNodeTag(matrix: SupportMatrixFile): string {
-  const versions = new Set(Object.values(matrix.networks).map((n) => n.minNode ?? n.node));
-  if (versions.size !== 1) {
-    throw new Error(`Networks run different node versions (${[...versions].join(", ")}); the map can only match one`);
-  }
-  return `node-${[...versions][0]}`;
+export interface NodeRelease {
+  tag: string;
+  ledger: string;
+  networks: string[];
 }
 
-async function fetchText(url: string): Promise<string | undefined> {
-  const response = await fetch(url, { signal: AbortSignal.timeout(20_000) });
-  if (response.status === 404) return undefined;
-  if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
-  return response.text();
+export function deployedNodeReleases(matrix: SupportMatrixFile): { reference: NodeRelease; others: NodeRelease[] } {
+  const byTag = new Map<string, NodeRelease>();
+  for (const [network, row] of Object.entries(matrix.networks)) {
+    const tag = `node-${row.minNode ?? row.node}`;
+    const release = byTag.get(tag) ?? { tag, ledger: row.ledger, networks: [] };
+    release.networks.push(network);
+    byTag.set(tag, release);
+  }
+  const reference = [...byTag.values()].find((r) => r.networks.includes(REFERENCE_NETWORK));
+  if (!reference) throw new Error(`The support matrix has no ${REFERENCE_NETWORK} entry`);
+  return { reference, others: [...byTag.values()].filter((r) => r !== reference) };
 }
 
-async function fetchNodeTable(tag: string): Promise<CodeTable> {
-  for (const path of CODE_TABLE_PATHS) {
-    const source = await fetchText(`${NODE_RAW}/${tag}/${path}`);
-    if (source) return parseCodeTable(source);
+export function tableDifference(reference: CodeTable, other: CodeTable): { added: number[]; removed: number[] } {
+  return {
+    added: [...other.keys()].filter((code) => !reference.has(code)).sort((a, b) => a - b),
+    removed: [...reference.keys()].filter((code) => !other.has(code)).sort((a, b) => a - b),
+  };
+}
+
+async function fetchText(url: string, attempts = 3): Promise<string | undefined> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      const response = await fetch(url, { signal: AbortSignal.timeout(20_000) });
+      if (response.status === 404) return undefined;
+      if (response.ok) return await response.text();
+      if (response.status < 500 || attempt === attempts) throw new Error(`${url}: HTTP ${response.status}`);
+    } catch (err) {
+      if (attempt === attempts) throw err;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 2_000 * attempt));
   }
-  throw new Error(`No ledger error table found in midnight-node ${tag}`);
+}
+
+async function fetchNodeTable(release: NodeRelease): Promise<CodeTable> {
+  for (const path of codeTablePaths(release.ledger)) {
+    const source = await fetchText(`${NODE_RAW}/${release.tag}/${path}`);
+    if (source === undefined) continue;
+    return requireCodeTable(source, `${release.tag}/${path}`);
+  }
+  throw new Error(`No ledger error table found in midnight-node ${release.tag}`);
 }
 
 async function main(): Promise<number> {
   const matrix = JSON.parse(readFileSync(join(root, "src/data/support-matrix.json"), "utf8")) as SupportMatrixFile;
   const ours = JSON.parse(readFileSync(join(root, "src/data/error-codes.json"), "utf8")).codes;
-  const tag = deployedNodeTag(matrix);
-  const [node, expertText] = await Promise.all([fetchNodeTable(tag), fetchText(MIDNIGHT_EXPERT_CODES)]);
+  const { reference, others } = deployedNodeReleases(matrix);
+  const [node, expertText, ...otherTables] = await Promise.all([
+    fetchNodeTable(reference),
+    fetchText(MIDNIGHT_EXPERT_CODES),
+    ...others.map(fetchNodeTable),
+  ]);
   if (!expertText) throw new Error("Midnight Expert catalog not found at the pinned ref");
-  const report = compare(ours, node, JSON.parse(expertText).entries, tag);
+  const report = compare(ours, node, JSON.parse(expertText).entries, reference.tag);
   console.log(formatReport(report));
+  others.forEach((release, i) => {
+    const { added, removed } = tableDifference(node, otherTables[i]!);
+    const change = added.length || removed.length ? `adds ${added.join(", ") || "none"}, removes ${removed.join(", ") || "none"}` : "same codes";
+    console.log(`Note: ${release.networks.join(", ")} run ${release.tag} (${change}); the map follows ${reference.tag}.`);
+  });
   return hasDrift(report) ? 1 : 0;
 }
 
@@ -148,7 +194,7 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   main().then(
     (code) => (process.exitCode = code),
     (err: unknown) => {
-      console.error(err instanceof Error ? err.message : String(err));
+      console.error(`Incomplete, re-run the check: ${err instanceof Error ? err.message : String(err)}`);
       process.exitCode = 2;
     },
   );

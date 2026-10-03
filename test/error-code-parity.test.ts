@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { compare, deployedNodeTag, hasDrift, parseCodeTable } from "../scripts/error-code-parity.js";
+import { compare, deployedNodeReleases, hasDrift, parseCodeTable, requireCodeTable, tableDifference } from "../scripts/error-code-parity.js";
 
 const NODE_SOURCE = `
   LedgerApiError::Deserialization(error) => match error {
@@ -24,6 +24,10 @@ describe("error code parity", () => {
       [193, ["ReplayProtectionViolation"]],
       [127, ["Unknown"]],
     ]);
+  });
+
+  it("treats a file without the table as a parser problem, not drift", () => {
+    expect(() => requireCodeTable("pub fn unrelated() {}", "node-9/types.rs")).toThrow(/parser needs updating/);
   });
 
   it("accepts the type name for a prefixed (de)serialization variant", () => {
@@ -64,13 +68,18 @@ describe("error code parity", () => {
     expect(hasDrift(conflict)).toBe(true);
   });
 
-  it("derives one node tag from the support matrix", () => {
-    const network = (minNode: string) => ({ minNode }) as never;
-    expect(deployedNodeTag({ networks: { preview: network("1.0.300"), preprod: network("1.0.300") } } as never)).toBe(
-      "node-1.0.300",
-    );
-    expect(() => deployedNodeTag({ networks: { preview: network("2.0.0"), preprod: network("1.0.300") } } as never)).toThrow(
-      /different node versions/,
-    );
+  it("follows mainnet's node release and lists networks ahead of it", () => {
+    const network = (minNode: string, ledger = "8.1.2") => ({ minNode, ledger }) as never;
+    const { reference, others } = deployedNodeReleases({
+      networks: { preview: network("2.0.0", "9.0.0"), preprod: network("1.0.300"), mainnet: network("1.0.300") },
+    } as never);
+    expect(reference).toEqual({ tag: "node-1.0.300", ledger: "8.1.2", networks: ["preprod", "mainnet"] });
+    expect(others).toEqual([{ tag: "node-2.0.0", ledger: "9.0.0", networks: ["preview"] }]);
+  });
+
+  it("describes how a newer node's table differs", () => {
+    const reference = new Map([[182, ["TransactionApplicationError"]], [117, ["NotNormalized"]]]);
+    const newer = new Map([[117, ["NotNormalized"]], [228, ["IntentTtlExpired"]]]);
+    expect(tableDifference(reference, newer)).toEqual({ added: [228], removed: [182] });
   });
 });
