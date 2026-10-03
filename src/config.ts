@@ -137,7 +137,7 @@ export function resolveNetwork(
 
   if (!merged.rpc || !merged.indexerHttp || !merged.indexerWs) {
     throw new Error(
-      `Network "${networkName}" is missing required endpoints. Run: mn config init`,
+      `Network "${networkName}" is missing required endpoints. Run: midnight-cast config init`,
     );
   }
 

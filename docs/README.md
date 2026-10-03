@@ -1,6 +1,6 @@
 # midnight-cast documentation
 
-Extended docs for the `mn` CLI. **GitHub only** — not included in the npm package tarball.
+Extended docs for the midnight-cast CLI. **GitHub only** — not included in the npm package tarball.
 
 | Doc | Description |
 |-----|-------------|

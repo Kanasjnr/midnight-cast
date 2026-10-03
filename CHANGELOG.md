@@ -14,6 +14,7 @@
 - `explain --json` with no topic returns a catalog of every command, generated from the CLI definition: usage, arguments, options, whether it is read-only, and its output schema, plus the global options, topics, exit codes and error kinds
 - JSON Schemas for the envelope and each command's data ship in `schemas/`, and the tests validate every command's output against them
 - The `decode 1010` result has `kind: "substrate"`, like every other decoding
+- Hints, error messages, `--help` and the docs say `midnight-cast` everywhere, matching the JSON output. `mn` still works as an alias, and the dev script is now `npm run cli`
 
 ### Tests & CI
 - Scheduled live network check (`live.yml`, every 6h, on push to `main` and on demand) compares each network's live versions against the bundled and upstream support matrices, and keeps one `live-check` issue per network in sync (opens on drift or outage, closes when clean)

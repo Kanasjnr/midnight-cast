@@ -27,7 +27,7 @@ async function runMn(
 }
 
 describe.skipIf(!integration)("smoke (live preview)", () => {
-  it("mn ping preview", async () => {
+  it("midnight-cast ping preview", async () => {
     const { code, stdout } = await runMn(["ping", "preview", "--json"]);
     expect(code).toBe(0);
     const parsed = parseEnvelope(stdout) as {
@@ -45,7 +45,7 @@ describe.skipIf(!integration)("smoke (live preview)", () => {
     );
   });
 
-  it("mn versions preview reports a consistent live stack", async () => {
+  it("midnight-cast versions preview reports a consistent live stack", async () => {
     const { stdout } = await runMn(["versions", "preview", "--json", "--no-local"]);
     const parsed = parseEnvelope(stdout) as {
       error: { message: string } | null;
@@ -70,7 +70,7 @@ describe.skipIf(!integration)("smoke (live preview)", () => {
     expect(parsed.data.checks.find((c) => c.label === "indexer-api")?.ok).toBe(true);
   });
 
-  it("mn health preview", async () => {
+  it("midnight-cast health preview", async () => {
     const { stdout, code } = await runMn(["health", "preview", "--json"]);
     expect(code).toBe(0);
     const parsed = parseEnvelope(stdout) as {
@@ -81,7 +81,7 @@ describe.skipIf(!integration)("smoke (live preview)", () => {
     expect(parsed.data.sync.rpcHeight).toBeGreaterThan(0);
   });
 
-  it("mn tip preview", async () => {
+  it("midnight-cast tip preview", async () => {
     const { stdout, code } = await runMn([
       "tip",
       "preview",
@@ -97,7 +97,7 @@ describe.skipIf(!integration)("smoke (live preview)", () => {
     expect(parsed.data.indexerHeight).toBeGreaterThan(0);
   });
 
-  it("mn decode 170 with preview ledger stamp", async () => {
+  it("midnight-cast decode 170 with preview ledger stamp", async () => {
     const { stdout, code } = await runMn([
       "decode",
       "170",

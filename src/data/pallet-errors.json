@@ -13,52 +13,52 @@
         "1": {
           "name": "Deserialization",
           "description": "Wraps DeserializationError (codes 0–11)",
-          "fix": "Run: mn decode ledger <inner code from Custom(N)>"
+          "fix": "Run: midnight-cast decode ledger <inner code from Custom(N)>"
         },
         "2": {
           "name": "Serialization",
           "description": "Wraps SerializationError (codes 50–63)",
-          "fix": "Run: mn decode ledger <inner code>"
+          "fix": "Run: midnight-cast decode ledger <inner code>"
         },
         "3": {
           "name": "Transaction",
           "description": "Wraps TransactionError (codes 100–210)",
-          "fix": "Run: mn decode ledger <inner Custom(N) code>"
+          "fix": "Run: midnight-cast decode ledger <inner Custom(N) code>"
         },
         "4": {
           "name": "LedgerCacheError",
           "description": "Ledger cache poisoned (code 150)",
-          "fix": "Run: mn decode ledger 150"
+          "fix": "Run: midnight-cast decode ledger 150"
         },
         "5": {
           "name": "NoLedgerState",
           "description": "No ledger state (code 151)",
-          "fix": "Run: mn decode ledger 151"
+          "fix": "Run: midnight-cast decode ledger 151"
         },
         "6": {
           "name": "LedgerStateScaleDecodingError",
           "description": "SCALE decode failure (code 152)",
-          "fix": "Run: mn decode ledger 152"
+          "fix": "Run: midnight-cast decode ledger 152"
         },
         "7": {
           "name": "ContractCallCostError",
           "description": "Cost calculation failure (code 153)",
-          "fix": "Run: mn decode ledger 153"
+          "fix": "Run: midnight-cast decode ledger 153"
         },
         "8": {
           "name": "BlockLimitExceededError",
           "description": "Block limit exceeded (code 154)",
-          "fix": "Run: mn decode ledger 154"
+          "fix": "Run: midnight-cast decode ledger 154"
         },
         "9": {
           "name": "FeeCalculationError",
           "description": "Fee calculation failure (code 155)",
-          "fix": "Run: mn decode ledger 155"
+          "fix": "Run: midnight-cast decode ledger 155"
         },
         "10": {
           "name": "HostApiError",
           "description": "Host API error (code 255)",
-          "fix": "Run: mn decode ledger 255"
+          "fix": "Run: midnight-cast decode ledger 255"
         },
         "11": {
           "name": "NetworkIdNotString",
@@ -68,7 +68,7 @@
         "12": {
           "name": "GetTransactionContextError",
           "description": "Transaction context retrieval error (code 165)",
-          "fix": "Run: mn decode ledger 165"
+          "fix": "Run: midnight-cast decode ledger 165"
         }
       }
     },
@@ -79,7 +79,7 @@
         "0": {
           "name": "LedgerApiError",
           "description": "Wraps full LedgerApiError",
-          "fix": "Run: mn decode ledger <Custom(N)> from the transaction error"
+          "fix": "Run: midnight-cast decode ledger <Custom(N)> from the transaction error"
         },
         "1": {
           "name": "SystemTransactionNotAllowedForGovernance",
@@ -105,7 +105,7 @@
         "2": {
           "name": "LedgerApiError",
           "description": "Wraps LedgerApiError",
-          "fix": "Run: mn decode ledger <Custom(N)>"
+          "fix": "Run: midnight-cast decode ledger <Custom(N)>"
         },
         "3": {
           "name": "InherentAlreadyExecuted",

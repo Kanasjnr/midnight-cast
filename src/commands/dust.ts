@@ -45,7 +45,7 @@ export async function dustEventCommand(
       const from = Math.max(0, eventId - 10);
       return fail(
         `Event ${eventId} not found via WS subscription. ` +
-          `Try browsing recent events: mn dust-events --from ${from} --limit 10`,
+          `Try browsing recent events: midnight-cast dust-events --from ${from} --limit 10`,
       );
     }
 

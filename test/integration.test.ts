@@ -26,26 +26,26 @@ async function runMn(args: string[]): Promise<{ stdout: string; stderr: string; 
 }
 
 describe.skipIf(!integration)("integration (live preprod)", () => {
-  it("mn ping preprod", async () => {
+  it("midnight-cast ping preprod", async () => {
     const { code, stdout } = await runMn(["ping", "preprod", "--json"]);
     expect(stdout).toContain('"ok"');
     expect(code).toBe(0);
   });
 
-  it("mn tip preprod", async () => {
+  it("midnight-cast tip preprod", async () => {
     const { stdout } = await runMn(["tip", "preprod", "--json", "--threshold", "10000"]);
     const parsed = parseEnvelope(stdout) as { ok: boolean; error: { message: string } | null; data: { rpcHeight: number } };
     expect(parsed.ok, parsed.error?.message).toBe(true);
     expect(parsed.data.rpcHeight).toBeGreaterThan(0);
   });
 
-  it("mn decode 170", async () => {
+  it("midnight-cast decode 170", async () => {
     const { stdout } = await runMn(["decode", "170", "--json"]);
     const parsed = parseEnvelope(stdout) as { data: { name: string } };
     expect(parsed.data.name).toBe("InvalidDustSpendProof");
   });
 
-  it("mn tx by hash on preprod", async () => {
+  it("midnight-cast tx by hash on preprod", async () => {
     const hash =
       "e5c86fcd43eb9707e8f23d940e59a6c12ca7ad3ca7e9d2f1232843cc62de1b8c";
     const { stdout, code } = await runMn([
@@ -65,7 +65,7 @@ describe.skipIf(!integration)("integration (live preprod)", () => {
 
   // Bundled-matrix vs live drift is a network event, not a code regression:
   // Here we only assert invariants that hold regardless of the matrix.
-  it("mn versions preprod reports a consistent live stack", async () => {
+  it("midnight-cast versions preprod reports a consistent live stack", async () => {
     const expectedNode = loadSupportMatrix().networks.preprod!.node;
     const { stdout } = await runMn(["versions", "preprod", "--json", "--no-local"]);
     const parsed = parseEnvelope(stdout) as {
