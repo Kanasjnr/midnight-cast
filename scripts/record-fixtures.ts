@@ -21,24 +21,29 @@ import { pingCommand } from "../src/commands/ping.js";
 import { tipCommand } from "../src/commands/tip.js";
 import { txCommand } from "../src/commands/tx.js";
 import { versionsCommand } from "../src/commands/versions.js";
+import { resolveNetwork } from "../src/config.js";
+import { takeProjectId } from "../src/lib/blockfrost.js";
 import { BUILTIN_NETWORKS } from "../src/networks.js";
 import type { EmitResult } from "../src/output.js";
 import { compareShapes, dustExchanges, recordingFetch, type Exchange, type FixtureFile } from "./fixtures.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-export const FIXTURE_NETWORKS = ["preview", "preprod"] as const;
+export const FIXTURE_NETWORKS = ["preview", "preprod", "mainnet"] as const;
+// Mainnet is served by Blockfrost and needs a project ID to record.
+const NEEDS_PROJECT_ID = new Set(["mainnet"]);
 const DUST_PAYLOADS = 3;
 
 export function fixtureDir(network: string): string {
   return join(root, "test", "fixtures", network);
 }
 
-async function graphql<T>(url: string, query: string, variables: Record<string, unknown> = {}): Promise<T> {
+async function graphql<T>(endpoint: string, query: string, variables: Record<string, unknown> = {}): Promise<T> {
+  const { url, projectId } = takeProjectId(endpoint);
   for (let attempt = 1; ; attempt++) {
     try {
       const response = await fetch(url, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", ...(projectId ? { project_id: projectId } : {}) },
         body: JSON.stringify({ query, variables }),
         signal: AbortSignal.timeout(20_000),
       });
@@ -166,7 +171,7 @@ async function recordSchema(indexerHttp: string): Promise<string> {
 }
 
 async function record(network: string, inputs: FixtureFile["inputs"]): Promise<{ fixture: FixtureFile; schema: string }> {
-  const endpoints = BUILTIN_NETWORKS[network]!;
+  const endpoints = resolveNetwork(network, {});
   const [exchanges, dust, schema] = [
     await recordExchanges(network, inputs),
     await recordDust(endpoints.indexerWs, inputs.dustEventId).catch(() => recordDust(endpoints.indexerWs, inputs.dustEventId)),
@@ -196,8 +201,13 @@ async function main(): Promise<number> {
   let incomplete = false;
   for (const network of networks.length ? networks : FIXTURE_NETWORKS) {
     if (!BUILTIN_NETWORKS[network]) throw new Error(`Unknown network ${network}`);
+    if (NEEDS_PROJECT_ID.has(network) && !process.env.BLOCKFROST_PROJECT_ID) {
+      if (networks.includes(network)) throw new Error(`${network} needs BLOCKFROST_PROJECT_ID to record`);
+      console.log(`${network}: skipped, BLOCKFROST_PROJECT_ID is not set`);
+      continue;
+    }
     const committed = readFixture(network);
-    const indexerHttp = BUILTIN_NETWORKS[network]!.indexerHttp;
+    const indexerHttp = resolveNetwork(network, {}).indexerHttp;
     const inputs = !discover && committed ? committed.inputs : await discoverInputs(indexerHttp);
     // Shapes are compared by request kind, so after a network reset any recent transaction will do.
     const { fixture, schema } = await record(network, inputs).catch(async (err: unknown) => {
@@ -206,6 +216,11 @@ async function main(): Promise<number> {
       return record(network, await discoverInputs(indexerHttp));
     });
     const dir = fixtureDir(network);
+
+    const secret = process.env.BLOCKFROST_PROJECT_ID;
+    if (secret && (JSON.stringify(fixture).includes(secret) || schema.includes(secret))) {
+      throw new Error(`${network}: the recording contains the Blockfrost project ID; nothing was written`);
+    }
 
     if (!check) {
       mkdirSync(dir, { recursive: true });
