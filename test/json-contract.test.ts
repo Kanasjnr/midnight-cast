@@ -70,11 +70,9 @@ describe("--json envelope", () => {
     });
   });
 
-  it("points a failed check at the configured endpoints", async () => {
+  it("suggests config show only for endpoints the config chose", async () => {
     const { envelope } = await runJson(["tip", "preprod", "--rpc", REFUSED]);
-    expect(envelope.next).toEqual([
-      expect.objectContaining({ command: "midnight-cast config show --network preprod" }),
-    ]);
+    expect(envelope.next).toEqual([]);
   });
 });
 

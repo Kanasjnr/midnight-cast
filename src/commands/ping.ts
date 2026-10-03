@@ -192,7 +192,7 @@ export async function pingCommand(
       ? {
           error: `Required services unreachable: ${failed.map((r) => r.service).join(", ")}`,
           ...(failed[0]?.errorKind ? { errorKind: failed[0].errorKind } : {}),
-          next: [checkEndpoints(endpoints.network)],
+          next: checkEndpoints(endpoints.network, flags),
         }
       : {}),
     data: {

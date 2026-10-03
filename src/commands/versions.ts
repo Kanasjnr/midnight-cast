@@ -41,7 +41,7 @@ export async function versionsCommand(
   try {
     live = await fetchLiveVersions(endpoints.rpc, endpoints.indexerHttp);
   } catch (err) {
-    return failReaching(err, endpoints.network);
+    return failReaching(err, endpoints.network, flags);
   }
 
   let liveProofServer: string | undefined;

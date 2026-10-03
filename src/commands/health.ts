@@ -131,13 +131,13 @@ export async function healthCommand(
     const header = await chainGetHeader(endpoints.rpc);
     rpcHeight = parseBlockNumber(header.number);
   } catch (err) {
-    return failReaching(err, endpoints.network);
+    return failReaching(err, endpoints.network, flags);
   }
 
   try {
     indexerHeight = await getLatestBlockHeight(endpoints.indexerHttp);
   } catch (err) {
-    return failReaching(err, endpoints.network);
+    return failReaching(err, endpoints.network, flags);
   }
 
   const delta = computeDelta(rpcHeight, indexerHeight);
@@ -148,7 +148,7 @@ export async function healthCommand(
   try {
     live = await fetchLiveVersions(endpoints.rpc, endpoints.indexerHttp);
   } catch (err) {
-    return failReaching(err, endpoints.network);
+    return failReaching(err, endpoints.network, flags);
   }
 
   let liveProofServer: string | undefined;
@@ -206,8 +206,8 @@ export async function healthCommand(
   const exitCode = healthy ? 0 : 1;
   const error = healthy ? undefined : unhealthyReason(report, { syncOk, versionsCount: flags.failOnMismatch ?? false });
   const next = [
-    ...narrowDown(endpoints.network, { services: !servicesOk, sync: !inSync }),
-    ...(servicesOk ? [] : [checkEndpoints(endpoints.network)]),
+    ...narrowDown(endpoints.network, flags, { services: !servicesOk, sync: !inSync }),
+    ...(servicesOk ? [] : checkEndpoints(endpoints.network, flags)),
     ...(versionsOk ? [] : [EXPLAIN_VERSIONS]),
   ];
 

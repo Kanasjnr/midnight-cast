@@ -8,6 +8,7 @@ import {
 import { resolveNetwork, type ResolveFlags } from "../config.js";
 import type { EmitResult, GlobalOptions, NextStep } from "../output.js";
 import { fail } from "../output.js";
+import { targetArgs } from "../lib/next-steps.js";
 
 /** Optional: warns when the endpoints' node or runtime don't fit the selected network. */
 async function networkWarningFor(
@@ -63,7 +64,7 @@ export async function txCommand(
         ? [{ command: 'midnight-cast decode --raw "<wallet or node error>"', reason: "The indexer records that a segment failed, not why" }]
         : []),
       ...tx.dustLedgerEvents.map((e) => ({
-        command: `midnight-cast dust-event ${e.id} ${endpoints.network}`,
+        command: `midnight-cast dust-event ${e.id} ${targetArgs(endpoints.network, flags)}`,
         reason: `Inspect the ${e.typename} DUST event`,
       })),
     ];

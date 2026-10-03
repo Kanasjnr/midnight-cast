@@ -29,13 +29,13 @@ export async function tipCommand(
     const header = await chainGetHeader(endpoints.rpc);
     rpcHeight = parseBlockNumber(header.number);
   } catch (err) {
-    return failReaching(err, endpoints.network);
+    return failReaching(err, endpoints.network, flags);
   }
 
   try {
     indexerHeight = await getLatestBlockHeight(endpoints.indexerHttp);
   } catch (err) {
-    return failReaching(err, endpoints.network);
+    return failReaching(err, endpoints.network, flags);
   }
 
   const delta = computeDelta(rpcHeight, indexerHeight);
