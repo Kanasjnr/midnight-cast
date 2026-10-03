@@ -1,20 +1,26 @@
 import { describe, expect, it } from "vitest";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { schemaErrors } from "./schema.js";
 
 const execFileAsync = promisify(execFile);
 const cli = join(process.cwd(), "dist", "cli.js");
 const REFUSED = "http://127.0.0.1:59999";
 
+// Every envelope a test sees is also checked against the published schemas.
 async function runJson(args: string[]): Promise<{ envelope: Record<string, unknown>; code: number }> {
+  let result: { envelope: Record<string, unknown>; code: number };
   try {
     const { stdout } = await execFileAsync("node", [cli, ...args, "--json"], { timeout: 15000 });
-    return { envelope: JSON.parse(stdout), code: 0 };
+    result = { envelope: JSON.parse(stdout), code: 0 };
   } catch (err: unknown) {
     const e = err as { stdout?: string; code?: number };
-    return { envelope: JSON.parse(e.stdout ?? ""), code: e.code ?? 1 };
+    result = { envelope: JSON.parse(e.stdout ?? ""), code: e.code ?? 1 };
   }
+  expect(schemaErrors(result.envelope as { command: string | null; data: unknown }), args.join(" ")).toEqual([]);
+  return result;
 }
 
 describe("--json envelope", () => {
@@ -112,4 +118,30 @@ describe("explain --json catalog", () => {
       expect((await runJson(["explain", topic])).code, topic).toBe(0);
     }
   }, 60000);
+});
+
+describe("schemas", () => {
+  it("match the output of every command that runs offline", async () => {
+    for (const args of [
+      ["decode", "170"],
+      ["decode", "ledger", "180"],
+      ["decode", "pallet", "5", "3"],
+      ["decode", "1010"],
+      ["decode", "jsonrpc", "--code", "-32602"],
+      ["decode", "--raw", "1010: Invalid Transaction: Custom error: 170"],
+      ["decode", "raw", "1010: Invalid Transaction: Custom error: 170"],
+      ["explain", "dust"],
+      ["explain"],
+      ["config", "show", "--network", "preprod"],
+    ]) {
+      expect((await runJson(args)).code, args.join(" ")).toBe(0);
+    }
+  }, 60000);
+
+  it("allow exactly the error kinds the catalog documents", async () => {
+    const envelope = JSON.parse(readFileSync(join(process.cwd(), "schemas", "envelope.schema.json"), "utf8"));
+    const kinds = envelope.properties.error.oneOf[1].properties.kind.enum.filter(Boolean);
+    const { envelope: catalog } = await runJson(["explain"]);
+    expect(kinds.sort()).toEqual(Object.keys((catalog.data as { errorKinds: object }).errorKinds).sort());
+  });
 });
