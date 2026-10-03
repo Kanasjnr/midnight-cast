@@ -33,9 +33,11 @@ Each finding is classified, and the classification decides what happens:
 
 ## Error codes
 
-`live.yml` also runs `npm run error-codes` (`scripts/error-code-parity.ts`) on the same triggers. It reads the `LedgerApiError` table from the midnight-node source at the release the bundled support matrix names (`node-1.0.300` today) and fails if `src/data/error-codes.json` is missing a code, has one the node doesn't, or names one differently. Error codes come from the on-chain runtime, so the node's release branch, not `main`, is the reference: `main` can already carry the next runtime's codes.
+`live.yml` also runs `npm run error-codes` (`scripts/error-code-parity.ts`) on the same triggers. It reads the `LedgerApiError` table from the midnight-node source at the release the bundled support matrix names for mainnet (`node-1.0.300` today) and fails if `src/data/error-codes.json` is missing a code, has one the node doesn't, or names one differently. Error codes come from the on-chain runtime, so the node's release tag, not `main`, is the reference: `main` can already carry the next runtime's codes. During a rollout, when preview or preprod runs a newer node than mainnet, the map keeps following mainnet and the check notes which codes the newer table adds or removes, so a staggered upgrade doesn't block releases.
 
 It also compares Midnight Expert's status-codes catalog, pinned to a commit in the script, and fails if it names a code differently. Codes that catalog marks retired while the deployed node still emits them, and codes the node doesn't emit yet, are only noted; the first is reported upstream as midnightntwrk/midnight-expert#272. Moving the pin is a deliberate change: update `MIDNIGHT_EXPERT_REF` and rerun the check.
+
+Fetches are retried. If the sources still can't be read, or the node file no longer contains the table the parser expects, the check exits 2 and says it is incomplete rather than reporting drift; re-run it, or update the parser if the table has moved. A scheduled run that finds drift shows as a failed run rather than opening an issue.
 
 ## Mainnet and Blockfrost
 
