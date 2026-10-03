@@ -70,6 +70,7 @@ function hintFor(kind: NetworkErrorKind, service: Service, status: number | unde
           : "The URL path looks wrong for a node RPC endpoint.";
       }
       if (status === 401 || status === 403) return `The ${name} refused access. It may need a token or an allow-listed IP.`;
+      if (status === 429) return `The ${name} is rate limiting requests. Wait a minute before retrying, or use your own endpoint.`;
       return `The ${name} rejected the request (HTTP ${status}).`;
     case "http_5xx":
       return `The ${name} reported a server error, which is usually temporary. Try again later.`;

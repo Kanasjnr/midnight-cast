@@ -47,6 +47,7 @@ describe("hints", () => {
 
   it("adds nothing to Blockfrost's own explanation", () => {
     expect(new NetworkError("RPC rejected by Blockfrost (403): ...", "http_4xx", "RPC", 403).hint).toBeUndefined();
+    expect(new NetworkError("RPC unreachable (429)", "http_4xx", "RPC", 429).hint).toMatch(/rate limiting/);
   });
 
   it("asks whether a local node is running when nothing listens", () => {
