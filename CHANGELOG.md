@@ -39,6 +39,11 @@
 - `decode --raw` recognises messages from current tooling and explains them, with `kind: "message"` and a `next` step: `UnsupportedBlockVersion(1000300)` from toolkit 1.0.0 or node 1.0.2 (upgrade to 1.0.300), Blockfrost's missing and invalid project token responses, the retired mainnet hosts, and output from Compact 0.35 / Compact runtime 0.20, which target ledger 9 (run `compact update 0.31` for the public networks)
 - `OutOfDustValidityWindow` (171) notes the indexer bug, fixed in 4.3.4 and 4.3.5, that rejected the first transaction of a block, and the deserialization codes (0–11) note ledger 8.1.2's stricter encoding rules
 - The ledger code map was checked against node 1.0.300 and matches all 120 codes. The new codes in node 2.x aren't added, since they arrive only with a runtime upgrade
+- Codes 117 (NotNormalized), 138 (BalanceCheckOverspend) and 170 (InvalidDustSpendProof) carry the fuller, devnet-verified descriptions and fixes from Midnight Expert's status-codes catalog, credited in `NOTICE`
+- Code 208 (InvalidBasisPoints) said the valid range was 0-9999; the ledger accepts up to 10000
+
+### Tests & CI (error codes)
+- `npm run error-codes` checks the ledger error map against midnight-node at the release the support matrix names, and against a pinned Midnight Expert catalog. It runs with the live checks, so a runtime upgrade that changes the code table fails before a release. Midnight Expert's entries for seven codes still live on runtime 1.0.300 are marked retired upstream; that is reported as midnightntwrk/midnight-expert#272
 
 ### Fixes
 - `decode --raw` no longer reads short words as hex codes ("a block" decoded as code 10, and "after 10 retries" as code 16), and no longer decodes "Invalid Transaction" as ledger code 1 `Transaction`. "Ledger N" counts as a code only when labelled ("ledger error 9", "ledger code 9"), so "targets ledger 9" and "ledger 8.1.2" are no longer read as codes
