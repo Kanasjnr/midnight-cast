@@ -13,7 +13,8 @@ import { healthCommand } from "./commands/health.js";
 import { tipCommand } from "./commands/tip.js";
 import { blockAtHeightCommand, blockLatestCommand } from "./commands/block.js";
 import { dustEventCommand, dustEventsCommand } from "./commands/dust.js";
-import { explainCommand } from "./commands/explain.js";
+import { TOPICS, explainCommand } from "./commands/explain.js";
+import { buildCatalog, isDefaultSubcommand } from "./lib/catalog.js";
 import { txCommand } from "./commands/tx.js";
 import { versionsCommand } from "./commands/versions.js";
 import type { ResolveFlags } from "./config.js";
@@ -45,7 +46,7 @@ program
 function commandPath(cmd: Command): string {
   const names: string[] = [];
   for (let c: Command | null = cmd; c?.parent; c = c.parent) {
-    if (c.name() && !/^[[<]/.test(c.name())) names.unshift(c.name());
+    if (!isDefaultSubcommand(c)) names.unshift(c.name());
   }
   return names.join(" ");
 }
@@ -425,10 +426,10 @@ program
   });
 
 program
-  .command("explain <topic>")
-  .description("Static help (e.g. explain dust)")
-  .action(async (topic: string, _opts, cmd) => {
-    await run(async () => explainCommand(topic, globalOpts(cmd)), cmd);
+  .command("explain [topic]")
+  .description("Static help (e.g. explain dust); with --json and no topic, a catalog of every command")
+  .action(async (topic: string | undefined, _opts, cmd) => {
+    await run(async () => explainCommand(topic, globalOpts(cmd), () => buildCatalog(program, TOPICS)), cmd);
   });
 
 const argv = normalizeArgv(process.argv);

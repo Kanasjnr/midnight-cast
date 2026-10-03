@@ -1,7 +1,8 @@
 import type { EmitResult, GlobalOptions } from "../output.js";
+import type { Catalog } from "../lib/catalog.js";
 import { fail, success } from "../output.js";
 
-const TOPICS = ["dust", "1010", "versions", "transcript"] as const;
+export const TOPICS = ["dust", "1010", "versions", "transcript"] as const;
 
 const DUST_HELP = `
 DUST on Midnight
@@ -98,9 +99,20 @@ const HELP_BY_TOPIC: Record<(typeof TOPICS)[number], string> = {
 };
 
 export function explainCommand(
-  topic: string,
+  topic: string | undefined,
   options: GlobalOptions,
+  catalog?: () => Catalog,
 ): EmitResult {
+  if (topic === undefined) {
+    if (options.json && catalog) return success(catalog());
+    return success(
+      [
+        `Topics: ${TOPICS.join(", ")}`,
+        "Run midnight-cast explain <topic> for one, or midnight-cast explain --json for every command, option, exit code and error kind.",
+      ].join("\n"),
+    );
+  }
+
   const key = topic.toLowerCase() as (typeof TOPICS)[number];
   const text = HELP_BY_TOPIC[key];
   if (!text) {
