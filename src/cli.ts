@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Command } from "commander";
-import { emit, type GlobalOptions } from "./output.js";
+import { emit, fail, type GlobalOptions } from "./output.js";
 import { parseIntOrFail } from "./lib/parse-int.js";
 import { configInitCommand, configShowCommand } from "./commands/config-cmd.js";
 import { decodeCommand, type DecodeOptions } from "./commands/decode.js";
@@ -87,11 +87,7 @@ async function run(
     const result = await fn();
     process.exitCode = emit(result, globalOpts(cmd));
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    process.exitCode = emit(
-      { ok: false, error: message, exitCode: 1 },
-      globalOpts(cmd),
-    );
+    process.exitCode = emit(fail(err), globalOpts(cmd));
   }
 }
 

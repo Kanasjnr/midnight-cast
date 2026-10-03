@@ -9,12 +9,14 @@ import { resolveNetwork, type ResolveFlags } from "../config.js";
 import { loadSupportMatrix } from "../lib/versions.js";
 import type { EmitResult, GlobalOptions } from "../output.js";
 import { fail } from "../output.js";
+import { NetworkError, isTransportKind } from "../lib/network-error.js";
 
 export interface ServiceResult {
   service: string;
   status: "OK" | "FAIL";
   latencyMs: number;
   detail?: string;
+  errorKind?: string;
   version?: string;
 }
 
@@ -44,13 +46,14 @@ async function checkRpc(rpcUrl: string): Promise<ServiceResult> {
     };
   } catch (err) {
     const retriesExhausted =
-      err instanceof Error && /^RPC unreachable( \((502|503|504)\))?$/.test(err.message);
+      err instanceof NetworkError &&
+      (isTransportKind(err.kind) || [502, 503, 504].includes(err.status ?? 0));
     if (retriesExhausted) {
       return {
         service: "rpc",
         status: "FAIL",
         latencyMs: Date.now() - start,
-        detail: err instanceof Error ? err.message : "RPC unreachable",
+        ...failure(err, "RPC unreachable"),
       };
     }
     try {
@@ -65,7 +68,7 @@ async function checkRpc(rpcUrl: string): Promise<ServiceResult> {
         service: "rpc",
         status: "FAIL",
         latencyMs: Date.now() - start,
-        detail: err instanceof Error ? err.message : "RPC unreachable",
+        ...failure(err, "RPC unreachable"),
       };
     }
   }
@@ -85,7 +88,7 @@ async function checkIndexer(indexerHttp: string): Promise<ServiceResult> {
       service: "indexer",
       status: "FAIL",
       latencyMs: Date.now() - start,
-      detail: err instanceof Error ? err.message : "Indexer unreachable",
+      ...failure(err, "Indexer unreachable"),
     };
   }
 }
@@ -163,7 +166,7 @@ export async function pingCommand(
   try {
     endpoints = resolveNetwork(networkArg ?? flags.network, flags);
   } catch (err) {
-    return fail(err instanceof Error ? err.message : String(err));
+    return fail(err);
   }
 
   const matrix = loadSupportMatrix();
@@ -196,8 +199,16 @@ export async function pingCommand(
         ...(r.service === "proof-server" ? { optional: true } : {}),
         ...(r.version ? { version: r.version } : {}),
         ...(r.detail ? { detail: r.detail } : {}),
+        ...(r.errorKind ? { errorKind: r.errorKind } : {}),
       })),
     },
     exitCode: requiredOk ? 0 : 1,
+  };
+}
+
+function failure(err: unknown, fallback: string): Pick<ServiceResult, "detail" | "errorKind"> {
+  return {
+    detail: err instanceof Error ? err.message : fallback,
+    ...(err instanceof NetworkError ? { errorKind: err.kind } : {}),
   };
 }

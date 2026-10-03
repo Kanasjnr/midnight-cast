@@ -84,7 +84,7 @@ describe("dust subscription cleanup", () => {
         );
       });
       expect(Date.now() - started).toBeLessThan(5000);
-      expect(JSON.parse(stdout)).toMatchObject({ ok: false, error: "Event not received within timeout" });
+      expect(JSON.parse(stdout)).toMatchObject({ ok: false, error: "Indexer WS closed (1006)", errorKind: "network" });
     } finally {
       indexer.stop();
     }

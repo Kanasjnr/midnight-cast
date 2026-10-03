@@ -38,7 +38,7 @@ export async function blockLatestCommand(
   try {
     endpoints = resolveNetwork(networkArg ?? flags.network, flags);
   } catch (err) {
-    return fail(err instanceof Error ? err.message : String(err));
+    return fail(err);
   }
 
   try {
@@ -59,7 +59,7 @@ export async function blockLatestCommand(
       },
     };
   } catch (err) {
-    return fail(err instanceof Error ? err.message : "RPC unreachable");
+    return fail(err);
   }
 }
 
@@ -78,7 +78,7 @@ export async function blockAtHeightCommand(
   try {
     endpoints = resolveNetwork(networkArg ?? flags.network, flags);
   } catch (err) {
-    return fail(err instanceof Error ? err.message : String(err));
+    return fail(err);
   }
 
   try {
@@ -96,6 +96,6 @@ export async function blockAtHeightCommand(
       },
     };
   } catch (err) {
-    return fail(err instanceof Error ? err.message : "RPC unreachable");
+    return fail(err);
   }
 }

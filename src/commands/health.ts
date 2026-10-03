@@ -102,7 +102,7 @@ export async function healthCommand(
   try {
     endpoints = resolveNetwork(networkArg ?? flags.network, flags);
   } catch (err) {
-    return fail(err instanceof Error ? err.message : String(err));
+    return fail(err);
   }
 
   const threshold = flags.threshold ?? 100;
@@ -130,13 +130,13 @@ export async function healthCommand(
     const header = await chainGetHeader(endpoints.rpc);
     rpcHeight = parseBlockNumber(header.number);
   } catch (err) {
-    return fail(err instanceof Error ? err.message : "RPC unreachable");
+    return fail(err);
   }
 
   try {
     indexerHeight = await getLatestBlockHeight(endpoints.indexerHttp);
   } catch (err) {
-    return fail(err instanceof Error ? err.message : "Indexer unreachable");
+    return fail(err);
   }
 
   const delta = computeDelta(rpcHeight, indexerHeight);
@@ -147,7 +147,7 @@ export async function healthCommand(
   try {
     live = await fetchLiveVersions(endpoints.rpc, endpoints.indexerHttp);
   } catch (err) {
-    return fail(err instanceof Error ? err.message : "Failed to fetch live versions");
+    return fail(err);
   }
 
   let liveProofServer: string | undefined;

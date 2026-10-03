@@ -24,7 +24,7 @@ export async function versionsCommand(
   try {
     endpoints = resolveNetwork(networkArg ?? flags.network, flags);
   } catch (err) {
-    return fail(err instanceof Error ? err.message : String(err));
+    return fail(err);
   }
 
   const matrix = loadSupportMatrix();
@@ -40,7 +40,7 @@ export async function versionsCommand(
   try {
     live = await fetchLiveVersions(endpoints.rpc, endpoints.indexerHttp);
   } catch (err) {
-    return fail(err instanceof Error ? err.message : "Failed to fetch live versions");
+    return fail(err);
   }
 
   let liveProofServer: string | undefined;
