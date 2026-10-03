@@ -30,8 +30,9 @@ Available on every command:
 | `--indexer-ws <url>` | Override indexer WebSocket URL |
 | `--proof-server <url>` | Override proof server URL (ping / health) |
 | `--project-id <id>` | Blockfrost project ID for mainnet |
+| `--offline` | `versions`, `matrix` and `health` use the bundled support matrix instead of fetching Midnight's |
 
-Environment: `MN_NETWORK` sets the default network (same as `--network`). `BLOCKFROST_PROJECT_ID` supplies the Blockfrost project ID for any Blockfrost network that has none in its config section; `--project-id` overrides both.
+Environment: `MN_NETWORK` sets the default network (same as `--network`). `BLOCKFROST_PROJECT_ID` supplies the Blockfrost project ID for any Blockfrost network that has none in its config section; `--project-id` overrides both. `MN_OFFLINE=1` is the same as `--offline`.
 
 **Version:** `midnight-cast --version` or `midnight-cast -V` prints the CLI package version.
 
@@ -171,7 +172,7 @@ inSync: true
 
 ## `midnight-cast versions [network]` / `midnight-cast matrix [network]`
 
-Compare live node/indexer signals to the pinned [support matrix](https://docs.midnight.network/relnotes/support-matrix) bundled with the CLI.
+Compare live node/indexer signals to the [support matrix](https://docs.midnight.network/relnotes/support-matrix).
 
 ```bash
 midnight-cast versions preprod
@@ -185,6 +186,7 @@ midnight-cast versions preprod --no-local
 |------|-------------|
 | `--fail-on-mismatch` | Exit `1` if live checks fail (CI) |
 | `--no-local` | Do not read `package.json` in cwd |
+| `--refresh-matrix` | Fetch Midnight's published matrix even if the cached copy is fresh (also on `health`) |
 
 **Live checks:** node `system_version` against the matrix minimum (`>=minNode`; exact match for rows without one), node runtime `specVersion` against the matrix `runtimeSpec`, indexer API path (`v4`), RPC `specVersion` vs indexer `protocolVersion`, and proof server `GET /version` when a URL is configured. A minimum rather than an exact node version is used because different operators run different compatible builds: on 2 October 2026 Midnight's endpoints reported node 1.0.400 and Blockfrost's mainnet node 2.1.0, both on runtime 1000300.
 
@@ -194,9 +196,15 @@ midnight-cast versions preprod --no-local
 
 **Network warning:** if the live node or runtime spec doesn't fit the selected matrix row, warns that your endpoints may point at a different environment.
 
-**Staleness:** warns when the bundled support matrix is older than 45 days (possible false mismatches).
+**Which matrix:** `versions`, `matrix` and `health` take the first of these, and report it as `Matrix:` (`matrixSource` in JSON):
 
-**Override:** drop `support-matrix.json` in `~/.config/midnight-cast/` to use a newer matrix without waiting for an npm release.
+1. A `support-matrix.json` you drop in `~/.config/midnight-cast/`, used as is.
+2. Midnight's published matrix (`midnightntwrk/midnight-docs`, `docs/relnotes/support-matrix.json`), fetched with a 3-second timeout and cached for six hours in `~/.cache/midnight-cast/` (or `$XDG_CACHE_HOME/midnight-cast/`). If a refresh fails, a cached copy up to a week old is used instead, unless the bundled matrix is newer, and the reason is shown. A failed fetch isn't retried for an hour, so an unreachable GitHub costs the timeout once rather than on every run.
+3. The matrix bundled with this release, when offline (`--offline` or `MN_OFFLINE=1`) or when nothing could be fetched.
+
+The published matrix updates only what the endpoints can't reveal: the indexer, on-chain runtime and Compact runtime versions, including the `compact-runtime` package pin. Node and proof server stay as bundled, because they are checked against the live network and the published file can list versions no network runs yet. The minimum node version, runtime `spec_version`, ledger and indexer API also come from the bundled matrix, since the published file doesn't carry them. Disagreements inside the published file, such as a `tag` and `containerTag` that differ, are shown as notes (`matrixNotes` in JSON).
+
+**Staleness:** when the bundled matrix (or your override) is older than 45 days, a warning says mismatches may be false. It applies even with the published matrix, since node, runtime spec and ledger still come from the bundled copy.
 
 Example output:
 

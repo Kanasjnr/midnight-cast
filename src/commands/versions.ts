@@ -4,7 +4,6 @@ import {
   fetchLiveVersions,
   formatVersionsHuman,
   isMatrixStale,
-  loadSupportMatrix,
   matrixStalenessWarning,
   checkLocalPackages,
   type VersionsReport,
@@ -15,10 +14,12 @@ import { sanitizeForOutput } from "../lib/sanitize.js";
 import type { EmitResult, GlobalOptions } from "../output.js";
 import { fail, failReaching } from "../output.js";
 import { EXPLAIN_VERSIONS } from "../lib/next-steps.js";
+import { resolveSupportMatrix } from "../lib/upstream-matrix.js";
+import { settle } from "../lib/settle.js";
 
 export async function versionsCommand(
   networkArg: string | undefined,
-  flags: ResolveFlags & { failOnMismatch?: boolean; local?: boolean },
+  flags: ResolveFlags & { failOnMismatch?: boolean; local?: boolean; offline?: boolean; refreshMatrix?: boolean },
   options: GlobalOptions,
 ): Promise<EmitResult> {
   let endpoints;
@@ -28,8 +29,13 @@ export async function versionsCommand(
     return fail(err);
   }
 
-  const matrix = loadSupportMatrix();
+  const liveResult = settle(fetchLiveVersions(endpoints.rpc, endpoints.indexerHttp));
+  const { matrix, source: matrixSource, notes } = await resolveSupportMatrix({
+    offline: flags.offline,
+    refresh: flags.refreshMatrix,
+  });
   const expected = matrix.networks[endpoints.network];
+  const matrixNotes = notes[endpoints.network] ?? [];
 
   if (!expected) {
     return fail(
@@ -37,12 +43,9 @@ export async function versionsCommand(
     );
   }
 
-  let live;
-  try {
-    live = await fetchLiveVersions(endpoints.rpc, endpoints.indexerHttp);
-  } catch (err) {
-    return failReaching(err, endpoints.network, flags);
-  }
+  const liveOutcome = await liveResult;
+  if (!liveOutcome.ok) return failReaching(liveOutcome.error, endpoints.network, flags);
+  const live = liveOutcome.value;
 
   let liveProofServer: string | undefined;
   if (endpoints.proofServer) {
@@ -74,6 +77,8 @@ export async function versionsCommand(
     matrixUpdated: matrix.updated,
     matrixStale,
     matrixWarning: matrixStalenessWarning(matrix.updated, matrix.docUrl),
+    matrixSource,
+    ...(matrixNotes.length ? { matrixNotes } : {}),
     networkWarning,
     docUrl: matrix.docUrl,
     expected,
