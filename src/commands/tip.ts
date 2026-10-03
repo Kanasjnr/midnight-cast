@@ -3,7 +3,7 @@ import { getLatestBlockHeight } from "../clients/indexer.js";
 import { resolveNetwork, type ResolveFlags } from "../config.js";
 import { computeDelta, describeLag, tipExitCode } from "../lib/delta.js";
 import type { EmitResult, GlobalOptions } from "../output.js";
-import { fail } from "../output.js";
+import { fail, failReaching } from "../output.js";
 
 export async function tipCommand(
   networkArg: string | undefined,
@@ -29,13 +29,13 @@ export async function tipCommand(
     const header = await chainGetHeader(endpoints.rpc);
     rpcHeight = parseBlockNumber(header.number);
   } catch (err) {
-    return fail(err);
+    return failReaching(err, endpoints.network);
   }
 
   try {
     indexerHeight = await getLatestBlockHeight(endpoints.indexerHttp);
   } catch (err) {
-    return fail(err);
+    return failReaching(err, endpoints.network);
   }
 
   const delta = computeDelta(rpcHeight, indexerHeight);

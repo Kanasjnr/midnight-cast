@@ -12,7 +12,8 @@ import {
 } from "../lib/versions.js";
 import { runServiceChecks } from "./ping.js";
 import type { EmitResult, GlobalOptions } from "../output.js";
-import { fail } from "../output.js";
+import { fail, failReaching } from "../output.js";
+import { EXPLAIN_VERSIONS, checkEndpoints } from "../lib/next-steps.js";
 
 export interface HealthReport {
   network: string;
@@ -130,13 +131,13 @@ export async function healthCommand(
     const header = await chainGetHeader(endpoints.rpc);
     rpcHeight = parseBlockNumber(header.number);
   } catch (err) {
-    return fail(err);
+    return failReaching(err, endpoints.network);
   }
 
   try {
     indexerHeight = await getLatestBlockHeight(endpoints.indexerHttp);
   } catch (err) {
-    return fail(err);
+    return failReaching(err, endpoints.network);
   }
 
   const delta = computeDelta(rpcHeight, indexerHeight);
@@ -147,7 +148,7 @@ export async function healthCommand(
   try {
     live = await fetchLiveVersions(endpoints.rpc, endpoints.indexerHttp);
   } catch (err) {
-    return fail(err);
+    return failReaching(err, endpoints.network);
   }
 
   let liveProofServer: string | undefined;
@@ -204,12 +205,18 @@ export async function healthCommand(
 
   const exitCode = healthy ? 0 : 1;
   const error = healthy ? undefined : unhealthyReason(report, { syncOk, versionsCount: flags.failOnMismatch ?? false });
+  const next = [
+    ...(servicesOk ? [] : [checkEndpoints(endpoints.network)]),
+    ...(versionsOk ? [] : [EXPLAIN_VERSIONS]),
+  ];
 
-  if (options.json) {
-    return { ok: healthy, data: report, exitCode, ...(error ? { error } : {}) };
-  }
-
-  return { ok: healthy, data: formatHealthHuman(report), exitCode, ...(error ? { error } : {}) };
+  return {
+    ok: healthy,
+    data: options.json ? report : formatHealthHuman(report),
+    exitCode,
+    ...(error ? { error } : {}),
+    next,
+  };
 }
 
 function unhealthyReason(report: HealthReport, gates: { syncOk: boolean; versionsCount: boolean }): string {

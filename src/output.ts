@@ -1,4 +1,5 @@
 import { NetworkError } from "./lib/network-error.js";
+import { checkEndpoints } from "./lib/next-steps.js";
 import { sanitizeDeep, sanitizeForOutput } from "./lib/sanitize.js";
 
 export const SCHEMA_VERSION = 1;
@@ -159,6 +160,11 @@ export function fail(
     };
   }
   return { ok: false, error: error instanceof Error ? error.message : String(error), exitCode };
+}
+
+export function failReaching(error: unknown, network: string): EmitResult<never> {
+  if (!(error instanceof NetworkError)) return fail(error);
+  return { ...fail(error), network, next: [checkEndpoints(network)] };
 }
 
 export function success<T>(data: T, exitCode = 0): EmitResult<T> {

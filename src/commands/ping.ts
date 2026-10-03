@@ -9,6 +9,7 @@ import { resolveNetwork, type ResolveFlags } from "../config.js";
 import { loadSupportMatrix } from "../lib/versions.js";
 import type { EmitResult, GlobalOptions } from "../output.js";
 import { fail } from "../output.js";
+import { checkEndpoints } from "../lib/next-steps.js";
 import { NetworkError, isTransportKind } from "../lib/network-error.js";
 
 export interface ServiceResult {
@@ -184,17 +185,14 @@ export async function pingCommand(
     });
   }
 
-  const requiredOk = results
-    .filter((r) => r.service === "rpc" || r.service === "indexer")
-    .every((r) => r.status === "OK");
-
   const failed = results.filter((r) => (r.service === "rpc" || r.service === "indexer") && r.status !== "OK");
   return {
-    ok: requiredOk,
+    ok: failed.length === 0,
     ...(failed.length
       ? {
           error: `Required services unreachable: ${failed.map((r) => r.service).join(", ")}`,
           ...(failed[0]?.errorKind ? { errorKind: failed[0].errorKind } : {}),
+          next: [checkEndpoints(endpoints.network)],
         }
       : {}),
     data: {
@@ -209,7 +207,7 @@ export async function pingCommand(
         ...(r.errorKind ? { errorKind: r.errorKind } : {}),
       })),
     },
-    exitCode: requiredOk ? 0 : 1,
+    exitCode: failed.length === 0 ? 0 : 1,
   };
 }
 
