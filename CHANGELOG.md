@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### Breaking changes
+- `--json` output is a versioned envelope: `{ schemaVersion, ok, command, network, data, warnings, error, next }`. `error` is now an object, `{ message, kind, hint }`, instead of a string, and the top-level `errorKind` and `hint` moved inside it as `kind` and `hint`. Read `error.message` where you read `error` before. Any later breaking change to the JSON bumps `schemaVersion`
+- Usage errors (an unknown command or option, a missing argument or subcommand) exit `2` instead of `1`
+
+### Agents & JSON
+- `next` lists follow-up commands, spelled `midnight-cast …`: `decode` points at the ledger code inside a 1010 and at `explain` topics, `tx` at `decode --raw` for a failed segment and at `dust-event` for each DUST event, a failed `health` at `ping` or `tip`, and an unreachable configured endpoint at `config show`. Suggestions keep any endpoint overrides, but never the project ID
+- `ping`, `health`, `tip` and `versions` failures say what failed, e.g. "Required services unreachable: rpc" or "Indexer is 120 blocks behind the node (threshold 100)", instead of no message
+- Warnings, such as a config pointing at the retired mainnet hosts, are included in the envelope's `warnings` as well as printed on stderr in human mode
+- With `--json`, a usage error prints an envelope with `error.kind: "usage"` and commander's suggestion as the hint
+- `explain --json` with no topic returns a catalog of every command, generated from the CLI definition: usage, arguments, options, whether it is read-only, and its output schema, plus the global options, topics, exit codes and error kinds
+- JSON Schemas for the envelope and each command's data ship in `schemas/`, and the tests validate every command's output against them
+- The `decode 1010` result has `kind: "substrate"`, like every other decoding
+- Hints, error messages, `--help` and the docs say `midnight-cast` everywhere, matching the JSON output. `mn` still works as an alias, and the dev script is now `npm run cli`
+
 ### Tests & CI
 - Scheduled live network check (`live.yml`, every 6h, on push to `main` and on demand) compares each network's live versions against the bundled and upstream support matrices, and keeps one `live-check` issue per network in sync (opens on drift or outage, closes when clean)
 - Mainnet joins the live checks via Blockfrost using the `BLOCKFROST_MAINNET_PROJECT_ID` secret, exported as `BLOCKFROST_PROJECT_ID` the way users set it; skipped (not passed) on scheduled runs without it, and mandatory on release PRs
@@ -11,7 +25,7 @@
 - Unit tests run on Linux, macOS and Windows × Node 20/22/24, plus a typecheck of `src/` and `scripts/`
 
 ### Changes
-- Network failures are classified. With `--json`, a failed RPC or indexer request adds `errorKind` (`dns`, `refused`, `timeout`, `tls`, `network`, `http_4xx`, `http_5xx`, `rpc_error`, `graphql_error`, `invalid_response`) and a `hint` next to the unchanged `error`. Human mode prints the hint under the error, and `ping`/`health` rows carry the kind too
+- Network failures are classified. With `--json`, a failed RPC or indexer request reports a `kind` (`dns`, `refused`, `timeout`, `tls`, `network`, `http_4xx`, `http_5xx`, `rpc_error`, `graphql_error`, `invalid_response`) and a `hint` in `error`. Human mode prints the hint under the error, and `ping`/`health` rows carry the kind as `errorKind`
 - `versions` reads Midnight packages under both npm scopes (`@midnight-ntwrk` and the new `@midnightntwrk`) and takes installed versions from `package-lock.json`. Matrix pins apply whichever scope is used. Installing one package under both scopes, directly or through a dependency, fails a `scope:` check, and old-scope packages that have a stable new-scope release get a rename hint
 - Mainnet works again, through Blockfrost. Midnight retired `rpc.mainnet.midnight.network` and `indexer.mainnet.midnight.network` on 2026-09-30, so the built-in mainnet endpoints are now Blockfrost's. The project ID comes from `--project-id`, the network's config section (`blockfrost_project_id`, or `project_id` in its URLs), or `BLOCKFROST_PROJECT_ID`, in that order. It is sent in the `project_id` header (in the URL only for WebSockets) and redacted from all output. Without one, mainnet commands stop before any request and explain how to get one
 - Blockfrost errors are explained: a `403` means a missing, invalid or wrong-network project ID, and `402`/`429` mean a plan limit. The v4 indexer API under Blockfrost's `/api/v0` is recognised
@@ -21,7 +35,14 @@
 - Error map stamped for ledger 8.1.2 and gains code 211 (`MerkleTreeError`, system transactions); the node's code table is otherwise unchanged since node 0.22.5
 - Live check: node and proof-server numbers in Midnight's matrix that differ from the bundled ones are reported as `upstream-differs` (info), since those components are checked against the live network
 
+### Decode
+- `decode --raw` recognises messages from current tooling and explains them, with `kind: "message"` and a `next` step: `UnsupportedBlockVersion(1000300)` from toolkit 1.0.0 or node 1.0.2 (upgrade to 1.0.300), Blockfrost's missing and invalid project token responses, the retired mainnet hosts, and output from Compact 0.35 / Compact runtime 0.20, which target ledger 9 (run `compact update 0.31` for the public networks)
+- `OutOfDustValidityWindow` (171) notes the indexer bug, fixed in 4.3.4 and 4.3.5, that rejected the first transaction of a block, and the deserialization codes (0–11) note ledger 8.1.2's stricter encoding rules
+- The ledger code map was checked against node 1.0.300 and matches all 120 codes. The new codes in node 2.x aren't added, since they arrive only with a runtime upgrade
+
 ### Fixes
+- `decode --raw` no longer reads short words as hex codes ("a block" decoded as code 10, and "after 10 retries" as code 16), and no longer decodes "Invalid Transaction" as ledger code 1 `Transaction`. "Ledger N" counts as a code only when labelled ("ledger error 9", "ledger code 9"), so "targets ledger 9" and "ledger 8.1.2" are no longer read as codes
+- An HTTP 429 from an RPC or indexer endpoint gets a rate-limiting hint instead of the generic "rejected the request"
 - `dust-event` and `dust-events` no longer repeat "Indexer WS unreachable" twice in their error
 - `dust-event` and `dust-events` exit right after a subscription times out. They used to keep reconnecting in the background, hang until the operating system gave up on a pending connection, or crash with an unhandled promise rejection
 - Failed commands print their report in human mode: `ping` with a service down, `health` when unhealthy and `tip --fail-on-lag` while lagging used to print nothing and only exit 1

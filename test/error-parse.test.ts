@@ -51,6 +51,11 @@ describe("parseRawErrorMessage", () => {
     expect(parsed.ledgerCodes).toEqual([]);
   });
 
+  it("reads standalone hex codes only with a 0x prefix", () => {
+    expect(parseRawErrorMessage("received a block made with an old node").ledgerCodes).toEqual([]);
+    expect(parseRawErrorMessage("failed after 10 retries").ledgerCodes).toEqual([]);
+  });
+
   it("does not treat Invalid Transaction alone as 1010", () => {
     const parsed = parseRawErrorMessage("Invalid Transaction");
     expect(parsed.substrate1010).toBe(false);
@@ -64,5 +69,13 @@ describe("findLedgerCodesByName", () => {
       { "170": "InvalidDustSpendProof", "1": "Transaction" },
     );
     expect(codes).toEqual(["170"]);
+  });
+
+  it("skips single-word names that appear in ordinary error text", () => {
+    const codes = findLedgerCodesByName("1010: Invalid Transaction: Custom error: 171", {
+      "1": "Transaction",
+      "104": "Transcript",
+    });
+    expect(codes).toEqual([]);
   });
 });

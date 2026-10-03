@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/main/schemas/explain.schema.json",
+  "title": "explain data",
+  "oneOf": [
+    {
+      "type": "object",
+      "required": [
+        "topic",
+        "text"
+      ],
+      "properties": {
+        "topic": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "cli",
+        "version",
+        "schemaVersion",
+        "globalOptions",
+        "commands",
+        "topics",
+        "exitCodes",
+        "errorKinds"
+      ],
+      "properties": {
+        "cli": {
+          "const": "midnight-cast"
+        },
+        "version": {
+          "type": "string"
+        },
+        "schemaVersion": {
+          "const": 1
+        },
+        "globalOptions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "flags",
+              "description"
+            ],
+            "properties": {
+              "flags": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "default": {}
+            }
+          }
+        },
+        "commands": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "usage",
+              "description",
+              "arguments",
+              "options",
+              "readOnly",
+              "outputSchema"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "usage": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "arguments": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "name",
+                    "required",
+                    "variadic"
+                  ],
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "required": {
+                      "type": "boolean"
+                    },
+                    "variadic": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              },
+              "options": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "flags",
+                    "description"
+                  ],
+                  "properties": {
+                    "flags": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "default": {}
+                  }
+                }
+              },
+              "readOnly": {
+                "type": "boolean"
+              },
+              "outputSchema": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "topics": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "exitCodes": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "errorKinds": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  ]
+}

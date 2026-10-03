@@ -3,9 +3,10 @@ import {
   findLedgerCodesByName,
   parseRawErrorMessage,
 } from "../lib/error-parse.js";
+import { matchKnownMessages, type KnownMessage } from "../lib/known-messages.js";
 import { loadSupportMatrix } from "../lib/versions.js";
 import { NETWORK_NAMES } from "../networks.js";
-import type { EmitResult, GlobalOptions } from "../output.js";
+import type { EmitResult, GlobalOptions, NextStep } from "../output.js";
 import { fail, success } from "../output.js";
 
 const MAX_RAW_ERROR_LENGTH = 16_384;
@@ -53,14 +54,15 @@ interface JsonRpcErrorsFile {
 }
 
 const SUBSTRATE_1010 = {
+  kind: "substrate" as const,
   code: 1010,
   name: "InvalidTransaction",
   description:
     "Substrate transaction pool rejected the extrinsic. This is an envelope code, not a Midnight ledger code.",
   steps: [
     "Find Custom error: N in the error message (u8, 0–255).",
-    "Run: mn decode ledger N   (or: mn decode N)",
-    "If DispatchError::Module { index, error }, run: mn decode pallet <index> <error>",
+    "Run: midnight-cast decode ledger N   (or: midnight-cast decode N)",
+    "If DispatchError::Module { index, error }, run: midnight-cast decode pallet <index> <error>",
     "If there is no inner Custom(N), rejection was upstream Substrate validation (nonce, fee, size, etc.).",
   ],
   docUrl:
@@ -70,21 +72,45 @@ const SUBSTRATE_1010 = {
 
 const TRANSCRIPT_LEDGER_CODES = ["179", "180", "181"] as const;
 
-function transcriptVersionHint(code: string): string | undefined {
-  if (!TRANSCRIPT_LEDGER_CODES.includes(code as (typeof TRANSCRIPT_LEDGER_CODES)[number])) {
-    return undefined;
+interface RelatedNote {
+  hint: string;
+  next: NextStep[];
+}
+
+function relatedNoteFor(code: string, network: string | undefined): RelatedNote | undefined {
+  const n = parseInt(code, 10);
+  if (TRANSCRIPT_LEDGER_CODES.includes(code as (typeof TRANSCRIPT_LEDGER_CODES)[number])) {
+    return {
+      hint:
+        "Related proof/transcript codes: 179 UnsupportedProofVersion, " +
+        "180 GuaranteedTranscriptVersion, 181 FallibleTranscriptVersion",
+      next: [{ command: "midnight-cast explain transcript", reason: "Why proof and transcript versions get rejected" }],
+    };
   }
-  return (
-    "Related proof/transcript codes: 179 UnsupportedProofVersion, " +
-    "180 GuaranteedTranscriptVersion, 181 FallibleTranscriptVersion"
-  );
+  if (n === 171) {
+    return {
+      hint:
+        "Indexers before 4.3.5 could also reject the first transaction of a block with this error " +
+        "(fixed in 4.3.4 and 4.3.5). If only first-in-block transactions fail, check the indexer version.",
+      next: [{ command: `midnight-cast versions ${network ?? "<network>"}`, reason: "Compare the indexer version with the support matrix" }],
+    };
+  }
+  if (n >= 0 && n <= 11) {
+    return {
+      hint:
+        "Since ledger 8.1.2 the node rejects non-canonical encodings and values that break their type's rules. " +
+        "Make sure the ledger and SDK packages that built this match the network.",
+      next: [{ command: "midnight-cast explain versions", reason: "Which package versions the network expects" }],
+    };
+  }
+  return undefined;
 }
 
 function palletTransactionHint(variantName: string): string | undefined {
   if (variantName !== "Transaction") return undefined;
   return (
     "Pallet Transaction wraps an inner Custom(N) ledger error — " +
-    "find Custom error: N in the full message, then: mn decode ledger N"
+    "find Custom error: N in the full message, then: midnight-cast decode ledger N"
   );
 }
 
@@ -163,7 +189,7 @@ function decodeLedger(input: string, options: DecodeOptions): EmitResult {
   const entry = data.codes[code]!;
   const ledgerMeta = ledgerMapMeta(options, data);
   const mapMismatch = ledgerMapMismatch(options, data);
-  const transcriptHint = transcriptVersionHint(code);
+  const related = relatedNoteFor(code, options.network);
   const payload = {
     kind: "ledger" as const,
     code: parseInt(code, 10),
@@ -179,11 +205,12 @@ function decodeLedger(input: string, options: DecodeOptions): EmitResult {
       : undefined,
     mapUpdated: data.updated,
     ...(mapMismatch ? { mapMismatch } : {}),
-    ...(transcriptHint ? { relatedHint: transcriptHint } : {}),
+    ...(related ? { relatedHint: related.hint } : {}),
   };
+  const next = related?.next ?? [];
 
   if (options.json) {
-    return success(payload);
+    return { ...success(payload), next };
   }
 
   const meta = ledgerMeta;
@@ -193,13 +220,13 @@ function decodeLedger(input: string, options: DecodeOptions): EmitResult {
     `Name:   ${entry.name}`,
     `Desc:   ${entry.description}`,
     `Fix:    ${entry.fix}`,
-    ...(transcriptHint ? [`Hint:   ${transcriptHint}`] : []),
+    ...(related ? [`Hint:   ${related.hint}`] : []),
     ...(mapMismatch ? [`Warn:   ${mapMismatch}`] : []),
     ...(meta ? [meta] : []),
     `Docs:   ${data.docUrl}`,
   ].join("\n");
 
-  return success(text);
+  return { ...success(text), next };
 }
 
 function findPalletIndex(
@@ -261,9 +288,12 @@ function decodePallet(
     docUrl: data.docUrl,
     ...(innerHint ? { innerHint } : {}),
   };
+  const next: NextStep[] = innerHint
+    ? [{ command: 'midnight-cast decode --raw "<full error message>"', reason: "Decode the inner Custom(N) ledger error" }]
+    : [];
 
   if (options.json) {
-    return success(payload);
+    return { ...success(payload), next };
   }
 
   const text = [
@@ -276,7 +306,7 @@ function decodePallet(
     `Docs:    ${data.docUrl}`,
   ].join("\n");
 
-  return success(text);
+  return { ...success(text), next };
 }
 
 function validateDecodeNetwork(network?: string): string | undefined {
@@ -325,9 +355,14 @@ function decodeJsonRpc(codeArg: string, options: DecodeOptions): EmitResult {
   return success(text);
 }
 
+const NEXT_AFTER_1010: NextStep[] = [
+  { command: "midnight-cast decode ledger <N>", reason: "Decode the Custom error: N inside the rejection" },
+  { command: "midnight-cast explain 1010", reason: "How to read a 1010 rejection" },
+];
+
 function decode1010(options: DecodeOptions): EmitResult {
   if (options.json) {
-    return success(SUBSTRATE_1010);
+    return { ...success(SUBSTRATE_1010), next: NEXT_AFTER_1010 };
   }
 
   const text = [
@@ -341,7 +376,7 @@ function decode1010(options: DecodeOptions): EmitResult {
     `Ledger codes: ${SUBSTRATE_1010.ledgerDocUrl}`,
   ].join("\n");
 
-  return success(text);
+  return { ...success(text), next: NEXT_AFTER_1010 };
 }
 
 function appendDecodeResult(
@@ -402,6 +437,10 @@ function decodeRaw(raw: string, options: DecodeOptions): EmitResult {
     else if (r.error) failures.push(r.error);
   }
 
+  for (const message of matchKnownMessages(raw)) {
+    appendDecodeResult(parts, sections, decodeKnownMessage(message, options), options.json);
+  }
+
   if (parts.length === 0) {
     const fallbackLedger = decodeLedger(raw.trim(), options);
     if (fallbackLedger.ok) {
@@ -420,13 +459,18 @@ function decodeRaw(raw: string, options: DecodeOptions): EmitResult {
     );
   }
 
+  const next = followUpsAfterRaw(parts);
+
   if (options.json) {
-    return success({
-      raw,
+    return {
+      ...success({
+        raw,
       parsed: { ...parsed, ledgerCodes, ledgerNames: nameCodes },
-      decodings: parts.map((p) => p.data),
-      ...(failures.length > 0 ? { warnings: failures } : {}),
-    });
+        decodings: parts.map((p) => p.data),
+        ...(failures.length > 0 ? { warnings: failures } : {}),
+      }),
+      next,
+    };
   }
 
   if (failures.length > 0) {
@@ -436,7 +480,29 @@ function decodeRaw(raw: string, options: DecodeOptions): EmitResult {
     );
   }
 
-  return success(sections.join("\n").trimEnd());
+  return { ...success(sections.join("\n").trimEnd()), next };
+}
+
+function decodeKnownMessage(message: KnownMessage, options: DecodeOptions): EmitResult {
+  const next = message.next.map((step) =>
+    options.network ? { ...step, command: step.command.replace("<network>", options.network) } : step,
+  );
+  if (options.json) {
+    const { next: _, ...rest } = message;
+    return { ...success({ kind: "message" as const, ...rest }), next };
+  }
+  const text = [
+    `Kind:   message (${message.name})`,
+    `Desc:   ${message.description}`,
+    `Fix:    ${message.fix}`,
+  ].join("\n");
+  return { ...success(text), next };
+}
+
+// The raw decoder has already tried every decode route, so suggesting one again would loop.
+function followUpsAfterRaw(parts: EmitResult[]): NextStep[] {
+  const steps = parts.flatMap((p) => p.next ?? []).filter((s) => !s.command.startsWith("midnight-cast decode"));
+  return steps.filter((s, i) => steps.findIndex((t) => t.command === s.command) === i);
 }
 
 function otherErrorRouterHint(raw: string): string | undefined {
@@ -487,7 +553,7 @@ export function decodeCommand(
 
   if (args.length === 0) {
     return fail(
-      "Usage: mn decode <code> | decode --raw \"<error>\" | decode ledger <code> | decode pallet <index> <variant> | decode 1010 | decode jsonrpc <code>",
+      "Usage: midnight-cast decode <code> | decode --raw \"<error>\" | decode ledger <code> | decode pallet <index> <variant> | decode 1010 | decode jsonrpc <code>",
     );
   }
 
@@ -498,19 +564,19 @@ export function decodeCommand(
   }
 
   if (head === "ledger") {
-    if (!rest[0]) return fail("Usage: mn decode ledger <code>");
+    if (!rest[0]) return fail("Usage: midnight-cast decode ledger <code>");
     return decodeLedger(rest[0], options);
   }
 
   if (head === "pallet") {
     if (rest.length < 2) {
-      return fail("Usage: mn decode pallet <index|name> <variant|name>");
+      return fail("Usage: midnight-cast decode pallet <index|name> <variant|name>");
     }
     return decodePallet(rest[0]!, rest[1]!, options);
   }
 
   if (head === "jsonrpc") {
-    if (!rest[0]) return fail("Usage: mn decode jsonrpc <code>");
+    if (!rest[0]) return fail("Usage: midnight-cast decode jsonrpc <code>");
     return decodeJsonRpc(rest[0], options);
   }
 

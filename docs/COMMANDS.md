@@ -1,6 +1,6 @@
 # Command reference
 
-Reference for `mn` (midnight-cast). For scenario guides, see [WORKFLOWS.md](./WORKFLOWS.md).
+Reference for midnight-cast. For scenario guides, see [WORKFLOWS.md](./WORKFLOWS.md).
 
 ## Common workflows
 
@@ -8,14 +8,14 @@ Start here for the shortest path:
 
 | Goal | Command |
 |------|---------|
-| Full stack health | `mn health preprod` |
-| Service reachability only | `mn ping preprod` |
-| Check indexer lag | `mn tip preprod` |
-| Check versions vs matrix | `mn versions preprod` |
-| Decode wallet/node error | `mn decode --raw "<error>"` |
-| Inspect a tx | `mn tx <hash> --network preprod` |
-| Inspect a block | `mn block latest preprod` or `mn block <height> preprod` |
-| Inspect DUST events | `mn dust-events --network preprod --from <id>` |
+| Full stack health | `midnight-cast health preprod` |
+| Service reachability only | `midnight-cast ping preprod` |
+| Check indexer lag | `midnight-cast tip preprod` |
+| Check versions vs matrix | `midnight-cast versions preprod` |
+| Decode wallet/node error | `midnight-cast decode --raw "<error>"` |
+| Inspect a tx | `midnight-cast tx <hash> --network preprod` |
+| Inspect a block | `midnight-cast block latest preprod` or `midnight-cast block <height> preprod` |
+| Inspect DUST events | `midnight-cast dust-events --network preprod --from <id>` |
 
 ## Global flags
 
@@ -23,7 +23,7 @@ Available on every command:
 
 | Flag | Description |
 |------|-------------|
-| `--json` | Machine-readable output (`{ ok, data?, error?, errorKind?, hint? }`) |
+| `--json` | Machine-readable output in a versioned envelope (see [JSON output](#json-output)) |
 | `--network <name>` | `preview`, `preprod`, `mainnet`, or `local` |
 | `--rpc <url>` | Override node JSON-RPC URL |
 | `--indexer-http <url>` | Override indexer GraphQL HTTP URL |
@@ -33,20 +33,20 @@ Available on every command:
 
 Environment: `MN_NETWORK` sets the default network (same as `--network`). `BLOCKFROST_PROJECT_ID` supplies the Blockfrost project ID for any Blockfrost network that has none in its config section; `--project-id` overrides both.
 
-**Version:** `mn --version` or `mn -V` prints the CLI package version.
+**Version:** `midnight-cast --version` or `midnight-cast -V` prints the CLI package version.
 
 ---
 
-## `mn config`
+## `midnight-cast config`
 
-### `mn config init`
+### `midnight-cast config init`
 
 Write `~/.config/midnight-cast/config.toml` (or `$XDG_CONFIG_HOME/midnight-cast/config.toml`).
 
 ```bash
-mn config init
-mn config init -y --network preprod
-mn config init --network local --rpc http://127.0.0.1:9944 \
+midnight-cast config init
+midnight-cast config init -y --network preprod
+midnight-cast config init --network local --rpc http://127.0.0.1:9944 \
   --indexer-http http://127.0.0.1:8088/api/v4/graphql \
   --indexer-ws ws://127.0.0.1:8088/api/v4/graphql/ws
 ```
@@ -57,24 +57,24 @@ mn config init --network local --rpc http://127.0.0.1:9944 \
 | `--rpc`, `--indexer-http`, `--indexer-ws`, `--proof-server` | Custom URLs |
 | `-y, --yes` | Non-interactive; default network `preprod` |
 
-### `mn config show`
+### `midnight-cast config show`
 
 Print resolved endpoints (built-in defaults merged with config file and flags).
 
 ```bash
-mn config show
-mn config show --network mainnet --json
+midnight-cast config show
+midnight-cast config show --network mainnet --json
 ```
 
 ---
 
-## `mn ping [network]`
+## `midnight-cast ping [network]`
 
 Check RPC and indexer reachability. If a proof server URL is configured, also GET `/version` and compare it to the support matrix pin (for example `8.1.0`). Proof-server FAIL does not change the command exit code.
 
 ```bash
-mn ping preprod
-mn ping preview --json
+midnight-cast ping preprod
+midnight-cast ping preview --json
 ```
 
 **Proof server row:** `version=8.1.0 (matches matrix 8.1.0)` or `version=… (expected …)` on mismatch. Unreachable hosts (e.g. mainnet DNS not live yet) show as FAIL with detail.
@@ -91,14 +91,14 @@ service=proof-server  status=OK  latencyMs=1044  optional=true  version=8.1.0  d
 
 ---
 
-## `mn health [network]`
+## `midnight-cast health [network]`
 
 Run **ping**, **tip**, and **versions** in one command. Use this first when checking a network.
 
 ```bash
-mn health preprod
-mn health preview --json
-mn health preprod --fail-on-lag --fail-on-mismatch   # CI
+midnight-cast health preprod
+midnight-cast health preview --json
+midnight-cast health preprod --fail-on-lag --fail-on-mismatch   # CI
 ```
 
 | Flag | Default | Description |
@@ -139,14 +139,14 @@ Versions:
 
 ---
 
-## `mn tip [network]`
+## `midnight-cast tip [network]`
 
 Compare latest block height: node RPC vs indexer.
 
 ```bash
-mn tip preprod
-mn tip mainnet --threshold 500
-mn tip preprod --fail-on-lag --json
+midnight-cast tip preprod
+midnight-cast tip mainnet --threshold 500
+midnight-cast tip preprod --fail-on-lag --json
 ```
 
 | Flag | Default | Description |
@@ -169,16 +169,16 @@ inSync: true
 
 ---
 
-## `mn versions [network]` / `mn matrix [network]`
+## `midnight-cast versions [network]` / `midnight-cast matrix [network]`
 
 Compare live node/indexer signals to the pinned [support matrix](https://docs.midnight.network/relnotes/support-matrix) bundled with the CLI.
 
 ```bash
-mn versions preprod
-mn matrix preview --json
-mn versions preprod --fail-on-mismatch
-cd my-dapp && mn versions preprod   # also reads local package.json deps
-mn versions preprod --no-local
+midnight-cast versions preprod
+midnight-cast matrix preview --json
+midnight-cast versions preprod --fail-on-mismatch
+cd my-dapp && midnight-cast versions preprod   # also reads local package.json deps
+midnight-cast versions preprod --no-local
 ```
 
 | Flag | Description |
@@ -213,13 +213,13 @@ Summary: live stack matches matrix checks ✓
 
 ---
 
-## `mn block latest [network]`
+## `midnight-cast block latest [network]`
 
 Latest block header from node RPC (`chain_getHeader` + head block hash).
 
 ```bash
-mn block latest preprod
-mn block latest --json
+midnight-cast block latest preprod
+midnight-cast block latest --json
 ```
 
 **JSON / human fields:** `height`, `hash`, `parentHash`, `stateRoot`, `extrinsicsRoot`, `network`.
@@ -237,13 +237,13 @@ extrinsicsRoot: 0x371613d5bad47555572a59088d9012c00cb5160ca11c1d10610c3bd4a7a2a1
 
 ---
 
-## `mn block <height> [network]`
+## `midnight-cast block <height> [network]`
 
 Read the block header at a specific height (`chain_getBlockHash` + `chain_getHeader`).
 
 ```bash
-mn block 909000 preprod
-mn block 909000 --json
+midnight-cast block 909000 preprod
+midnight-cast block 909000 --json
 ```
 
 Use this to confirm a tx block or inspect RPC state at a past height.
@@ -261,29 +261,29 @@ extrinsicsRoot: 0x3a61ec7982b80286f7908e90b481548e9f07240f80fb2dbd9f02205b05f493
 
 ---
 
-## `mn rpc <method> [params]`
+## `midnight-cast rpc <method> [params]`
 
 Raw JSON-RPC call to the configured node.
 
 ```bash
-mn rpc chain_getHeader
-mn rpc chain_getHeader '[]'
-mn rpc chain_getRuntimeVersion --network mainnet --json
-mn rpc system_version
+midnight-cast rpc chain_getHeader
+midnight-cast rpc chain_getHeader '[]'
+midnight-cast rpc chain_getRuntimeVersion --network mainnet --json
+midnight-cast rpc system_version
 ```
 
 `params` must be a JSON array (or omitted for `[]`).
 
 ---
 
-## `mn tx <hashOrId>`
+## `midnight-cast tx <hashOrId>`
 
 Look up an indexed transaction over GraphQL HTTP.
 
 ```bash
-mn tx e5c86fcd43eb9707e8f23d940e59a6c12ca7ad3ca7e9d2f1232843cc62de1b8c
-mn tx e5c86fcd... --network preprod --json
-mn tx abc123... --by identifier
+midnight-cast tx e5c86fcd43eb9707e8f23d940e59a6c12ca7ad3ca7e9d2f1232843cc62de1b8c
+midnight-cast tx e5c86fcd... --network preprod --json
+midnight-cast tx abc123... --by identifier
 ```
 
 | Flag | Default | Description |
@@ -292,11 +292,11 @@ mn tx abc123... --by identifier
 
 **Shows:** status, fees, segment results, contract action types, DUST/zswap event ids, block height.
 
-When DUST events are present, human output includes `mn dust-event <id>` hints per event.
+When DUST events are present, human output includes `midnight-cast dust-event <id>` hints per event.
 
 **Network warning:** compares live node `system_version` to the matrix row for `--network` (same as `versions`).
 
-When a segment failed, output notes that indexer v4 does not expose the failure reason and suggests `mn decode --raw` with the wallet/node error string.
+When a segment failed, output notes that indexer v4 does not expose the failure reason and suggests `midnight-cast decode --raw` with the wallet/node error string.
 
 Example output:
 
@@ -310,24 +310,24 @@ Status:   PARTIAL_SUCCESS
 Fees:     paid=1 estimated=1
 Segments: 0:ok, 20003:ok, 35012:fail
 Failure:  indexer v4 exposes segment success only (no failure reason)
-Hint:     paste wallet/node error → mn decode --raw "<error>"
+Hint:     paste wallet/node error → midnight-cast decode --raw "<error>"
 Actions:  ContractCall
 DUST:     665110:DustSpendProcessed
-          → mn dust-event 665110
+          → midnight-cast dust-event 665110
 ```
 
 ---
 
-## `mn decode`
+## `midnight-cast decode`
 
 Decode Midnight and Substrate errors. No network required.
 
 ### Paste full error (`--raw`)
 
 ```bash
-mn decode --raw "1010: Invalid Transaction: Custom error: 186"
-mn decode raw "1010: Invalid Transaction: Custom error: 186"
-mn decode raw "DispatchError::Module { index: 5, error: 3 }"
+midnight-cast decode --raw "1010: Invalid Transaction: Custom error: 186"
+midnight-cast decode raw "1010: Invalid Transaction: Custom error: 186"
+midnight-cast decode raw "DispatchError::Module { index: 5, error: 3 }"
 ```
 
 Auto-detects and decodes everything it finds in one pasted error:
@@ -337,18 +337,27 @@ Auto-detects and decodes everything it finds in one pasted error:
 - Known **ledger error names** (e.g. `InvalidDustSpendProof`)
 - **DispatchError::Module** pallet index + error
 - **JSON-RPC** codes (e.g. `"code": -32602` or RPC error text)
+- **Known messages** from current tooling, decoded with `kind: "message"`:
+  - `UnsupportedBlockVersion(1000300)` from toolkit 1.0.0 or node 1.0.2 on runtime 1.0.300
+  - Blockfrost's "Missing project token" and "Invalid project token"
+  - Anything mentioning the retired `rpc.mainnet.midnight.network` or `indexer.mainnet.midnight.network`
+  - Output from Compact toolchain 0.35 or Compact runtime 0.20 (`--feature-zkir-v3`, ZKIR 3.1, `ContractModuleProvider`, `ledger-v9`), which target ledger 9, not yet on the public networks
+
+Hex codes need the `0x` prefix, "ledger N" counts only as "ledger error N" or "ledger code N", and single-word ledger names such as `Transaction` aren't matched in free text, since they also appear in ordinary error messages ("Invalid Transaction").
+
+Some ledger codes carry a related hint. `OutOfDustValidityWindow` (171) notes the indexer bug fixed in 4.3.4 and 4.3.5, which rejected the first transaction of a block. The deserialization codes (0–11) note that ledger 8.1.2 rejects non-canonical encodings.
 
 ### Shorthand
 
 ```bash
-mn decode 170
-mn decode 170 --network preview    # ledger map uses preview row (8.1.0 vs 8.0.3)
-mn decode 0xaa
-mn decode InvalidDustSpendProof
-mn decode 1010
+midnight-cast decode 170
+midnight-cast decode 170 --network preview    # ledger map uses preview row (8.1.0 vs 8.0.3)
+midnight-cast decode 0xaa
+midnight-cast decode InvalidDustSpendProof
+midnight-cast decode 1010
 ```
 
-**Pallet `Transaction`:** decoding `mn decode pallet pallet_midnight Transaction` adds a hint to find inner `Custom(N)` in the full error string.
+**Pallet `Transaction`:** decoding `midnight-cast decode pallet pallet_midnight Transaction` adds a hint to find inner `Custom(N)` in the full error string.
 
 **Transcript codes 179 / 180 / 181:** decoding any of these shows related proof/transcript version context (`UnsupportedProofVersion`, `GuaranteedTranscriptVersion`, `FallibleTranscriptVersion`).
 
@@ -366,11 +375,11 @@ Docs:   https://docs.midnight.network/nodes/error-codes
 ### Subcommands
 
 ```bash
-mn decode ledger 170
-mn decode pallet 5 3
-mn decode pallet pallet_midnight Transaction
-mn decode 1010
-mn decode jsonrpc -32602
+midnight-cast decode ledger 170
+midnight-cast decode pallet 5 3
+midnight-cast decode pallet pallet_midnight Transaction
+midnight-cast decode 1010
+midnight-cast decode jsonrpc -32602
 ```
 
 | Form | Purpose |
@@ -384,13 +393,13 @@ mn decode jsonrpc -32602
 
 ---
 
-## `mn dust-event <id>`
+## `midnight-cast dust-event <id>`
 
 Fetch one DUST ledger event by id over **indexer WebSocket** (v4 has no HTTP query for dust events).
 
 ```bash
-mn dust-event 565975 --network preprod
-mn dust-event 565975 --verbose --json
+midnight-cast dust-event 565975 --network preprod
+midnight-cast dust-event 565975 --verbose --json
 ```
 
 | Flag | Default | Description |
@@ -398,17 +407,17 @@ mn dust-event 565975 --verbose --json
 | `--verbose` | off | Full `raw` hex |
 | `--timeout <ms>` | `15000` | Subscription timeout |
 
-**Not found:** suggests `mn dust-events --from <id-10> --limit 10` to browse recent events on that network.
+**Not found:** suggests `midnight-cast dust-events --from <id-10> --limit 10` to browse recent events on that network.
 
 ---
 
-## `mn dust-events [network]`
+## `midnight-cast dust-events [network]`
 
 Stream recent DUST ledger events from a starting id.
 
 ```bash
-mn dust-events --network preprod --from 565900 --limit 10
-mn dust-events preview --from 12340 --limit 5 --json
+midnight-cast dust-events --network preprod --from 565900 --limit 10
+midnight-cast dust-events preview --from 12340 --limit 5 --json
 ```
 
 | Flag | Default | Description |
@@ -430,56 +439,80 @@ id=565902  typename=DustInitialUtxo  protocolVersion=22000  raw=0x6d69646e696768
 
 ---
 
-## `mn explain <topic>`
+## `midnight-cast explain [topic]`
 
-Static help (no network).
+Static help (no network). Topics: `dust`, `1010`, `versions`, `transcript`.
 
 ```bash
-mn explain dust
+midnight-cast explain dust
+midnight-cast explain --json
 ```
+
+With `--json` and no topic, `explain` returns a catalog of the whole CLI, built from the command definitions so it can't drift from them. It lists every command with its usage, arguments and options, whether it is read-only (only `config init` writes, to the config file), and a link to the schema of its output, plus the global options, the topics, the exit codes and the error kinds. An agent can learn what midnight-cast does from that one call.
 
 ---
 
 ## JSON output
 
-With `--json`, successful commands print:
+With `--json`, every command prints one envelope on stdout:
 
 ```json
 {
-  "ok": true,
-  "data": { ... }
-}
-```
-
-Failures:
-
-```json
-{
+  "schemaVersion": 1,
   "ok": false,
-  "error": "Indexer unreachable",
-  "errorKind": "timeout",
-  "hint": "The indexer didn't answer in time. Public endpoints can be slow, so try again, or point at another endpoint with --rpc / --indexer-http."
+  "command": "tip",
+  "network": "preprod",
+  "data": null,
+  "warnings": [],
+  "error": {
+    "message": "Indexer unreachable",
+    "kind": "timeout",
+    "hint": "The indexer didn't answer in time. Public endpoints can be slow, so try again, or point at another endpoint with --rpc / --indexer-http."
+  },
+  "next": [
+    {
+      "command": "midnight-cast config show --network preprod",
+      "reason": "Check the configured endpoints; a wrong or retired URL is the usual cause"
+    }
+  ]
 }
 ```
 
-When an RPC or indexer request fails, `errorKind` says what went wrong. It is also set on failed rows in `ping` and `health`:
+`command` is the command path, such as `decode ledger`, and is `null` only for a usage error. `network` is the network the command ran against, when it has one. `data` holds the command's result and `error` is `null` whenever `ok` is true. Some failed checks keep their report in `data`: a failed `ping` still lists every service, and an unhealthy `health` keeps the full report. Warnings that human mode prints on stderr, such as a config that still points at a retired mainnet host, are collected in `warnings`.
 
-| `errorKind` | Meaning |
+`next` lists follow-up commands, always spelled `midnight-cast …`, and appears only in JSON output. Suggested commands keep any `--rpc`, `--indexer-http`, `--indexer-ws` or `--proof-server` override, so they recheck the same endpoints, but never the project ID. The suggestions are: `decode 1010` points at `decode ledger <N>` and `explain 1010`, `tx` points at `decode --raw` when a segment failed and at `dust-event <id>` for each DUST event, a failed `health` points at `ping` or `tip`, and a request that can't reach a configured endpoint points at `config show`. A placeholder in angle brackets, such as `<N>`, has to be filled in before running the command.
+
+`error.kind` says what went wrong. The network kinds are also set on failed rows in `ping` and `health`:
+
+| `kind` | Meaning |
 | --- | --- |
+| `usage` | The command line was invalid |
 | `dns` | The host name doesn't resolve |
 | `refused` | Nothing is listening at the URL |
 | `timeout` | No answer in time, after retries |
 | `tls` | The TLS handshake failed (certificate, proxy or clock) |
 | `network` | The connection dropped |
-| `http_4xx` | The endpoint rejected the request, e.g. a wrong path (404) or a missing token (403) |
+| `http_4xx` | The endpoint rejected the request, e.g. a wrong path (404), a missing token (403) or rate limiting (429) |
 | `http_5xx` | The endpoint reported a server error, after retries |
 | `rpc_error` | The node rejected the JSON-RPC call |
 | `graphql_error` | The indexer rejected the GraphQL query |
 | `invalid_response` | The response wasn't the JSON expected |
 
-`hint` suggests a next step, and human mode prints it as a `Hint:` line under the error. `error` keeps its existing wording, so scripts matching on it keep working.
+Other failures, such as an unknown ledger code or a transaction that isn't found, have a `kind` of `null`. `error.hint` suggests what to do, and human mode prints it as a `Hint:` line under the error.
 
-Some commands also set non-zero exit codes for CI (`health --fail-on-lag`, `health --fail-on-mismatch`, `tip --fail-on-lag`, `versions --fail-on-mismatch`, `ping`).
+### Exit codes
+
+| Code | Meaning |
+| --- | --- |
+| `0` | Success |
+| `1` | The command ran and failed: a service is unreachable, a check failed, or a request was rejected |
+| `2` | Usage error: an unknown command or option, or a missing argument |
+
+`ping` exits `1` when the RPC or indexer is down. `tip --fail-on-lag`, `health --fail-on-lag`, `health --fail-on-mismatch` and `versions --fail-on-mismatch` exit `1` when their check fails; without those flags they only report.
+
+### Schemas and versioning
+
+JSON Schemas (draft 2020-12) for the envelope and for each command's `data` are in [`schemas/`](../schemas) and ship in the npm package. The `explain --json` catalog links each command to its schema. Data schemas require only the fields that are always present and allow others, so new fields can appear in any release. Removing or renaming a field, or changing its type, is a breaking change: it bumps `schemaVersion` and is called out in the changelog. Check `schemaVersion` before reading the rest.
 
 ---
 
@@ -499,8 +532,8 @@ Built-in proof server URLs: `https://proof-server.<network>.midnight.network` (`
 Midnight retired its hosted mainnet RPC and indexer on 30 September 2026, and Blockfrost serves them now. Every request needs a project ID from a **Midnight Mainnet** project on [blockfrost.io](https://blockfrost.io) (it starts with `nightmainnet`). Pass it with `--project-id`, set it in the network's config section (as `blockfrost_project_id`, or as `project_id` in its URLs), or export `BLOCKFROST_PROJECT_ID`, in that order of precedence. The environment variable applies to every Blockfrost network, so a network's own config wins over it:
 
 ```bash
-mn health mainnet --project-id nightmainnet...
-export BLOCKFROST_PROJECT_ID=nightmainnet...   # then: mn health mainnet
+midnight-cast health mainnet --project-id nightmainnet...
+export BLOCKFROST_PROJECT_ID=nightmainnet...   # then: midnight-cast health mainnet
 ```
 
 You can also put it in the config file:
@@ -510,6 +543,6 @@ You can also put it in the config file:
 blockfrost_project_id = "nightmainnet..."
 ```
 
-Without a project ID, mainnet commands stop before making any request and say how to get one. midnight-cast sends the ID in Blockfrost's `project_id` header and never prints it: `config show` reports where it came from, and every output is scrubbed of it. A `403` from Blockfrost means the ID is missing, invalid, or for another network. A config file that still points at `rpc.mainnet.midnight.network` or `indexer.mainnet.midnight.network` gets a warning on stderr. Run `mn config init --network mainnet` to switch it to Blockfrost.
+Without a project ID, mainnet commands stop before making any request and say how to get one. midnight-cast sends the ID in Blockfrost's `project_id` header and never prints it: `config show` reports where it came from, and every output is scrubbed of it. A `403` from Blockfrost means the ID is missing, invalid, or for another network. A config file that still points at `rpc.mainnet.midnight.network` or `indexer.mainnet.midnight.network` gets a warning on stderr. Run `midnight-cast config init --network mainnet` to switch it to Blockfrost.
 
 Override any endpoint in config or with flags. See [Midnight network docs](https://docs.midnight.network/relnotes/network).

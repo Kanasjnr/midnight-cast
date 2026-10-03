@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { join } from "node:path";
+import { parseEnvelope } from "./schema.js";
 
 const execFileAsync = promisify(execFile);
 const integration = process.env.INTEGRATION === "1";
@@ -26,10 +27,10 @@ async function runMn(
 }
 
 describe.skipIf(!integration)("smoke (live preview)", () => {
-  it("mn ping preview", async () => {
+  it("midnight-cast ping preview", async () => {
     const { code, stdout } = await runMn(["ping", "preview", "--json"]);
     expect(code).toBe(0);
-    const parsed = JSON.parse(stdout) as {
+    const parsed = parseEnvelope(stdout) as {
       ok: boolean;
       data: {
         network: string;
@@ -44,10 +45,10 @@ describe.skipIf(!integration)("smoke (live preview)", () => {
     );
   });
 
-  it("mn versions preview reports a consistent live stack", async () => {
+  it("midnight-cast versions preview reports a consistent live stack", async () => {
     const { stdout } = await runMn(["versions", "preview", "--json", "--no-local"]);
-    const parsed = JSON.parse(stdout) as {
-      error?: string;
+    const parsed = parseEnvelope(stdout) as {
+      error: { message: string } | null;
       data: {
         network: string;
         live: {
@@ -59,7 +60,7 @@ describe.skipIf(!integration)("smoke (live preview)", () => {
         checks: Array<{ label: string; ok: boolean }>;
       };
     };
-    expect(parsed.data, parsed.error).toBeDefined();
+    expect(parsed.data, parsed.error?.message).toBeDefined();
     expect(parsed.data.network).toBe("preview");
     expect(parsed.data.expected.node).toMatch(/^\d+\.\d+\.\d+/);
     expect(parsed.data.live.nodeVersion).toMatch(/^\d+\.\d+\.\d+/);
@@ -69,10 +70,10 @@ describe.skipIf(!integration)("smoke (live preview)", () => {
     expect(parsed.data.checks.find((c) => c.label === "indexer-api")?.ok).toBe(true);
   });
 
-  it("mn health preview", async () => {
+  it("midnight-cast health preview", async () => {
     const { stdout, code } = await runMn(["health", "preview", "--json"]);
     expect(code).toBe(0);
-    const parsed = JSON.parse(stdout) as {
+    const parsed = parseEnvelope(stdout) as {
       data: { network: string; healthy: boolean; sync: { rpcHeight: number } };
     };
     expect(parsed.data.network).toBe("preview");
@@ -80,7 +81,7 @@ describe.skipIf(!integration)("smoke (live preview)", () => {
     expect(parsed.data.sync.rpcHeight).toBeGreaterThan(0);
   });
 
-  it("mn tip preview", async () => {
+  it("midnight-cast tip preview", async () => {
     const { stdout, code } = await runMn([
       "tip",
       "preview",
@@ -89,14 +90,14 @@ describe.skipIf(!integration)("smoke (live preview)", () => {
       "10000",
     ]);
     expect(code).toBe(0);
-    const parsed = JSON.parse(stdout) as {
+    const parsed = parseEnvelope(stdout) as {
       data: { rpcHeight: number; indexerHeight: number };
     };
     expect(parsed.data.rpcHeight).toBeGreaterThan(0);
     expect(parsed.data.indexerHeight).toBeGreaterThan(0);
   });
 
-  it("mn decode 170 with preview ledger stamp", async () => {
+  it("midnight-cast decode 170 with preview ledger stamp", async () => {
     const { stdout, code } = await runMn([
       "decode",
       "170",
@@ -105,7 +106,7 @@ describe.skipIf(!integration)("smoke (live preview)", () => {
       "--json",
     ]);
     expect(code).toBe(0);
-    const parsed = JSON.parse(stdout) as {
+    const parsed = parseEnvelope(stdout) as {
       data: { name: string; ledger: string; network: string };
     };
     expect(parsed.data.name).toBe("InvalidDustSpendProof");

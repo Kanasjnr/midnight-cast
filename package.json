@@ -18,6 +18,7 @@
   },
   "files": [
     "dist",
+    "schemas",
     "README.md",
     "LICENSE",
     "CHANGELOG.md"
@@ -27,7 +28,7 @@
   },
   "scripts": {
     "build": "tsc && node scripts/copy-data.mjs",
-    "mn": "node dist/cli.js",
+    "cli": "node dist/cli.js",
     "dev": "tsx src/cli.ts",
     "test": "vitest run",
     "test:integration": "INTEGRATION=1 vitest run test/integration.test.ts",
@@ -52,6 +53,7 @@
   "devDependencies": {
     "@types/node": "^22.13.10",
     "@types/ws": "^8.18.0",
+    "ajv": "^8.20.0",
     "tsx": "^4.19.3",
     "typescript": "^5.8.2",
     "vitest": "^3.0.9"

@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { Command } from "commander";
+import { Command, CommanderError } from "commander";
 import { emit, fail, type GlobalOptions } from "./output.js";
 import { parseIntOrFail } from "./lib/parse-int.js";
 import { configInitCommand, configShowCommand } from "./commands/config-cmd.js";
@@ -13,14 +13,15 @@ import { healthCommand } from "./commands/health.js";
 import { tipCommand } from "./commands/tip.js";
 import { blockAtHeightCommand, blockLatestCommand } from "./commands/block.js";
 import { dustEventCommand, dustEventsCommand } from "./commands/dust.js";
-import { explainCommand } from "./commands/explain.js";
+import { TOPICS, explainCommand } from "./commands/explain.js";
+import { buildCatalog, isDefaultSubcommand } from "./lib/catalog.js";
 import { txCommand } from "./commands/tx.js";
 import { versionsCommand } from "./commands/versions.js";
 import type { ResolveFlags } from "./config.js";
 import { normalizeArgv } from "./lib/argv.js";
 import { isNetworkName, splitRpcPositionalArgs } from "./lib/network-arg.js";
 
-const program = new Command();
+const program = new Command().exitOverride();
 
 function cliVersion(): string {
   const path = join(dirname(fileURLToPath(import.meta.url)), "..", "package.json");
@@ -28,7 +29,7 @@ function cliVersion(): string {
 }
 
 program
-  .name("mn")
+  .name("midnight-cast")
   .description("Read-only developer CLI for Midnight")
   .version(cliVersion(), "-V, --version", "Show CLI version")
   .option("--json", "JSON output")
@@ -42,9 +43,17 @@ program
     "Blockfrost project ID for mainnet (or set BLOCKFROST_PROJECT_ID)",
   );
 
+function commandPath(cmd: Command): string {
+  const names: string[] = [];
+  for (let c: Command | null = cmd; c?.parent; c = c.parent) {
+    if (!isDefaultSubcommand(c)) names.unshift(c.name());
+  }
+  return names.join(" ");
+}
+
 function globalOpts(cmd: Command): GlobalOptions {
   const o = cmd.optsWithGlobals();
-  return { json: o.json };
+  return { json: o.json, command: commandPath(cmd) };
 }
 
 function decodeOpts(cmd: Command, networkPositional?: string): DecodeOptions {
@@ -169,7 +178,7 @@ decode
       await run(
         async () => ({
           ok: false,
-          error: "Usage: mn decode jsonrpc <code> (e.g. -32602)",
+          error: "Usage: midnight-cast decode jsonrpc <code> (e.g. -32602)",
           exitCode: 1,
         }),
         cmd,
@@ -417,10 +426,31 @@ program
   });
 
 program
-  .command("explain <topic>")
-  .description("Static help (e.g. explain dust)")
-  .action(async (topic: string, _opts, cmd) => {
-    await run(async () => explainCommand(topic, globalOpts(cmd)), cmd);
+  .command("explain [topic]")
+  .description("Static help (e.g. explain dust); with --json and no topic, a catalog of every command")
+  .action(async (topic: string | undefined, _opts, cmd) => {
+    await run(async () => explainCommand(topic, globalOpts(cmd), () => buildCatalog(program, TOPICS)), cmd);
   });
 
-program.parseAsync(normalizeArgv(process.argv));
+const argv = normalizeArgv(process.argv);
+
+program.parseAsync(argv).catch((err: unknown) => {
+  if (!(err instanceof CommanderError)) throw err;
+  if (err.exitCode === 0) {
+    process.exitCode = 0;
+    return;
+  }
+  if (!argv.includes("--json")) {
+    process.exitCode = 2;
+    return;
+  }
+  const missingCommand = err.code === "commander.help";
+  const [message = "", ...suggestion] = missingCommand
+    ? ["Missing command", "Run midnight-cast explain --json to list the commands"]
+    : err.message.replace(/^error: /, "").split("\n");
+  const hint = suggestion.join(" ").replace(/^\((.*)\)$/, "$1");
+  process.exitCode = emit(
+    { ok: false, error: message, errorKind: "usage", ...(hint ? { hint } : {}), exitCode: 2 },
+    { json: true },
+  );
+});

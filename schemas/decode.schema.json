@@ -1,0 +1,362 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/main/schemas/decode.schema.json",
+  "title": "decode data",
+  "oneOf": [
+    {
+      "type": "object",
+      "required": [
+        "kind",
+        "code",
+        "name",
+        "description",
+        "fix"
+      ],
+      "properties": {
+        "kind": {
+          "const": "ledger"
+        },
+        "code": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "fix": {
+          "type": "string"
+        },
+        "docUrl": {
+          "type": "string"
+        },
+        "ledger": {
+          "type": "string"
+        },
+        "relatedHint": {
+          "type": "string"
+        },
+        "mapMismatch": {
+          "type": "string"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "kind",
+        "palletIndex",
+        "palletName",
+        "variant",
+        "variantName",
+        "description",
+        "fix"
+      ],
+      "properties": {
+        "kind": {
+          "const": "pallet"
+        },
+        "palletIndex": {
+          "type": "integer"
+        },
+        "palletName": {
+          "type": "string"
+        },
+        "variant": {
+          "type": "integer"
+        },
+        "variantName": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "fix": {
+          "type": "string"
+        },
+        "innerHint": {
+          "type": "string"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "kind",
+        "code",
+        "name",
+        "description",
+        "steps"
+      ],
+      "properties": {
+        "kind": {
+          "const": "substrate"
+        },
+        "code": {
+          "const": 1010
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "docUrl": {
+          "type": "string"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "kind",
+        "code",
+        "name",
+        "description"
+      ],
+      "properties": {
+        "kind": {
+          "const": "jsonrpc"
+        },
+        "code": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "fix": {
+          "type": "string"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "kind",
+        "id",
+        "name",
+        "description",
+        "fix"
+      ],
+      "properties": {
+        "kind": {
+          "const": "message"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "fix": {
+          "type": "string"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
+        "raw",
+        "parsed",
+        "decodings"
+      ],
+      "properties": {
+        "raw": {
+          "type": "string"
+        },
+        "parsed": {
+          "type": "object"
+        },
+        "decodings": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "required": [
+                  "kind",
+                  "code",
+                  "name",
+                  "description",
+                  "fix"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "ledger"
+                  },
+                  "code": {
+                    "type": "integer"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "fix": {
+                    "type": "string"
+                  },
+                  "docUrl": {
+                    "type": "string"
+                  },
+                  "ledger": {
+                    "type": "string"
+                  },
+                  "relatedHint": {
+                    "type": "string"
+                  },
+                  "mapMismatch": {
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "kind",
+                  "palletIndex",
+                  "palletName",
+                  "variant",
+                  "variantName",
+                  "description",
+                  "fix"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "pallet"
+                  },
+                  "palletIndex": {
+                    "type": "integer"
+                  },
+                  "palletName": {
+                    "type": "string"
+                  },
+                  "variant": {
+                    "type": "integer"
+                  },
+                  "variantName": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "fix": {
+                    "type": "string"
+                  },
+                  "innerHint": {
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "kind",
+                  "code",
+                  "name",
+                  "description",
+                  "steps"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "substrate"
+                  },
+                  "code": {
+                    "const": 1010
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "steps": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "docUrl": {
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "kind",
+                  "code",
+                  "name",
+                  "description"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "jsonrpc"
+                  },
+                  "code": {
+                    "type": "integer"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "fix": {
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "kind",
+                  "id",
+                  "name",
+                  "description",
+                  "fix"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "message"
+                  },
+                  "id": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "fix": {
+                    "type": "string"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/main/schemas/rpc.schema.json",
+  "title": "rpc data",
+  "type": "object",
+  "required": [
+    "network",
+    "method",
+    "params",
+    "result"
+  ],
+  "properties": {
+    "network": {
+      "type": "string"
+    },
+    "method": {
+      "type": "string"
+    },
+    "params": {
+      "type": "array"
+    },
+    "result": {
+      "description": "The node's JSON-RPC result, unchanged"
+    }
+  }
+}

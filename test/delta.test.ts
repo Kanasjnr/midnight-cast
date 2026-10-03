@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeDelta, tipExitCode } from "../src/lib/delta.js";
+import { computeDelta, describeLag, tipExitCode } from "../src/lib/delta.js";
 
 describe("delta", () => {
   it("computes rpc minus indexer", () => {
@@ -21,5 +21,10 @@ describe("delta", () => {
   it("exit 0 by default without fail-on-lag even when lagging", () => {
     expect(tipExitCode(500, 100, false)).toBe(0);
     expect(tipExitCode(100, 100)).toBe(0);
+  });
+
+  it("describes which way the indexer is off", () => {
+    expect(describeLag(120, 100)).toBe("Indexer is 120 blocks behind the node (threshold 100)");
+    expect(describeLag(-120, 100)).toBe("Indexer is 120 blocks ahead of the node (threshold 100)");
   });
 });

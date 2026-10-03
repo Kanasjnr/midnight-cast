@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/main/schemas/config-show.schema.json",
+  "title": "config show data",
+  "type": "object",
+  "required": [
+    "configPath",
+    "network",
+    "rpc",
+    "indexerHttp",
+    "indexerWs"
+  ],
+  "properties": {
+    "configPath": {
+      "type": "string"
+    },
+    "defaultNetwork": {
+      "type": "string"
+    },
+    "network": {
+      "type": "string"
+    },
+    "networkId": {
+      "type": "string"
+    },
+    "rpc": {
+      "type": "string"
+    },
+    "rpcWs": {
+      "type": "string"
+    },
+    "indexerHttp": {
+      "type": "string"
+    },
+    "indexerWs": {
+      "type": "string"
+    },
+    "proofServer": {
+      "type": "string"
+    },
+    "builtin": {
+      "type": "boolean"
+    }
+  }
+}

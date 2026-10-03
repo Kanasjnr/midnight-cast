@@ -13,7 +13,8 @@ import { fetchProofServerVersion } from "../clients/proof-server.js";
 import { resolveNetwork, type ResolveFlags } from "../config.js";
 import { sanitizeForOutput } from "../lib/sanitize.js";
 import type { EmitResult, GlobalOptions } from "../output.js";
-import { fail } from "../output.js";
+import { fail, failReaching } from "../output.js";
+import { EXPLAIN_VERSIONS } from "../lib/next-steps.js";
 
 export async function versionsCommand(
   networkArg: string | undefined,
@@ -40,7 +41,7 @@ export async function versionsCommand(
   try {
     live = await fetchLiveVersions(endpoints.rpc, endpoints.indexerHttp);
   } catch (err) {
-    return fail(err);
+    return failReaching(err, endpoints.network, flags);
   }
 
   let liveProofServer: string | undefined;
@@ -82,17 +83,16 @@ export async function versionsCommand(
     allOk,
   };
 
-  if (options.json) {
-    return {
-      ok: !flags.failOnMismatch || allOk,
-      data: report,
-      exitCode: flags.failOnMismatch && !allOk ? 1 : 0,
-    };
-  }
+  const failing = flags.failOnMismatch && !allOk;
+  const error = failing
+    ? `Version checks failed: ${[...checks, ...(local.localPackageChecks ?? [])].filter((c) => !c.ok).map((c) => c.label).join(", ")}`
+    : undefined;
 
   return {
-    ok: !flags.failOnMismatch || allOk,
-    data: formatVersionsHuman(report),
-    exitCode: flags.failOnMismatch && !allOk ? 1 : 0,
+    ok: !failing,
+    data: options.json ? report : formatVersionsHuman(report),
+    exitCode: failing ? 1 : 0,
+    ...(error ? { error } : {}),
+    next: allOk ? [] : [EXPLAIN_VERSIONS],
   };
 }

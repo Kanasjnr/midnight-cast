@@ -1,0 +1,150 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/main/schemas/versions.schema.json",
+  "title": "versions and matrix data",
+  "type": "object",
+  "required": [
+    "network",
+    "matrixUpdated",
+    "matrixStale",
+    "expected",
+    "live",
+    "checks",
+    "allOk"
+  ],
+  "properties": {
+    "network": {
+      "type": "string"
+    },
+    "matrixUpdated": {
+      "type": "string"
+    },
+    "matrixStale": {
+      "type": "boolean"
+    },
+    "docUrl": {
+      "type": "string"
+    },
+    "expected": {
+      "type": "object",
+      "required": [
+        "node",
+        "runtimeSpec",
+        "indexerApi"
+      ],
+      "properties": {
+        "node": {
+          "type": "string"
+        },
+        "minNode": {
+          "type": "string"
+        },
+        "runtimeSpec": {
+          "type": "integer"
+        },
+        "ledger": {
+          "type": "string"
+        },
+        "indexer": {
+          "type": "string"
+        },
+        "indexerApi": {
+          "type": "string"
+        },
+        "proofServer": {
+          "type": "string"
+        },
+        "onChainRuntime": {
+          "type": "string"
+        },
+        "packages": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "live": {
+      "type": "object",
+      "required": [
+        "nodeVersion",
+        "runtimeSpecVersion"
+      ],
+      "properties": {
+        "nodeVersion": {
+          "type": "string"
+        },
+        "runtimeSpecVersion": {
+          "type": "integer"
+        },
+        "runtimeImplVersion": {
+          "type": "integer"
+        },
+        "indexerProtocolVersion": {
+          "type": "integer"
+        },
+        "indexerApi": {
+          "type": "string"
+        }
+      }
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "label",
+          "ok"
+        ],
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "expected": {
+            "type": "string"
+          },
+          "live": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "localPackageChecks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "label",
+          "ok"
+        ],
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "expected": {
+            "type": "string"
+          },
+          "live": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "allOk": {
+      "type": "boolean"
+    }
+  }
+}

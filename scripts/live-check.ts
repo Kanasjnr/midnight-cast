@@ -79,11 +79,11 @@ export interface CheckResult {
   upstream?: ComponentVersions;
 }
 
-/** The `{ ok, data }` envelope every `--json` command prints. */
+/** The fields of the `--json` envelope that live checks read. */
 export interface Envelope<T> {
   ok: boolean;
-  data?: T;
-  error?: string;
+  data?: T | null;
+  error?: { message: string } | null;
 }
 
 interface UpstreamFile {
@@ -238,7 +238,7 @@ export function classify(input: ClassifyInput): CheckResult {
 
   const health = input.health?.data;
   if (!health || typeof health.healthy !== "boolean") {
-    add("outage", "health", input.health?.error ?? "health check produced no usable output");
+    add("outage", "health", input.health?.error?.message ?? "health check produced no usable output");
   } else {
     for (const s of health.services ?? []) {
       if (!s.optional && s.status !== "OK") add("outage", s.service, `${s.service} is ${s.status}`);
@@ -280,7 +280,7 @@ export function classify(input: ClassifyInput): CheckResult {
       });
     }
   } else if (health) {
-    add("outage", "versions", input.versions?.error ?? "versions check produced no usable output");
+    add("outage", "versions", input.versions?.error?.message ?? "versions check produced no usable output");
   }
 
   // The CLI's own checks decide whether the live network satisfies the
@@ -552,7 +552,7 @@ async function main(): Promise<number> {
     const used = versions?.data?.expected;
     const mismatch = used
       ? matrixRowMismatch(matrix.networks[network]!, used)
-      : cliMatrixLacksNetwork(versions?.error ?? health?.error);
+      : cliMatrixLacksNetwork(versions?.error?.message ?? health?.error?.message);
     if (mismatch) {
       console.error(`live-check: ${mismatch}`);
       return EXIT.error;

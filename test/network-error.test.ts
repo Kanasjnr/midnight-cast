@@ -47,6 +47,7 @@ describe("hints", () => {
 
   it("adds nothing to Blockfrost's own explanation", () => {
     expect(new NetworkError("RPC rejected by Blockfrost (403): ...", "http_4xx", "RPC", 403).hint).toBeUndefined();
+    expect(new NetworkError("RPC unreachable (429)", "http_4xx", "RPC", 429).hint).toMatch(/rate limiting/);
   });
 
   it("asks whether a local node is running when nothing listens", () => {
@@ -196,7 +197,7 @@ describe("reporting", () => {
     emit(result, {});
     expect(err).toEqual(["RPC unreachable", expect.stringMatching(/^Hint: Nothing is listening/)]);
     emit(result, { json: true });
-    expect(JSON.parse(out[0]!)).toMatchObject({ ok: false, error: "RPC unreachable", errorKind: "refused" });
+    expect(JSON.parse(out[0]!)).toMatchObject({ ok: false, error: { message: "RPC unreachable", kind: "refused" } });
   });
 
   it("labels each failed ping row with its kind", async () => {
