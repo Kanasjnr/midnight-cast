@@ -4,10 +4,10 @@
 
 ### Breaking changes
 - `--json` output is a versioned envelope: `{ schemaVersion, ok, command, network, data, warnings, error, next }`. `error` is now an object, `{ message, kind, hint }`, instead of a string, and the top-level `errorKind` and `hint` moved inside it as `kind` and `hint`. Read `error.message` where you read `error` before. Any later breaking change to the JSON bumps `schemaVersion`
-- Usage errors (an unknown command or option, a missing argument) exit `2` instead of `1`
+- Usage errors (an unknown command or option, a missing argument or subcommand) exit `2` instead of `1`
 
 ### Agents & JSON
-- `next` lists follow-up commands, spelled `midnight-cast …`: `decode` points at the ledger code inside a 1010 and at `explain` topics, `tx` at `decode --raw` for a failed segment and at `dust-event` for each DUST event, a failed `health` at `ping` or `tip`, and an unreachable endpoint at `config show`
+- `next` lists follow-up commands, spelled `midnight-cast …`: `decode` points at the ledger code inside a 1010 and at `explain` topics, `tx` at `decode --raw` for a failed segment and at `dust-event` for each DUST event, a failed `health` at `ping` or `tip`, and an unreachable configured endpoint at `config show`. Suggestions keep any endpoint overrides, but never the project ID
 - `ping`, `health`, `tip` and `versions` failures say what failed, e.g. "Required services unreachable: rpc" or "Indexer is 120 blocks behind the node (threshold 100)", instead of no message
 - Warnings, such as a config pointing at the retired mainnet hosts, are included in the envelope's `warnings` as well as printed on stderr in human mode
 - With `--json`, a usage error prints an envelope with `error.kind: "usage"` and commander's suggestion as the hint
