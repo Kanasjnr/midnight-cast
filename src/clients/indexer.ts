@@ -88,21 +88,56 @@ const DUST_SUBSCRIPTION = `
   }
 `;
 
+function isCloseEvent(value: unknown): boolean {
+  return typeof value === "object" && value !== null && "code" in value && "reason" in value;
+}
+
 function createWsClient(
   indexerWs: string,
+  keepTrying: () => boolean,
   on: {
     connecting: () => void;
     connected: () => void;
     closed: (event: unknown) => void;
     error: (event: unknown) => void;
   },
-): Client {
-  return createClient({
+): { client: Client; close: () => void } {
+  const sockets = new Set<WebSocket>();
+  class TrackedWebSocket extends WebSocket {
+    constructor(...args: ConstructorParameters<typeof WebSocket>) {
+      super(...args);
+      sockets.add(this);
+    }
+  }
+  let everConnected = false;
+  const client = createClient({
     url: indexerWs,
-    webSocketImpl: WebSocket,
+    webSocketImpl: TrackedWebSocket,
     connectionParams: {},
-    on,
+    on: {
+      ...on,
+      connected: () => {
+        everConnected = true;
+        on.connected();
+      },
+    },
+    // Before the first connection an error (refused, DNS, handshake) is final;
+    // after it, a dropped connection is retried like a close.
+    shouldRetry: (errOrClose) => keepTrying() && (everConnected || isCloseEvent(errOrClose)),
+    retryWait: (retries) =>
+      new Promise((resolve) => {
+        setTimeout(resolve, 2 ** retries * 1000 + 300 + Math.floor(Math.random() * 2700)).unref();
+      }),
   });
+  return {
+    client,
+    // dispose() waits on a pending connect and rejects if it failed, so the
+    // sockets are terminated directly to let the process exit.
+    close: () => {
+      Promise.resolve(client.dispose()).catch(() => {});
+      for (const socket of sockets) socket.terminate();
+    },
+  };
 }
 
 export async function subscribeDustEvents(
@@ -123,7 +158,8 @@ export async function subscribeDustEvents(
     let everConnected = false;
     let lastFailure: unknown;
     let attemptError: unknown;
-    const client = createWsClient(endpoints.indexerWs, {
+    let settled = false;
+    const { client, close } = createWsClient(endpoints.indexerWs, () => !settled, {
       connecting: () => {
         attemptError = undefined;
       },
@@ -142,12 +178,13 @@ export async function subscribeDustEvents(
         lastFailure = code === 1006 && attemptError ? attemptError : event;
       },
     });
-    let settled = false;
+    let unsubscribe = () => {};
 
     const timer = setTimeout(() => {
       if (!settled) {
         settled = true;
-        client.dispose();
+        unsubscribe();
+        close();
         if (events.length === 0) {
           reject(
             lastFailure
@@ -164,7 +201,8 @@ export async function subscribeDustEvents(
       if (settled) return;
       settled = true;
       clearTimeout(timer);
-      client.dispose();
+      unsubscribe();
+      close();
       if (err) {
         reject(err);
       } else {
@@ -172,7 +210,7 @@ export async function subscribeDustEvents(
       }
     };
 
-    client.subscribe(
+    unsubscribe = client.subscribe(
       {
         query: DUST_SUBSCRIPTION,
         variables: fromId !== undefined ? { id: fromId } : {},

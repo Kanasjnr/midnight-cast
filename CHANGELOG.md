@@ -23,6 +23,7 @@
 
 ### Fixes
 - `dust-event` and `dust-events` no longer repeat "Indexer WS unreachable" twice in their error
+- `dust-event` and `dust-events` exit right after a subscription times out. They used to keep reconnecting in the background, hang until the operating system gave up on a pending connection, or crash with an unhandled promise rejection
 - Failed commands print their report in human mode: `ping` with a service down, `health` when unhealthy and `tip --fail-on-lag` while lagging used to print nothing and only exit 1
 - Local package checks compare only exact versions (from `package-lock.json` or an exact pin) against the matrix. A range such as `^8.1.0` used to be compared as if it were the installed version; without a lockfile it is now listed as not resolved
 - RPC and indexer requests retry timeouts, network errors and 502/503/504 (up to 3 attempts, 10 s each, within 20 s per request) instead of failing on the first slow response. Preprod's RPC is load-balanced across nodes that sometimes lag (servicedesk#223). The generic `rpc` command still makes a single attempt, since it can call methods that submit
