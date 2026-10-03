@@ -88,3 +88,28 @@ describe("next steps", () => {
     }
   });
 });
+
+describe("explain --json catalog", () => {
+  it("lists every command, each of which answers --help", async () => {
+    const { envelope, code } = await runJson(["explain"]);
+    expect(code).toBe(0);
+    const catalog = envelope.data as {
+      commands: Array<{ name: string; usage: string }>;
+      topics: string[];
+      exitCodes: Record<string, string>;
+      errorKinds: Record<string, string>;
+    };
+    const names = catalog.commands.map((c) => c.name);
+    expect(names).toEqual(expect.arrayContaining(["decode", "decode ledger", "config init", "ping", "tx", "explain"]));
+    expect(names).not.toContain("config");
+    expect(Object.keys(catalog.exitCodes)).toEqual(["0", "1", "2"]);
+    expect(catalog.errorKinds).toHaveProperty("usage");
+    for (const name of names) {
+      const { stdout } = await execFileAsync("node", [cli, ...name.split(" "), "--help"], { timeout: 15000 });
+      expect(stdout, name).toContain("Usage:");
+    }
+    for (const topic of catalog.topics) {
+      expect((await runJson(["explain", topic])).code, topic).toBe(0);
+    }
+  }, 60000);
+});
