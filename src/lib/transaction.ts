@@ -120,7 +120,8 @@ function mapTransaction(tx: GqlTransaction): TransactionSummary {
     blockHeight: tx.block.height,
     blockHash: tx.block.hash,
     status: tx.transactionResult?.status,
-    segments: tx.transactionResult?.segments,
+    // The indexer returns null rather than an empty list when a transaction has no segment results.
+    ...(tx.transactionResult?.segments ? { segments: tx.transactionResult.segments } : {}),
     fees: tx.fees,
     dustLedgerEvents: tx.dustLedgerEvents.map((e) => ({
       id: e.id,
