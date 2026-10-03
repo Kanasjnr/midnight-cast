@@ -53,6 +53,7 @@ interface JsonRpcErrorsFile {
 }
 
 const SUBSTRATE_1010 = {
+  kind: "substrate" as const,
   code: 1010,
   name: "InvalidTransaction",
   description:
