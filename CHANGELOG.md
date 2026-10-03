@@ -50,7 +50,7 @@
 - Code 208 (InvalidBasisPoints) said the valid range was 0-9999; the ledger accepts up to 10000
 
 ### Tests & CI (recorded responses)
-- Recorded preview and preprod responses for every request midnight-cast makes, plus each indexer's GraphQL schema, live in `test/fixtures/` and are replayed through the real commands in the unit tests. Every output is checked against the published JSON Schemas and every indexer query against the recorded schema. `npm run fixtures` re-records them
+- Recorded preview, preprod and mainnet (Blockfrost) responses for every request midnight-cast makes, plus each indexer's GraphQL schema, live in `test/fixtures/` and are replayed through the real commands in the unit tests. Every output is checked against the published JSON Schemas and every indexer query against the recorded schema. `npm run fixtures` re-records them
 - `live.yml` re-records on the usual triggers and fails on schema drift: a request no longer made or newly made, a changed status, a field that disappeared or changed type, or a changed indexer schema
 
 ### Tests & CI (error codes)
