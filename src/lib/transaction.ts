@@ -194,7 +194,7 @@ export function formatTransactionHuman(tx: TransactionSummary): string {
     if (failed.length > 0) {
       lines.push(
         "Failure:  indexer v4 exposes segment success only (no failure reason)",
-        `Hint:     paste wallet/node error → mn decode --raw "<error>"`,
+        `Hint:     paste wallet/node error → midnight-cast decode --raw "<error>"`,
       );
     }
   }
@@ -210,7 +210,7 @@ export function formatTransactionHuman(tx: TransactionSummary): string {
       `DUST:     ${tx.dustLedgerEvents.map((e) => `${e.id}:${e.typename}`).join(", ")}`,
     );
     for (const e of tx.dustLedgerEvents) {
-      lines.push(`          → mn dust-event ${e.id}`);
+      lines.push(`          → midnight-cast dust-event ${e.id}`);
     }
   }
 

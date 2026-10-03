@@ -17,7 +17,7 @@ describe("formatTransactionHuman", () => {
       contractActions: [],
     });
     expect(text).toContain("indexer v4 exposes segment success only");
-    expect(text).toContain("mn decode --raw");
+    expect(text).toContain("midnight-cast decode --raw");
   });
 
   it("links dust-event commands for DUST ledger events", () => {
@@ -33,6 +33,6 @@ describe("formatTransactionHuman", () => {
       contractActions: [],
     });
     expect(text).toContain("DUST:");
-    expect(text).toContain("mn dust-event 42");
+    expect(text).toContain("midnight-cast dust-event 42");
   });
 });

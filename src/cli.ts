@@ -29,7 +29,7 @@ function cliVersion(): string {
 }
 
 program
-  .name("mn")
+  .name("midnight-cast")
   .description("Read-only developer CLI for Midnight")
   .version(cliVersion(), "-V, --version", "Show CLI version")
   .option("--json", "JSON output")
@@ -178,7 +178,7 @@ decode
       await run(
         async () => ({
           ok: false,
-          error: "Usage: mn decode jsonrpc <code> (e.g. -32602)",
+          error: "Usage: midnight-cast decode jsonrpc <code> (e.g. -32602)",
           exitCode: 1,
         }),
         cmd,

@@ -60,8 +60,8 @@ const SUBSTRATE_1010 = {
     "Substrate transaction pool rejected the extrinsic. This is an envelope code, not a Midnight ledger code.",
   steps: [
     "Find Custom error: N in the error message (u8, 0–255).",
-    "Run: mn decode ledger N   (or: mn decode N)",
-    "If DispatchError::Module { index, error }, run: mn decode pallet <index> <error>",
+    "Run: midnight-cast decode ledger N   (or: midnight-cast decode N)",
+    "If DispatchError::Module { index, error }, run: midnight-cast decode pallet <index> <error>",
     "If there is no inner Custom(N), rejection was upstream Substrate validation (nonce, fee, size, etc.).",
   ],
   docUrl:
@@ -85,7 +85,7 @@ function palletTransactionHint(variantName: string): string | undefined {
   if (variantName !== "Transaction") return undefined;
   return (
     "Pallet Transaction wraps an inner Custom(N) ledger error — " +
-    "find Custom error: N in the full message, then: mn decode ledger N"
+    "find Custom error: N in the full message, then: midnight-cast decode ledger N"
   );
 }
 
@@ -510,7 +510,7 @@ export function decodeCommand(
 
   if (args.length === 0) {
     return fail(
-      "Usage: mn decode <code> | decode --raw \"<error>\" | decode ledger <code> | decode pallet <index> <variant> | decode 1010 | decode jsonrpc <code>",
+      "Usage: midnight-cast decode <code> | decode --raw \"<error>\" | decode ledger <code> | decode pallet <index> <variant> | decode 1010 | decode jsonrpc <code>",
     );
   }
 
@@ -521,19 +521,19 @@ export function decodeCommand(
   }
 
   if (head === "ledger") {
-    if (!rest[0]) return fail("Usage: mn decode ledger <code>");
+    if (!rest[0]) return fail("Usage: midnight-cast decode ledger <code>");
     return decodeLedger(rest[0], options);
   }
 
   if (head === "pallet") {
     if (rest.length < 2) {
-      return fail("Usage: mn decode pallet <index|name> <variant|name>");
+      return fail("Usage: midnight-cast decode pallet <index|name> <variant|name>");
     }
     return decodePallet(rest[0]!, rest[1]!, options);
   }
 
   if (head === "jsonrpc") {
-    if (!rest[0]) return fail("Usage: mn decode jsonrpc <code>");
+    if (!rest[0]) return fail("Usage: midnight-cast decode jsonrpc <code>");
     return decodeJsonRpc(rest[0], options);
   }
 
