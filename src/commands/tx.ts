@@ -41,7 +41,7 @@ export async function txCommand(
   try {
     endpoints = resolveNetwork(networkArg ?? flags.network, flags);
   } catch (err) {
-    return fail(err instanceof Error ? err.message : String(err));
+    return fail(err);
   }
 
   const lookup =
@@ -77,6 +77,6 @@ export async function txCommand(
 
     return { ok: true, data: human };
   } catch (err) {
-    return fail(err instanceof Error ? err.message : "Indexer unreachable");
+    return fail(err);
   }
 }

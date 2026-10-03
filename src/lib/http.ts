@@ -1,3 +1,5 @@
+import { NetworkError, transportKind } from "./network-error.js";
+
 const RETRYABLE_STATUS = new Set([502, 503, 504]);
 
 export interface PostJsonOptions {
@@ -51,8 +53,8 @@ export async function readJson<T>(response: Response, service: "RPC" | "Indexer"
   try {
     return (await response.json()) as T;
   } catch (err) {
-    throw new Error(
-      err instanceof SyntaxError ? `${service} unreachable (invalid response)` : `${service} unreachable`,
-    );
+    throw err instanceof SyntaxError
+      ? new NetworkError(`${service} unreachable (invalid response)`, "invalid_response", service)
+      : new NetworkError(`${service} unreachable`, transportKind(err), service);
   }
 }

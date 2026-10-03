@@ -30,7 +30,7 @@ export async function dustEventCommand(
   try {
     endpoints = resolveNetwork(networkArg ?? flags.network, flags);
   } catch (err) {
-    return fail(err instanceof Error ? err.message : String(err));
+    return fail(err);
   }
 
   try {
@@ -54,11 +54,7 @@ export async function dustEventCommand(
       data: formatEvent(events[0]!, flags.verbose ?? false),
     };
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes("WS")) {
-      return fail(`Indexer WS unreachable: ${msg}`);
-    }
-    return fail(msg);
+    return fail(err);
   }
 }
 
@@ -76,7 +72,7 @@ export async function dustEventsCommand(
   try {
     endpoints = resolveNetwork(networkArg ?? flags.network, flags);
   } catch (err) {
-    return fail(err instanceof Error ? err.message : String(err));
+    return fail(err);
   }
 
   const limit = flags.limit ?? 10;
@@ -105,10 +101,6 @@ export async function dustEventsCommand(
       },
     };
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    if (msg.includes("WS")) {
-      return fail(`Indexer WS unreachable: ${msg}`);
-    }
-    return fail(msg);
+    return fail(err);
   }
 }
