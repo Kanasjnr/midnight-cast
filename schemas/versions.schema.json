@@ -145,6 +145,39 @@
     },
     "allOk": {
       "type": "boolean"
+    },
+    "matrixSource": {
+      "type": "object",
+      "required": [
+        "kind",
+        "updated"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "override",
+            "upstream",
+            "cache",
+            "bundled"
+          ]
+        },
+        "updated": {
+          "type": "string"
+        },
+        "ageMinutes": {
+          "type": "integer"
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
+    "matrixNotes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Inconsistencies inside Midnight's published matrix for this network"
     }
   }
 }

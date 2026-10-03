@@ -7,10 +7,10 @@ import {
   buildVersionChecks,
   fetchLiveVersions,
   isMatrixStale,
-  loadSupportMatrix,
   matrixStalenessWarning,
 } from "../lib/versions.js";
 import { runServiceChecks } from "./ping.js";
+import { describeMatrixSource, resolveSupportMatrix, type MatrixSource } from "../lib/upstream-matrix.js";
 import type { EmitResult, GlobalOptions } from "../output.js";
 import { fail, failReaching } from "../output.js";
 import { EXPLAIN_VERSIONS, checkEndpoints, narrowDown } from "../lib/next-steps.js";
@@ -36,6 +36,8 @@ export interface HealthReport {
     matrixUpdated: string;
     matrixStale: boolean;
     matrixWarning?: string;
+    matrixSource?: MatrixSource;
+    matrixNotes?: string[];
     allOk: boolean;
     checks: Array<{ label: string; ok: boolean; expected?: string; live?: string; note?: string }>;
   };
@@ -73,7 +75,10 @@ function formatHealthHuman(report: HealthReport): string {
     `  In sync:         ${report.sync.inSync ? "yes" : "no"}`,
     "",
     "Versions:",
-    `  Matrix updated:  ${report.versions.matrixUpdated}${report.versions.matrixStale ? " (stale)" : ""}`,
+    report.versions.matrixSource
+      ? `  Matrix:          ${describeMatrixSource(report.versions.matrixSource)}`
+      : `  Matrix updated:  ${report.versions.matrixUpdated}${report.versions.matrixStale ? " (stale)" : ""}`,
+    ...(report.versions.matrixNotes ?? []).map((note) => `  Note: published matrix: ${note}`),
   );
 
   if (report.versions.matrixWarning) {
@@ -96,6 +101,8 @@ export async function healthCommand(
     threshold?: number;
     failOnLag?: boolean;
     failOnMismatch?: boolean;
+    offline?: boolean;
+    refreshMatrix?: boolean;
   },
   options: GlobalOptions,
 ): Promise<EmitResult> {
@@ -107,8 +114,12 @@ export async function healthCommand(
   }
 
   const threshold = flags.threshold ?? 100;
-  const matrix = loadSupportMatrix();
+  const { matrix, source: matrixSource, notes } = await resolveSupportMatrix({
+    offline: flags.offline,
+    refresh: flags.refreshMatrix,
+  });
   const expected = matrix.networks[endpoints.network];
+  const matrixNotes = notes[endpoints.network] ?? [];
 
   if (!expected) {
     return fail(
@@ -163,7 +174,7 @@ export async function healthCommand(
 
   const versionChecks = buildVersionChecks(expected, live, liveProofServer);
   const versionsOk = versionChecks.every((c) => c.ok);
-  const matrixStale = isMatrixStale(matrix.updated);
+  const matrixStale = matrixSource.kind === "bundled" && isMatrixStale(matrix.updated);
 
   const healthy =
     servicesOk &&
@@ -191,7 +202,9 @@ export async function healthCommand(
     versions: {
       matrixUpdated: matrix.updated,
       matrixStale,
-      matrixWarning: matrixStalenessWarning(matrix.updated, matrix.docUrl),
+      matrixWarning: matrixSource.kind === "bundled" ? matrixStalenessWarning(matrix.updated, matrix.docUrl) : undefined,
+      matrixSource,
+      ...(matrixNotes.length ? { matrixNotes } : {}),
       allOk: versionsOk,
       checks: versionChecks.map((c) => ({
         label: c.label,

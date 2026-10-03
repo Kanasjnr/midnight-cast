@@ -4,7 +4,6 @@ import {
   fetchLiveVersions,
   formatVersionsHuman,
   isMatrixStale,
-  loadSupportMatrix,
   matrixStalenessWarning,
   checkLocalPackages,
   type VersionsReport,
@@ -15,10 +14,11 @@ import { sanitizeForOutput } from "../lib/sanitize.js";
 import type { EmitResult, GlobalOptions } from "../output.js";
 import { fail, failReaching } from "../output.js";
 import { EXPLAIN_VERSIONS } from "../lib/next-steps.js";
+import { resolveSupportMatrix } from "../lib/upstream-matrix.js";
 
 export async function versionsCommand(
   networkArg: string | undefined,
-  flags: ResolveFlags & { failOnMismatch?: boolean; local?: boolean },
+  flags: ResolveFlags & { failOnMismatch?: boolean; local?: boolean; offline?: boolean; refreshMatrix?: boolean },
   options: GlobalOptions,
 ): Promise<EmitResult> {
   let endpoints;
@@ -28,8 +28,12 @@ export async function versionsCommand(
     return fail(err);
   }
 
-  const matrix = loadSupportMatrix();
+  const { matrix, source: matrixSource, notes } = await resolveSupportMatrix({
+    offline: flags.offline,
+    refresh: flags.refreshMatrix,
+  });
   const expected = matrix.networks[endpoints.network];
+  const matrixNotes = notes[endpoints.network] ?? [];
 
   if (!expected) {
     return fail(
@@ -62,7 +66,7 @@ export async function versionsCommand(
     checks.every((c) => c.ok) &&
     (localPackageChecks?.every((c) => c.ok) ?? true);
 
-  const matrixStale = isMatrixStale(matrix.updated);
+  const matrixStale = matrixSource.kind === "bundled" && isMatrixStale(matrix.updated);
   const networkWarning = buildNetworkMismatchWarning(
     endpoints.network,
     matrix,
@@ -73,7 +77,9 @@ export async function versionsCommand(
     network: endpoints.network,
     matrixUpdated: matrix.updated,
     matrixStale,
-    matrixWarning: matrixStalenessWarning(matrix.updated, matrix.docUrl),
+    matrixWarning: matrixSource.kind === "bundled" ? matrixStalenessWarning(matrix.updated, matrix.docUrl) : undefined,
+    matrixSource,
+    ...(matrixNotes.length ? { matrixNotes } : {}),
     networkWarning,
     docUrl: matrix.docUrl,
     expected,

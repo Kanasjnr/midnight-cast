@@ -491,8 +491,8 @@ async function main(): Promise<number> {
   let result: CheckResult | undefined;
   for (let attempt = 1; attempt <= opts.attempts; attempt++) {
     const [health, versions] = await Promise.all([
-      runCli<HealthReport>(["health", network, "--json"]),
-      runCli<VersionsReport>(["versions", network, "--json", "--no-local"]),
+      runCli<HealthReport>(["health", network, "--json", "--offline"]),
+      runCli<VersionsReport>(["versions", network, "--json", "--no-local", "--offline"]),
     ]);
     // The verdict must be about the matrix that ships. If the CLI judged a
     // different one, its checks don't apply: refuse rather than mislead.
