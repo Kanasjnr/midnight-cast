@@ -265,7 +265,7 @@ describe("live-check classify", () => {
 
   it("reports an outage with the CLI's own error message", () => {
     const result = classify(
-      input({ health: { ok: false, error: "RPC unreachable" }, versions: { ok: false, error: "RPC unreachable" } }),
+      input({ health: { ok: false, error: { message: "RPC unreachable" } }, versions: { ok: false, error: { message: "RPC unreachable" } } }),
     );
     expect(result.status).toBe("outage");
     expect(result.findings[0]).toMatchObject({ kind: "outage", component: "health", message: "RPC unreachable" });
@@ -305,7 +305,7 @@ describe("live-check fingerprint", () => {
         nodeBehind({
           // bundled-drift carries an upstream field, and upstream-differs
           // exists, only while the upstream fetch works
-          health: { ok: false, error: "Indexer unreachable (503)" },
+          health: { ok: false, error: { message: "Indexer unreachable (503)" } },
           ...(upstreamUp ? {} : { upstream: undefined, upstreamError: "HTTP 503" }),
         }),
       );
@@ -317,12 +317,12 @@ describe("live-check fingerprint", () => {
   });
 
   it("still updates an outage issue when drift unrelated to upstream changes", () => {
-    const outage = { health: { ok: false, error: "Indexer unreachable (503)" } } as const;
+    const outage = { health: { ok: false, error: { message: "Indexer unreachable (503)" } } } as const;
     expect(fingerprint(classify(input(outage)))).not.toBe(fingerprint(classify(nodeBehind(outage))));
   });
 
   it("keeps one outage's fingerprint stable as the failure mode varies", () => {
-    const outage = (error: string) => classify(input({ health: { ok: false, error } }));
+    const outage = (message: string) => classify(input({ health: { ok: false, error: { message } } }));
     const fp = fingerprint(outage("Indexer unreachable"));
     expect(fingerprint(outage("Indexer unreachable (502)"))).toBe(fp);
     expect(fingerprint(outage("Indexer unreachable (503)"))).toBe(fp);
@@ -338,7 +338,7 @@ describe("live-check fingerprint", () => {
   });
 
   it("changes the outage fingerprint when the outage itself changes", () => {
-    const outage = (error: string) => classify(input({ health: { ok: false, error } }));
+    const outage = (message: string) => classify(input({ health: { ok: false, error: { message } } }));
     expect(fingerprint(outage("RPC unreachable"))).not.toBe(fingerprint(outage("Indexer unreachable (503)")));
   });
 
@@ -398,7 +398,7 @@ describe("live-check release blockers", () => {
   });
 
   it("blocks on an outage and on a protocol split", () => {
-    expect(releaseBlockers(classify(input({ health: { ok: false, error: "RPC unreachable" } })))[0]?.kind).toBe("outage");
+    expect(releaseBlockers(classify(input({ health: { ok: false, error: { message: "RPC unreachable" } } })))[0]?.kind).toBe("outage");
     const split = input();
     split.versions!.data!.live.indexerProtocolVersion = 1000000;
     expect(releaseBlockers(classify(split)).map((f) => f.kind)).toEqual(["protocol-split"]);
@@ -410,7 +410,7 @@ describe("live-check exit code", () => {
     const base = input();
     expect(exitCodeFor(classify(base))).toBe(0);
     expect(exitCodeFor(classify(nodeBehind()))).toBe(10);
-    expect(exitCodeFor(classify(input({ health: { ok: false, error: "RPC unreachable" } })))).toBe(20);
+    expect(exitCodeFor(classify(input({ health: { ok: false, error: { message: "RPC unreachable" } } })))).toBe(20);
   });
 
   it("refuses a verdict without upstream data, so the issue is left alone", () => {
@@ -420,7 +420,7 @@ describe("live-check exit code", () => {
 
   it("still reports an outage when upstream is also unavailable", () => {
     const result = classify(
-      input({ upstream: undefined, upstreamError: "HTTP 503", health: { ok: false, error: "Indexer unreachable (503)" } }),
+      input({ upstream: undefined, upstreamError: "HTTP 503", health: { ok: false, error: { message: "Indexer unreachable (503)" } } }),
     );
     expect(exitCodeFor(result)).toBe(20);
   });

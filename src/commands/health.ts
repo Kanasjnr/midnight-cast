@@ -2,7 +2,7 @@ import { chainGetHeader, parseBlockNumber } from "../clients/rpc.js";
 import { getLatestBlockHeight } from "../clients/indexer.js";
 import { fetchProofServerVersion } from "../clients/proof-server.js";
 import { resolveNetwork, type ResolveFlags } from "../config.js";
-import { computeDelta, tipExitCode } from "../lib/delta.js";
+import { computeDelta, describeLag, tipExitCode } from "../lib/delta.js";
 import {
   buildVersionChecks,
   fetchLiveVersions,
@@ -12,7 +12,8 @@ import {
 } from "../lib/versions.js";
 import { runServiceChecks } from "./ping.js";
 import type { EmitResult, GlobalOptions } from "../output.js";
-import { fail } from "../output.js";
+import { fail, failReaching } from "../output.js";
+import { EXPLAIN_VERSIONS, checkEndpoints, narrowDown } from "../lib/next-steps.js";
 
 export interface HealthReport {
   network: string;
@@ -130,13 +131,13 @@ export async function healthCommand(
     const header = await chainGetHeader(endpoints.rpc);
     rpcHeight = parseBlockNumber(header.number);
   } catch (err) {
-    return fail(err);
+    return failReaching(err, endpoints.network, flags);
   }
 
   try {
     indexerHeight = await getLatestBlockHeight(endpoints.indexerHttp);
   } catch (err) {
-    return fail(err);
+    return failReaching(err, endpoints.network, flags);
   }
 
   const delta = computeDelta(rpcHeight, indexerHeight);
@@ -147,7 +148,7 @@ export async function healthCommand(
   try {
     live = await fetchLiveVersions(endpoints.rpc, endpoints.indexerHttp);
   } catch (err) {
-    return fail(err);
+    return failReaching(err, endpoints.network, flags);
   }
 
   let liveProofServer: string | undefined;
@@ -203,10 +204,31 @@ export async function healthCommand(
   };
 
   const exitCode = healthy ? 0 : 1;
+  const error = healthy ? undefined : unhealthyReason(report, { syncOk, versionsCount: flags.failOnMismatch ?? false });
+  const next = [
+    ...narrowDown(endpoints.network, flags, { services: !servicesOk, sync: !inSync }),
+    ...(servicesOk ? [] : checkEndpoints(endpoints.network, flags)),
+    ...(versionsOk ? [] : [EXPLAIN_VERSIONS]),
+  ];
 
-  if (options.json) {
-    return { ok: healthy, data: report, exitCode };
+  return {
+    ok: healthy,
+    data: options.json ? report : formatHealthHuman(report),
+    exitCode,
+    ...(error ? { error } : {}),
+    next,
+  };
+}
+
+function unhealthyReason(report: HealthReport, gates: { syncOk: boolean; versionsCount: boolean }): string {
+  const reasons = report.services
+    .filter((s) => !s.optional && s.status !== "OK")
+    .map((s) => `${s.service} unreachable`);
+  if (!gates.syncOk) {
+    reasons.push(describeLag(report.sync.delta, report.sync.threshold));
   }
-
-  return { ok: healthy, data: formatHealthHuman(report), exitCode };
+  if (gates.versionsCount) {
+    reasons.push(...report.versions.checks.filter((c) => !c.ok).map((c) => `${c.label} mismatch`));
+  }
+  return `Unhealthy: ${reasons.join(", ") || "see the report"}`;
 }

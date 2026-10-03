@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/main/schemas/envelope.schema.json",
+  "title": "midnight-cast --json envelope",
+  "type": "object",
+  "required": [
+    "schemaVersion",
+    "ok",
+    "command",
+    "network",
+    "data",
+    "warnings",
+    "error",
+    "next"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "ok": {
+      "type": "boolean"
+    },
+    "command": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Command path, e.g. \"decode ledger\"; null for a usage error"
+    },
+    "network": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "data": {
+      "description": "Command-specific; see the command's schema"
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "error": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "required": [
+            "message",
+            "kind",
+            "hint"
+          ],
+          "properties": {
+            "message": {
+              "type": "string"
+            },
+            "kind": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "enum": [
+                null,
+                "usage",
+                "dns",
+                "refused",
+                "timeout",
+                "tls",
+                "network",
+                "http_4xx",
+                "http_5xx",
+                "rpc_error",
+                "graphql_error",
+                "invalid_response"
+              ]
+            },
+            "hint": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "next": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "command",
+          "reason"
+        ],
+        "properties": {
+          "command": {
+            "type": "string",
+            "pattern": "^midnight-cast "
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "ok": {
+            "const": true
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "error": {
+            "type": "null"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "error": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  ]
+}

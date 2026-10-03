@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/main/schemas/health.schema.json",
+  "title": "health data",
+  "type": "object",
+  "required": [
+    "network",
+    "healthy",
+    "services",
+    "sync",
+    "versions"
+  ],
+  "properties": {
+    "network": {
+      "type": "string"
+    },
+    "healthy": {
+      "type": "boolean"
+    },
+    "services": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "service",
+          "status",
+          "latencyMs"
+        ],
+        "properties": {
+          "service": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "OK",
+              "FAIL"
+            ]
+          },
+          "latencyMs": {
+            "type": "integer"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "errorKind": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "optional": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "sync": {
+      "type": "object",
+      "required": [
+        "rpcHeight",
+        "indexerHeight",
+        "delta",
+        "threshold",
+        "inSync"
+      ],
+      "properties": {
+        "rpcHeight": {
+          "type": "integer"
+        },
+        "indexerHeight": {
+          "type": "integer"
+        },
+        "delta": {
+          "type": "integer"
+        },
+        "threshold": {
+          "type": "integer"
+        },
+        "inSync": {
+          "type": "boolean"
+        }
+      }
+    },
+    "versions": {
+      "type": "object",
+      "required": [
+        "matrixUpdated",
+        "matrixStale",
+        "allOk",
+        "checks"
+      ],
+      "properties": {
+        "matrixUpdated": {
+          "type": "string"
+        },
+        "matrixStale": {
+          "type": "boolean"
+        },
+        "matrixWarning": {
+          "type": "string"
+        },
+        "allOk": {
+          "type": "boolean"
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "label",
+              "ok"
+            ],
+            "properties": {
+              "label": {
+                "type": "string"
+              },
+              "ok": {
+                "type": "boolean"
+              },
+              "expected": {
+                "type": "string"
+              },
+              "live": {
+                "type": "string"
+              },
+              "note": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

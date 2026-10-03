@@ -3,6 +3,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { join } from "node:path";
 import { loadSupportMatrix } from "../src/lib/versions.js";
+import { parseEnvelope } from "./schema.js";
 
 const execFileAsync = promisify(execFile);
 const integration = process.env.INTEGRATION === "1";
@@ -33,14 +34,14 @@ describe.skipIf(!integration)("integration (live preprod)", () => {
 
   it("mn tip preprod", async () => {
     const { stdout } = await runMn(["tip", "preprod", "--json", "--threshold", "10000"]);
-    const parsed = JSON.parse(stdout) as { ok: boolean; error?: string; data: { rpcHeight: number } };
-    expect(parsed.ok, parsed.error).toBe(true);
+    const parsed = parseEnvelope(stdout) as { ok: boolean; error: { message: string } | null; data: { rpcHeight: number } };
+    expect(parsed.ok, parsed.error?.message).toBe(true);
     expect(parsed.data.rpcHeight).toBeGreaterThan(0);
   });
 
   it("mn decode 170", async () => {
     const { stdout } = await runMn(["decode", "170", "--json"]);
-    const parsed = JSON.parse(stdout) as { data: { name: string } };
+    const parsed = parseEnvelope(stdout) as { data: { name: string } };
     expect(parsed.data.name).toBe("InvalidDustSpendProof");
   });
 
@@ -55,7 +56,7 @@ describe.skipIf(!integration)("integration (live preprod)", () => {
       "--json",
     ]);
     expect(code).toBe(0);
-    const parsed = JSON.parse(stdout) as {
+    const parsed = parseEnvelope(stdout) as {
       data: { id: number; status: string };
     };
     expect(parsed.data.id).toBe(232830);
@@ -67,8 +68,8 @@ describe.skipIf(!integration)("integration (live preprod)", () => {
   it("mn versions preprod reports a consistent live stack", async () => {
     const expectedNode = loadSupportMatrix().networks.preprod!.node;
     const { stdout } = await runMn(["versions", "preprod", "--json", "--no-local"]);
-    const parsed = JSON.parse(stdout) as {
-      error?: string;
+    const parsed = parseEnvelope(stdout) as {
+      error: { message: string } | null;
       data: {
         expected: { node: string };
         live: {
@@ -79,7 +80,7 @@ describe.skipIf(!integration)("integration (live preprod)", () => {
         checks: Array<{ label: string; ok: boolean }>;
       };
     };
-    expect(parsed.data, parsed.error).toBeDefined();
+    expect(parsed.data, parsed.error?.message).toBeDefined();
     expect(parsed.data.expected.node).toBe(expectedNode);
     expect(parsed.data.live.nodeVersion).toMatch(/^\d+\.\d+\.\d+/);
     expect(parsed.data.live.runtimeSpecVersion).toBeGreaterThan(0);

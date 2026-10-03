@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/main/schemas/block.schema.json",
+  "title": "block data",
+  "type": "object",
+  "required": [
+    "network",
+    "height",
+    "hash",
+    "parentHash"
+  ],
+  "properties": {
+    "network": {
+      "type": "string"
+    },
+    "height": {
+      "type": "integer"
+    },
+    "hash": {
+      "type": "string"
+    },
+    "parentHash": {
+      "type": "string"
+    },
+    "stateRoot": {
+      "type": "string"
+    },
+    "extrinsicsRoot": {
+      "type": "string"
+    }
+  }
+}

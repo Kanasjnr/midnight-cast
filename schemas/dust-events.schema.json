@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/main/schemas/dust-events.schema.json",
+  "title": "dust-events data",
+  "type": "object",
+  "required": [
+    "table",
+    "count"
+  ],
+  "properties": {
+    "table": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "typename",
+          "protocolVersion"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "typename": {
+            "type": "string"
+          },
+          "protocolVersion": {
+            "type": "integer"
+          },
+          "raw": {
+            "type": "string"
+          },
+          "maxId": {
+            "type": "integer"
+          }
+        }
+      }
+    },
+    "count": {
+      "type": "integer"
+    }
+  }
+}
