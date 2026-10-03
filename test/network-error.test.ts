@@ -140,7 +140,7 @@ describe("WebSocket rejection that graphql-ws retries", () => {
     const { port } = server.address() as AddressInfo;
     try {
       await expect(
-        subscribeDustEvents({ indexerWs: `ws://127.0.0.1:${port}` }, { fromId: 1, limit: 1, timeoutMs: 1500 }),
+        subscribeDustEvents({ indexerWs: `ws://127.0.0.1:${port}` }, { fromId: 1, limit: 1, timeoutMs: 1000 }),
       ).rejects.toMatchObject({ message: "Indexer WS closed (4403: Forbidden)", kind: "http_4xx", status: 403 });
     } finally {
       for (const client of wss.clients) client.terminate();
@@ -165,7 +165,7 @@ describe("WebSocket that connects and then drops", () => {
     const { port } = server.address() as AddressInfo;
     try {
       await expect(
-        subscribeDustEvents({ indexerWs: `ws://127.0.0.1:${port}` }, { fromId: 1, limit: 1, timeoutMs: 1500 }),
+        subscribeDustEvents({ indexerWs: `ws://127.0.0.1:${port}` }, { fromId: 1, limit: 1, timeoutMs: 1000 }),
       ).rejects.toMatchObject({ message: "Indexer WS closed (4403: Forbidden)", kind: "http_4xx" });
     } finally {
       for (const client of wss.clients) client.terminate();
