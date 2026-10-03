@@ -27,7 +27,7 @@ async function runMn(
 }
 
 describe.skipIf(!enabled)("smoke (live mainnet via Blockfrost)", () => {
-  it("mn ping mainnet", async () => {
+  it("midnight-cast ping mainnet", async () => {
     const { code, stdout } = await runMn(["ping", "mainnet", "--json"]);
     expect(code).toBe(0);
     const parsed = parseEnvelope(stdout) as {
@@ -38,7 +38,7 @@ describe.skipIf(!enabled)("smoke (live mainnet via Blockfrost)", () => {
     expect(parsed.data.table.find((r) => r.service === "indexer")?.status).toBe("OK");
   });
 
-  it("mn tip mainnet", async () => {
+  it("midnight-cast tip mainnet", async () => {
     const { stdout, code } = await runMn(["tip", "mainnet", "--json", "--threshold", "10000"]);
     expect(code).toBe(0);
     const parsed = parseEnvelope(stdout) as {
@@ -48,7 +48,7 @@ describe.skipIf(!enabled)("smoke (live mainnet via Blockfrost)", () => {
     expect(parsed.data.indexerHeight).toBeGreaterThan(0);
   });
 
-  it("mn versions mainnet reports a consistent live stack", async () => {
+  it("midnight-cast versions mainnet reports a consistent live stack", async () => {
     const { stdout } = await runMn(["versions", "mainnet", "--json", "--no-local"]);
     const parsed = parseEnvelope(stdout) as {
       error: { message: string } | null;
