@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { Command } from "commander";
+import { Command, CommanderError } from "commander";
 import { emit, fail, type GlobalOptions } from "./output.js";
 import { parseIntOrFail } from "./lib/parse-int.js";
 import { configInitCommand, configShowCommand } from "./commands/config-cmd.js";
@@ -20,7 +20,7 @@ import type { ResolveFlags } from "./config.js";
 import { normalizeArgv } from "./lib/argv.js";
 import { isNetworkName, splitRpcPositionalArgs } from "./lib/network-arg.js";
 
-const program = new Command();
+const program = new Command().exitOverride();
 
 function cliVersion(): string {
   const path = join(dirname(fileURLToPath(import.meta.url)), "..", "package.json");
@@ -431,4 +431,22 @@ program
     await run(async () => explainCommand(topic, globalOpts(cmd)), cmd);
   });
 
-program.parseAsync(normalizeArgv(process.argv));
+const argv = normalizeArgv(process.argv);
+
+program.parseAsync(argv).catch((err: unknown) => {
+  if (!(err instanceof CommanderError)) throw err;
+  if (err.exitCode === 0) {
+    process.exitCode = 0;
+    return;
+  }
+  if (!argv.includes("--json")) {
+    process.exitCode = 2;
+    return;
+  }
+  const [message = "", ...suggestion] = err.message.replace(/^error: /, "").split("\n");
+  const hint = suggestion.join(" ").replace(/^\((.*)\)$/, "$1");
+  process.exitCode = emit(
+    { ok: false, error: message, errorKind: "usage", ...(hint ? { hint } : {}), exitCode: 2 },
+    { json: true },
+  );
+});
