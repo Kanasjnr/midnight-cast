@@ -343,7 +343,7 @@ Auto-detects and decodes everything it finds in one pasted error:
   - Anything mentioning the retired `rpc.mainnet.midnight.network` or `indexer.mainnet.midnight.network`
   - Output from Compact toolchain 0.35 or Compact runtime 0.20 (`--feature-zkir-v3`, ZKIR 3.1, `ContractModuleProvider`, `ledger-v9`), which target ledger 9, not yet on the public networks
 
-Hex codes need the `0x` prefix, and single-word ledger names such as `Transaction` aren't matched in free text, since they also appear in ordinary error messages ("Invalid Transaction").
+Hex codes need the `0x` prefix, "ledger N" counts only as "ledger error N" or "ledger code N", and single-word ledger names such as `Transaction` aren't matched in free text, since they also appear in ordinary error messages ("Invalid Transaction").
 
 Some ledger codes carry a related hint. `OutOfDustValidityWindow` (171) notes the indexer bug fixed in 4.3.4 and 4.3.5, which rejected the first transaction of a block. The deserialization codes (0–11) note that ledger 8.1.2 rejects non-canonical encodings.
 

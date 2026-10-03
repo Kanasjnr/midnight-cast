@@ -41,7 +41,7 @@
 - The ledger code map was checked against node 1.0.300 and matches all 120 codes. The new codes in node 2.x aren't added, since they arrive only with a runtime upgrade
 
 ### Fixes
-- `decode --raw` no longer reads short words as hex codes ("a block" decoded as code 10, and "after 10 retries" as code 16), and no longer decodes "Invalid Transaction" as ledger code 1 `Transaction`
+- `decode --raw` no longer reads short words as hex codes ("a block" decoded as code 10, and "after 10 retries" as code 16), and no longer decodes "Invalid Transaction" as ledger code 1 `Transaction`. "Ledger N" counts as a code only when labelled ("ledger error 9", "ledger code 9"), so "targets ledger 9" and "ledger 8.1.2" are no longer read as codes
 - An HTTP 429 from an RPC or indexer endpoint gets a rate-limiting hint instead of the generic "rejected the request"
 - `dust-event` and `dust-events` no longer repeat "Indexer WS unreachable" twice in their error
 - `dust-event` and `dust-events` exit right after a subscription times out. They used to keep reconnecting in the background, hang until the operating system gave up on a pending connection, or crash with an unhandled promise rejection
