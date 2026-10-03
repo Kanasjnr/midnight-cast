@@ -23,6 +23,7 @@ import { txCommand } from "../src/commands/tx.js";
 import { versionsCommand } from "../src/commands/versions.js";
 import { resolveNetwork } from "../src/config.js";
 import { takeProjectId } from "../src/lib/blockfrost.js";
+import { sanitizeForOutput } from "../src/lib/sanitize.js";
 import { BUILTIN_NETWORKS } from "../src/networks.js";
 import type { EmitResult } from "../src/output.js";
 import { compareShapes, dustExchanges, recordingFetch, type Exchange, type FixtureFile } from "./fixtures.js";
@@ -70,7 +71,7 @@ async function discoverInputs(indexerHttp: string): Promise<FixtureFile["inputs"
     const tx = data.block.transactions.find((t) => t.dustLedgerEvents?.length);
     if (tx) return { txHash: tx.hash, blockHeight: height, dustEventId: tx.dustLedgerEvents![0]!.id };
   }
-  throw new Error(`No transaction with DUST events in the last 1000 blocks at ${indexerHttp}`);
+  throw new Error(`No transaction with DUST events in the last 1000 blocks at ${takeProjectId(indexerHttp).url}`);
 }
 
 // Public endpoints fail now and then; a fixture must come from a successful run.
@@ -124,7 +125,10 @@ async function recordDust(indexerWs: string, fromId: number): Promise<FixtureFil
   try {
     await new Promise<void>((resolve, reject) => {
       const timer = setTimeout(
-        () => (payloads.length ? resolve() : reject(new Error(`no DUST events from ${indexerWs} within 20s`))),
+        () =>
+          payloads.length
+            ? resolve()
+            : reject(new Error(`no DUST events from ${takeProjectId(indexerWs).url} within 20s`)),
         20_000,
       );
       const unsubscribe = client.subscribe(
@@ -212,7 +216,8 @@ async function main(): Promise<number> {
     // Shapes are compared by request kind, so after a network reset any recent transaction will do.
     const { fixture, schema } = await record(network, inputs).catch(async (err: unknown) => {
       if (!check) throw err;
-      console.log(`${network}: recorded inputs didn't resolve (${err instanceof Error ? err.message : err}); using fresh ones`);
+      const reason = sanitizeForOutput(err instanceof Error ? err.message : String(err));
+      console.log(`${network}: recorded inputs didn't resolve (${reason}); using fresh ones`);
       return record(network, await discoverInputs(indexerHttp));
     });
     const dir = fixtureDir(network);
@@ -260,7 +265,7 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   main().then(
     (code) => (process.exitCode = code),
     (err: unknown) => {
-      console.error(`Incomplete, re-run: ${err instanceof Error ? err.message : String(err)}`);
+      console.error(sanitizeForOutput(`Incomplete, re-run: ${err instanceof Error ? err.message : String(err)}`));
       process.exitCode = 2;
     },
   );
