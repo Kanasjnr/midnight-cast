@@ -159,7 +159,8 @@ export function findLedgerCodesByName(
   );
 
   for (const [code, name] of entries) {
-    if (name.length < minNameLength) continue;
+    // Single-word names such as "Transaction" also appear in ordinary error text ("Invalid Transaction").
+    if (name.length < minNameLength || (name.match(/[A-Z]/g) ?? []).length < 2) continue;
     const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     if (new RegExp(`\\b${escaped}\\b`).test(raw) && !matched.has(code)) {
       found.push(code);

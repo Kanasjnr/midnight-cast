@@ -70,4 +70,12 @@ describe("findLedgerCodesByName", () => {
     );
     expect(codes).toEqual(["170"]);
   });
+
+  it("skips single-word names that appear in ordinary error text", () => {
+    const codes = findLedgerCodesByName("1010: Invalid Transaction: Custom error: 171", {
+      "1": "Transaction",
+      "104": "Transcript",
+    });
+    expect(codes).toEqual([]);
+  });
 });
