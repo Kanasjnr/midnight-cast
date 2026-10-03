@@ -20,10 +20,11 @@ export class NetworkError extends Error {
     readonly kind: NetworkErrorKind,
     readonly service: Service,
     readonly status?: number,
+    hint?: string,
   ) {
     super(message);
     this.name = "NetworkError";
-    this.hint = hintFor(kind, service, status, message);
+    this.hint = hint ?? hintFor(kind, service, status, message);
   }
 }
 

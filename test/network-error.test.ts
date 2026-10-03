@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { NetworkError, isTransportKind, statusKind, transportKind } from "../src/lib/network-error.js";
 import { jsonRpc } from "../src/clients/rpc.js";
-import { gqlPost } from "../src/clients/indexer.js";
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
+import { WebSocketServer } from "ws";
+import { gqlPost, subscribeDustEvents, subscriptionTimeout, wsFailure } from "../src/clients/indexer.js";
 import { emit, fail } from "../src/output.js";
 import { runServiceChecks } from "../src/commands/ping.js";
 
@@ -66,6 +69,108 @@ describe("clients throw classified errors", () => {
       else fetchMock.mockResolvedValue(response);
       vi.stubGlobal("fetch", fetchMock);
       await expect(call()).rejects.toMatchObject({ name: "NetworkError", kind });
+    }
+  });
+});
+
+describe("WebSocket failures", () => {
+  it("reports a close code and its reason, mapping 4xxx to the HTTP status it mirrors", () => {
+    const forbidden = wsFailure({ code: 4403, reason: "Forbidden" });
+    expect(forbidden).toMatchObject({ message: "Indexer WS closed (4403: Forbidden)", kind: "http_4xx", status: 403 });
+    expect(forbidden.hint).toMatch(/token/);
+    expect(wsFailure({ code: 1006, reason: "" })).toMatchObject({ message: "Indexer WS closed (1006)", kind: "network" });
+  });
+
+  it("maps only HTTP-like close codes to statuses", () => {
+    expect(wsFailure({ code: 1008, reason: "" })).toMatchObject({ kind: "http_4xx", status: 403 });
+    expect(wsFailure({ code: 1008, reason: "" }).hint).not.toMatch(/undefined/);
+    expect(wsFailure({ code: 4500, reason: "boom" })).toMatchObject({ kind: "http_5xx", status: 500 });
+    expect(wsFailure({ code: 4408, reason: "" })).toMatchObject({ kind: "timeout" });
+    for (const code of [4409, 4429, 4499]) {
+      expect(wsFailure({ code, reason: "" })).toMatchObject({ kind: "network", status: undefined });
+    }
+  });
+
+  it("gives the subscription timeout a hint that matches what happened", () => {
+    expect(subscriptionTimeout(false, true).hint).toMatch(/never connected/);
+    expect(subscriptionTimeout(true, true).hint).toMatch(/id may not exist/);
+    expect(subscriptionTimeout(true, false).hint).toMatch(/no events arrived/);
+  });
+
+  it("classifies a refused handshake by its HTTP status, with Blockfrost's explanation on Blockfrost", () => {
+    const rejected = { message: "Unexpected server response: 403" };
+    expect(wsFailure(rejected, "wss://midnight-mainnet.blockfrost.io/api/v0/ws")).toMatchObject({
+      kind: "http_4xx",
+      status: 403,
+      message: expect.stringContaining("rejected by Blockfrost (403)"),
+    });
+    expect(wsFailure(rejected, "ws://127.0.0.1:8088/api/v4/graphql/ws")).toMatchObject({
+      message: "Indexer WS unreachable (403)",
+      kind: "http_4xx",
+    });
+  });
+
+  it("points WebSocket timeouts at --indexer-ws", () => {
+    expect(wsFailure({ code: 4408, reason: "" }).hint).toMatch(/--indexer-ws/);
+    expect(wsFailure({ message: "", error: Object.assign(new Error("t"), { code: "ETIMEDOUT" }) }).hint).toMatch(/--indexer-ws/);
+  });
+
+  it("points a WebSocket 404 at the subscription path", () => {
+    expect(wsFailure({ message: "Unexpected server response: 404" }).hint).toMatch(/\/api\/v4\/graphql\/ws/);
+  });
+
+  it("treats a redirected handshake as a URL problem, not a rejection", () => {
+    const redirected = wsFailure({ message: "Unexpected server response: 301" }, "ws://indexer.example/api/v4/graphql/ws");
+    expect(redirected).toMatchObject({ message: "Indexer WS redirected (301)", kind: "network", status: 301 });
+    expect(redirected.hint).toMatch(/wss:\/\//);
+  });
+
+  it("falls back to the error code when the event's message is empty", () => {
+    const failure = wsFailure({ message: "", error: Object.assign(new Error(""), { code: "ECONNREFUSED" }) });
+    expect(failure).toMatchObject({ message: "Indexer WS unreachable: ECONNREFUSED", kind: "refused" });
+  });
+});
+
+describe("WebSocket rejection that graphql-ws retries", () => {
+  it("reports the server's close reason when the subscription times out", async () => {
+    const server = createServer();
+    const wss = new WebSocketServer({ server });
+    wss.on("connection", (socket) => socket.on("message", () => socket.close(4403, "Forbidden")));
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const { port } = server.address() as AddressInfo;
+    try {
+      await expect(
+        subscribeDustEvents({ indexerWs: `ws://127.0.0.1:${port}` }, { fromId: 1, limit: 1, timeoutMs: 1500 }),
+      ).rejects.toMatchObject({ message: "Indexer WS closed (4403: Forbidden)", kind: "http_4xx", status: 403 });
+    } finally {
+      for (const client of wss.clients) client.terminate();
+      wss.close();
+      server.close();
+    }
+  });
+});
+
+describe("WebSocket that connects and then drops", () => {
+  it("reports the drop instead of blaming missing events", async () => {
+    const server = createServer();
+    const wss = new WebSocketServer({ server });
+    wss.on("connection", (socket) =>
+      socket.on("message", (raw) => {
+        const message = JSON.parse(String(raw)) as { type: string };
+        if (message.type === "connection_init") socket.send(JSON.stringify({ type: "connection_ack" }));
+        if (message.type === "subscribe") socket.close(4403, "Forbidden");
+      }),
+    );
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const { port } = server.address() as AddressInfo;
+    try {
+      await expect(
+        subscribeDustEvents({ indexerWs: `ws://127.0.0.1:${port}` }, { fromId: 1, limit: 1, timeoutMs: 1500 }),
+      ).rejects.toMatchObject({ message: "Indexer WS closed (4403: Forbidden)", kind: "http_4xx" });
+    } finally {
+      for (const client of wss.clients) client.terminate();
+      wss.close();
+      server.close();
     }
   });
 });
