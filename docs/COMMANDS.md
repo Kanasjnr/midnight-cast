@@ -199,12 +199,12 @@ midnight-cast versions preprod --no-local
 **Which matrix:** `versions`, `matrix` and `health` take the first of these, and report it as `Matrix:` (`matrixSource` in JSON):
 
 1. A `support-matrix.json` you drop in `~/.config/midnight-cast/`, used as is.
-2. Midnight's published matrix (`midnightntwrk/midnight-docs`, `docs/relnotes/support-matrix.json`), fetched with a 3-second timeout and cached for six hours in `~/.cache/midnight-cast/` (or `$XDG_CACHE_HOME/midnight-cast/`). If a refresh fails, an older cached copy is used and the reason is shown.
+2. Midnight's published matrix (`midnightntwrk/midnight-docs`, `docs/relnotes/support-matrix.json`), fetched with a 3-second timeout and cached for six hours in `~/.cache/midnight-cast/` (or `$XDG_CACHE_HOME/midnight-cast/`). If a refresh fails, a cached copy up to a week old is used instead, unless the bundled matrix is newer, and the reason is shown. A failed fetch isn't retried for an hour, so an unreachable GitHub costs the timeout once rather than on every run.
 3. The matrix bundled with this release, when offline (`--offline` or `MN_OFFLINE=1`) or when nothing could be fetched.
 
 The published matrix updates only what the endpoints can't reveal: the indexer, on-chain runtime and Compact runtime versions, including the `compact-runtime` package pin. Node and proof server stay as bundled, because they are checked against the live network and the published file can list versions no network runs yet. The minimum node version, runtime `spec_version`, ledger and indexer API also come from the bundled matrix, since the published file doesn't carry them. Disagreements inside the published file, such as a `tag` and `containerTag` that differ, are shown as notes (`matrixNotes` in JSON).
 
-**Staleness:** when the bundled matrix is used and is older than 45 days, a warning says mismatches may be false.
+**Staleness:** when the bundled matrix (or your override) is older than 45 days, a warning says mismatches may be false. It applies even with the published matrix, since node, runtime spec and ledger still come from the bundled copy.
 
 Example output:
 

@@ -39,7 +39,7 @@
 - `versions`, `matrix` and `health` judge against Midnight's published support matrix (`midnightntwrk/midnight-docs`), fetched with a 3-second timeout and cached for six hours in `~/.cache/midnight-cast/`, so they stay current between releases. It updates the indexer, on-chain runtime and Compact runtime; node, proof server, runtime `spec_version`, ledger and indexer API stay as bundled, since those are checked live or aren't in the published file. A local `support-matrix.json` override still comes first, and the bundled matrix is used when offline or when nothing can be fetched
 - The output says which matrix was used (`Matrix:` line, `matrixSource` in JSON), and shows disagreements inside the published file, such as mainnet's node `tag` 1.0.400 against `containerTag` 1.0.300, as notes (`matrixNotes`)
 - `--offline` (or `MN_OFFLINE=1`) uses the bundled matrix; `--refresh-matrix` refetches even with a fresh cache
-- The staleness warning applies only when the bundled matrix is used
+- A failed fetch isn't retried for an hour, and a cached copy stands in for it only if it is under a week old and not older than the bundled matrix. The staleness warning still tracks the bundled matrix's age, since node, runtime spec and ledger come from it
 - The published-matrix parser is shared by the CLI and the live check, which runs the CLI with `--offline` so it still judges the matrix that ships
 
 ### Decode
