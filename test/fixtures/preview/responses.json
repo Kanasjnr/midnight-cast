@@ -1,0 +1,101 @@
+{
+  "network": "preview",
+  "recordedAt": "2026-10-03T19:53:40.946Z",
+  "inputs": {
+    "txHash": "9166c5fff516e5ad1ad210cc791861385b97fc73b69622ab12f066b3a0540329",
+    "blockHeight": 1139648,
+    "dustEventId": 259927
+  },
+  "exchanges": [
+    {
+      "key": "indexer query { block { height } } {}",
+      "status": 200,
+      "contentType": "application/graphql-response+json",
+      "body": "{\"data\":{\"block\":{\"height\":1139699}}}"
+    },
+    {
+      "key": "indexer query { block { protocolVersion } } {}",
+      "status": 200,
+      "contentType": "application/graphql-response+json",
+      "body": "{\"data\":{\"block\":{\"protocolVersion\":1000300}}}"
+    },
+    {
+      "key": "indexer query TransactionLookup($offset: TransactionOffset!) { transactions(offset: $offset) { __typename id hash protocolVersion ... on RegularTransaction { transactionResult { status segments { id success } } fees { paidFees estimatedFees } identifiers startIndex endIndex } block { height hash } dustLedgerEvents { id __typename } zswapLedgerEvents { id __typename } contractActions { __typename } } } {\"offset\":{\"hash\":\"0x9166c5fff516e5ad1ad210cc791861385b97fc73b69622ab12f066b3a0540329\"}}",
+      "status": 200,
+      "contentType": "application/graphql-response+json",
+      "body": "{\"data\":{\"transactions\":[{\"__typename\":\"RegularTransaction\",\"id\":70571,\"hash\":\"9166c5fff516e5ad1ad210cc791861385b97fc73b69622ab12f066b3a0540329\",\"protocolVersion\":1000300,\"transactionResult\":{\"status\":\"SUCCESS\",\"segments\":null},\"fees\":{\"paidFees\":\"1\",\"estimatedFees\":\"1\"},\"identifiers\":[\"00156db687a03e90f58df4fbd3822572dbb71d2d9c3ca3d047fbc8510fe898664d\",\"002b0c12bed7f74b568db1b8759c6dc85b9d6ce93e5f4029fcd657ff8eafa3049d\"],\"startIndex\":66087,\"endIndex\":66087,\"zswapLedgerEvents\":[],\"dustLedgerEvents\":[{\"id\":259927,\"__typename\":\"DustSpendProcessed\"}],\"block\":{\"height\":1139648,\"hash\":\"74edb3e1af7039956a4d8babe6cfa33e0012750dda7b492bfdbc79e34604235c\"},\"contractActions\":[{\"__typename\":\"ContractDeploy\"}]}]}}"
+    },
+    {
+      "key": "proof-server GET /",
+      "status": 200,
+      "contentType": "application/json",
+      "body": "{\"status\":\"ok\",\"timestamp\":\"2026-10-03 19:53:15.847604993 +00:00:00\"}"
+    },
+    {
+      "key": "proof-server GET /version",
+      "status": 200,
+      "contentType": "text/plain; charset=utf-8",
+      "body": "8.0.3"
+    },
+    {
+      "key": "rpc chain_getBlockHash [\"0x1163c0\"]",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":\"0x74edb3e1af7039956a4d8babe6cfa33e0012750dda7b492bfdbc79e34604235c\"}"
+    },
+    {
+      "key": "rpc chain_getBlockHash []",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":\"0x30c9102e20e01e265280df3c34fbbd09853f8e330c6d3278566e37312d016342\"}"
+    },
+    {
+      "key": "rpc chain_getHeader [\"0x74edb3e1af7039956a4d8babe6cfa33e0012750dda7b492bfdbc79e34604235c\"]",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"parentHash\":\"0x1ef5390dc2ccb56abf71965576fb755ed2ebc0eeca679d93a004b6a4a0a1d179\",\"number\":\"0x1163c0\",\"stateRoot\":\"0xfef8b98f667089c2e936a3944eade237be3754fc4f4c8bb9e787c8c827bb8bb5\",\"extrinsicsRoot\":\"0xd94902c02a1a637951c8e85a820164f57c334a85adaa81b94d98d9e3842f8206\",\"digest\":{\"logs\":[\"0x066175726120a7e4ca1100000000\",\"0x066d63736880b2e066a22bb7761a91c41586e6104c12b09847ad386fc950274ccfb7e28180cf\",\"0x044d4e5356106c430f00\",\"0x04424545468403948bbf36a0fea9d56d61cf6b5894833bd0c7428d69bc2575a062d10f2549b7de\",\"0x05617572610101b62579892d4d825eb1f4119cd57376bcb07af9f51f3a9184b99addc32c713724039c9911434e9e3bd312b983c80095e16f90245427530eee47618649ac012989\"]}}}"
+    },
+    {
+      "key": "rpc chain_getHeader []",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"parentHash\":\"0x30c9102e20e01e265280df3c34fbbd09853f8e330c6d3278566e37312d016342\",\"number\":\"0x1163f6\",\"stateRoot\":\"0xbe4b3006830e1172aecb731ac98fe4d779387826d511fb83cb32d573d25a6e14\",\"extrinsicsRoot\":\"0xaaefa28c5516ffa11eca8b323ea4b74e505cfa8a137b13ac13780382412e3a2d\",\"digest\":{\"logs\":[\"0x066175726120dde4ca1100000000\",\"0x066d6373688072deb9ee163589939114db4931caf9b0a8170f1c541b5437dc4641bd0f3020b2\",\"0x044d4e5356106c430f00\",\"0x044245454684034a00bd7e943d08ab94e784a55b9a8f1ec593c34f5fa9724f12779974ed1db580\",\"0x05617572610101b2da182f78955109e0dd7de0bbf7c3ad8f3af9cf53d0675f009ff9241d866227fd7d6b25fa0ca275db0fa14edcc31156085ecc6037cdc7736b8413bf64a52286\"]}}}"
+    },
+    {
+      "key": "rpc chain_getRuntimeVersion []",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"specName\":\"midnight\",\"implName\":\"midnight\",\"authoringVersion\":1,\"specVersion\":1000300,\"implVersion\":0,\"apis\":[[\"0xa0c89371ec56244c\",1],[\"0xf78b278be53f454c\",2],[\"0x91d5df18b0d2cf58\",3],[\"0xd9bc84ac3bfb8a0c\",1],[\"0x7d699da8a672e867\",5],[\"0x393b2599ea57bca2\",1],[\"0xbc9d89904f5b923f\",1],[\"0x49eaaf1b548a0cb0\",6],[\"0x40fe3ad401f8959a\",6],[\"0x2a5e924655399e60\",1],[\"0xdd718d5cc53262d4\",1],[\"0xc3c222f40af6f42b\",1],[\"0xc7805fd5ec973a86\",1],[\"0x279a32908e96410d\",1],[\"0xfbc577b9d747efd6\",1],[\"0x22a0eaa81c05f0d3\",1],[\"0x19dba14093498f16\",2],[\"0x0093e736d7484c30\",1],[\"0x37e397fc7c91f5e4\",2],[\"0xd2bc9897eed08f15\",3],[\"0xab3c0572291feb8b\",2],[\"0xa897625b130086bd\",1],[\"0xed99c5acb25eedf5\",3],[\"0xdf6acb689907609b\",5]],\"transactionVersion\":3,\"systemVersion\":3,\"stateVersion\":3}}"
+    },
+    {
+      "key": "rpc system_health []",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"peers\":8,\"isSyncing\":false,\"shouldHavePeers\":true}}"
+    },
+    {
+      "key": "rpc system_version []",
+      "status": 200,
+      "contentType": "application/json; charset=utf-8",
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":\"1.0.400-c338b9ac\"}"
+    }
+  ],
+  "dust": {
+    "variables": {
+      "id": 259927
+    },
+    "payloads": [
+      {
+        "data": {
+          "dustLedgerEvents": {
+            "__typename": "DustSpendProcessed",
+            "id": 259927,
+            "protocolVersion": 1000300,
+            "raw": "6d69646e696768743a6576656e745b76395d3a0400f5019166c5fff516e5ad1ad210cc791861385b97fc73b69622ab12f066b3a054032900000200077303a09b72a74d9a9396e0ffa0392dec85fde759fcc978399db4ab1c4093fc7433eeea0700735f3c741e36eb8b0bc3d790e2686e787349f01e46c9d9d5c92fc2843b3aee4b470f01c06e31d9100103d25bc16a03ea5bc16a",
+            "maxId": 259927
+          }
+        }
+      }
+    ]
+  }
+}
