@@ -444,7 +444,10 @@ program.parseAsync(argv).catch((err: unknown) => {
     process.exitCode = 2;
     return;
   }
-  const [message = "", ...suggestion] = err.message.replace(/^error: /, "").split("\n");
+  const missingCommand = err.code === "commander.help";
+  const [message = "", ...suggestion] = missingCommand
+    ? ["Missing command", "Run midnight-cast explain --json to list the commands"]
+    : err.message.replace(/^error: /, "").split("\n");
   const hint = suggestion.join(" ").replace(/^\((.*)\)$/, "$1");
   process.exitCode = emit(
     { ok: false, error: message, errorKind: "usage", ...(hint ? { hint } : {}), exitCode: 2 },

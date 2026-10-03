@@ -46,6 +46,12 @@ describe("--json envelope", () => {
     });
   });
 
+  it("reports a missing command as a usage error, not commander's internals", async () => {
+    const { envelope, code } = await runJson(["config"]);
+    expect(code).toBe(2);
+    expect(envelope).toMatchObject({ ok: false, error: { message: "Missing command", kind: "usage" } });
+  });
+
   it("summarises which required services failed", async () => {
     const { envelope, code } = await runJson([
       "ping",
