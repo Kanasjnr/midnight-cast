@@ -65,6 +65,7 @@ export function recordingFetch(
     const response = await realFetch(input, init);
     const body = await response.clone().text();
     const key = exchangeKey(url, bodyText(init?.body), proofServer);
+    if (exchanges.get(key)?.status === 200 && response.status !== 200) return response;
     exchanges.set(key, {
       key,
       status: response.status,
@@ -112,22 +113,34 @@ function parsedBody(exchange: Exchange): unknown {
 
 export interface ShapeDrift {
   key: string;
-  change: "missing" | "new" | "shape" | "status";
+  change: "missing" | "new" | "shape" | "status" | "unavailable";
   recorded?: string;
   live?: string;
 }
 
-// Values that vary by block or are optional in the indexer schema read as null on one run and a value on the next.
-function compatible(recorded: unknown, live: unknown): boolean {
-  if (recorded === "null" || live === "null") return true;
+export interface ShapeComparison {
+  drift: ShapeDrift[];
+  /** Paths one side had as null or an empty list, so their shape couldn't be compared this time. */
+  unverified: string[];
+}
+
+function compatible(recorded: unknown, live: unknown, path: string, unverified: string[]): boolean {
+  if (recorded === "null" || live === "null") {
+    if (recorded !== live) unverified.push(`${path} (${recorded === "null" ? "recorded" : "live"} null)`);
+    return true;
+  }
   if (Array.isArray(recorded) && Array.isArray(live)) {
-    return !recorded.length || !live.length || compatible(recorded[0], live[0]);
+    if (!recorded.length || !live.length) {
+      if (recorded.length !== live.length) unverified.push(`${path}[] (${recorded.length ? "live" : "recorded"} empty)`);
+      return true;
+    }
+    return compatible(recorded[0], live[0], `${path}[]`, unverified);
   }
   if (typeof recorded === "object" && typeof live === "object" && recorded && live) {
     const a = recorded as Record<string, unknown>;
     const b = live as Record<string, unknown>;
     const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
-    return [...keys].every((k) => k in a && k in b && compatible(a[k], b[k]));
+    return [...keys].every((k) => k in a && k in b && compatible(a[k], b[k], `${path}.${k}`, unverified));
   }
   return recorded === live;
 }
@@ -137,20 +150,25 @@ function requestKind(key: string): string {
   return key.replace(/"0x[0-9a-f]+"/gi, '"0x"').replace(/\b\d+\b/g, "#");
 }
 
-export function compareShapes(recorded: Exchange[], live: Exchange[]): ShapeDrift[] {
+export function compareShapes(recorded: Exchange[], live: Exchange[]): ShapeComparison {
   const liveByKey = new Map(live.map((e) => [requestKind(e.key), e]));
   const recordedKeys = new Set(recorded.map((e) => requestKind(e.key)));
   const drift: ShapeDrift[] = [];
+  const unverified: string[] = [];
   for (const before of recorded) {
     const after = liveByKey.get(requestKind(before.key));
     if (!after) {
       drift.push({ key: before.key, change: "missing" });
     } else if (before.status !== after.status) {
-      drift.push({ key: before.key, change: "status", recorded: String(before.status), live: String(after.status) });
+      const change = after.status >= 500 ? "unavailable" : "status";
+      drift.push({ key: before.key, change, recorded: String(before.status), live: String(after.status) });
     } else {
       const a = shapeOf(parsedBody(before));
       const b = shapeOf(parsedBody(after));
-      if (!compatible(a, b)) {
+      const paths: string[] = [];
+      if (compatible(a, b, "", paths)) {
+        unverified.push(...paths.map((path) => `${before.key.slice(0, 60)}: ${path}`));
+      } else {
         drift.push({ key: before.key, change: "shape", recorded: JSON.stringify(a), live: JSON.stringify(b) });
       }
     }
@@ -158,5 +176,15 @@ export function compareShapes(recorded: Exchange[], live: Exchange[]): ShapeDrif
   for (const after of live) {
     if (!recordedKeys.has(requestKind(after.key))) drift.push({ key: after.key, change: "new" });
   }
-  return drift;
+  return { drift, unverified };
+}
+
+/** DUST subscription payloads as exchanges, so they're compared like any response. */
+export function dustExchanges(dust: { payloads: unknown[] }): Exchange[] {
+  return dust.payloads.slice(0, 1).map((payload) => ({
+    key: "dust subscription next",
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify(payload),
+  }));
 }

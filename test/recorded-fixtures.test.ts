@@ -18,8 +18,10 @@ import { BUILTIN_NETWORKS } from "../src/networks.js";
 import { toEnvelope, type EmitResult } from "../src/output.js";
 import {
   compareShapes,
+  dustExchanges,
   exchangeKey,
   indexerQuery,
+  recordingFetch,
   replayFetch,
   shapeOf,
   type Exchange,
@@ -139,18 +141,41 @@ describe("fixture shapes", () => {
   it("compare keys and types, not values", () => {
     expect(shapeOf({ b: [{ c: 1 }], a: "x" })).toEqual({ a: "string", b: [{ c: "number" }] });
     const before = [exchange("rpc chain_getBlockHash [\"0x10\"]", { result: "0xaa" })];
-    expect(compareShapes(before, [exchange("rpc chain_getBlockHash [\"0x20\"]", { result: "0xbb" })])).toEqual([]);
-    expect(compareShapes(before, [exchange("rpc chain_getBlockHash [\"0x20\"]", { result: 5 })])[0]?.change).toBe("shape");
+    expect(compareShapes(before, [exchange("rpc chain_getBlockHash [\"0x20\"]", { result: "0xbb" })]).drift).toEqual([]);
+    expect(compareShapes(before, [exchange("rpc chain_getBlockHash [\"0x20\"]", { result: 5 })]).drift[0]?.change).toBe(
+      "shape",
+    );
   });
 
-  it("allow a field to be null on one run, but not to disappear", () => {
-    const before = [exchange("indexer q {}", { data: { fees: null, id: 1 } })];
-    expect(compareShapes(before, [exchange("indexer q {}", { data: { fees: { paid: "1" }, id: 2 } })])).toEqual([]);
-    expect(compareShapes(before, [exchange("indexer q {}", { data: { id: 2 } })])[0]?.change).toBe("shape");
+  it("allow a field to be null on one run, but say it went unchecked, and not let it disappear", () => {
+    const before = [exchange("indexer q {}", { data: { segments: null, id: 1 } })];
+    const filled = compareShapes(before, [exchange("indexer q {}", { data: { segments: [{ id: 1 }], id: 2 } })]);
+    expect(filled.drift).toEqual([]);
+    expect(filled.unverified).toEqual(["indexer q {}: .data.segments (recorded null)"]);
+    expect(compareShapes(before, [exchange("indexer q {}", { data: { id: 2 } })]).drift[0]?.change).toBe("shape");
   });
 
-  it("report requests that are no longer made, or new ones", () => {
-    const drift = compareShapes([exchange("rpc a []", {})], [exchange("rpc b []", {})]);
+  it("report requests that are no longer made, new ones, and outages separately", () => {
+    const { drift } = compareShapes([exchange("rpc a []", {})], [exchange("rpc b []", {})]);
     expect(drift.map((d) => d.change)).toEqual(["missing", "new"]);
+    const outage = compareShapes([exchange("proof-server GET /", {})], [exchange("proof-server GET /", {}, 502)]);
+    expect(outage.drift.map((d) => d.change)).toEqual(["unavailable"]);
+  });
+
+  it("keep a good answer when a later call to the same endpoint fails", async () => {
+    const exchanges = new Map<string, Exchange>();
+    let status = 200;
+    const fake = (async () => new Response("ok", { status })) as unknown as typeof fetch;
+    const recording = recordingFetch(fake, "https://proof.x", exchanges);
+    await recording("https://proof.x/version");
+    status = 502;
+    await recording("https://proof.x/version");
+    expect(exchanges.get("proof-server GET /version")?.status).toBe(200);
+  });
+
+  it("compare DUST payloads like responses", () => {
+    const committed = dustExchanges({ payloads: [{ data: { dustLedgerEvents: { id: 1, raw: "0x" } } }] });
+    const renamed = dustExchanges({ payloads: [{ data: { dustLedgerEvents: { id: 1, bytes: "0x" } } }] });
+    expect(compareShapes(committed, renamed).drift[0]?.change).toBe("shape");
   });
 });

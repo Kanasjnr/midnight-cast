@@ -23,7 +23,7 @@ import { txCommand } from "../src/commands/tx.js";
 import { versionsCommand } from "../src/commands/versions.js";
 import { BUILTIN_NETWORKS } from "../src/networks.js";
 import type { EmitResult } from "../src/output.js";
-import { compareShapes, recordingFetch, type Exchange, type FixtureFile } from "./fixtures.js";
+import { compareShapes, dustExchanges, recordingFetch, type Exchange, type FixtureFile } from "./fixtures.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 export const FIXTURE_NETWORKS = ["preview", "preprod"] as const;
@@ -101,7 +101,21 @@ async function recordExchanges(network: string, inputs: FixtureFile["inputs"]): 
 async function recordDust(indexerWs: string, fromId: number): Promise<FixtureFile["dust"]> {
   const variables = { id: fromId };
   const payloads: unknown[] = [];
-  const client = createClient({ url: indexerWs, webSocketImpl: WebSocket, connectionParams: {}, retryAttempts: 0, lazy: true });
+  // graphql-ws dispose() waits on a pending handshake, so sockets are closed directly instead.
+  const sockets: WebSocket[] = [];
+  class TrackedWebSocket extends WebSocket {
+    constructor(...args: ConstructorParameters<typeof WebSocket>) {
+      super(...args);
+      sockets.push(this);
+    }
+  }
+  const client = createClient({
+    url: indexerWs,
+    webSocketImpl: TrackedWebSocket,
+    connectionParams: {},
+    retryAttempts: 0,
+    lazy: true,
+  });
   try {
     await new Promise<void>((resolve, reject) => {
       const timer = setTimeout(
@@ -131,7 +145,8 @@ async function recordDust(indexerWs: string, fromId: number): Promise<FixtureFil
       );
     });
   } finally {
-    await client.dispose();
+    void Promise.resolve(client.dispose()).catch(() => undefined);
+    for (const socket of sockets) socket.terminate();
   }
   return { variables, payloads };
 }
@@ -178,12 +193,18 @@ async function main(): Promise<number> {
   process.env.MN_OFFLINE = "1";
 
   let drifted = false;
+  let incomplete = false;
   for (const network of networks.length ? networks : FIXTURE_NETWORKS) {
     if (!BUILTIN_NETWORKS[network]) throw new Error(`Unknown network ${network}`);
     const committed = readFixture(network);
-    const inputs =
-      !discover && committed ? committed.inputs : await discoverInputs(BUILTIN_NETWORKS[network]!.indexerHttp);
-    const { fixture, schema } = await record(network, inputs);
+    const indexerHttp = BUILTIN_NETWORKS[network]!.indexerHttp;
+    const inputs = !discover && committed ? committed.inputs : await discoverInputs(indexerHttp);
+    // Shapes are compared by request kind, so after a network reset any recent transaction will do.
+    const { fixture, schema } = await record(network, inputs).catch(async (err: unknown) => {
+      if (!check) throw err;
+      console.log(`${network}: recorded inputs didn't resolve (${err instanceof Error ? err.message : err}); using fresh ones`);
+      return record(network, await discoverInputs(indexerHttp));
+    });
     const dir = fixtureDir(network);
 
     if (!check) {
@@ -195,17 +216,29 @@ async function main(): Promise<number> {
     }
 
     if (!committed) throw new Error(`${network}: no committed fixtures; run npm run fixtures first`);
-    const drift = compareShapes(committed.exchanges, fixture.exchanges);
+    const { drift: all, unverified } = compareShapes(
+      [...committed.exchanges, ...dustExchanges(committed.dust)],
+      [...fixture.exchanges, ...dustExchanges(fixture.dust)],
+    );
+    const outages = all.filter((d) => d.change === "unavailable");
+    const drift = all.filter((d) => d.change !== "unavailable");
     const committedSchema = readFileSync(join(dir, "indexer-schema.graphql"), "utf8");
     const schemaChanged = committedSchema !== schema;
     console.log(`${network}: ${drift.length || schemaChanged ? "schema drift" : "responses and indexer schema match the fixtures"}`);
-    for (const d of drift) {
+    for (const d of [...drift, ...outages]) {
       console.log(`  ${d.change}: ${d.key}${d.recorded ? `\n    recorded ${d.recorded}\n    live     ${d.live}` : ""}`);
     }
     if (schemaChanged) console.log("  indexer GraphQL schema changed; run npm run fixtures and review the diff");
+    if (unverified.length) console.log(`  not compared this run (null or empty on one side): ${unverified.join("; ")}`);
     drifted ||= drift.length > 0 || schemaChanged;
+    incomplete ||= outages.length > 0;
   }
-  return drifted ? 1 : 0;
+  if (drifted) return 1;
+  if (incomplete) {
+    console.error("Incomplete, re-run: an endpoint answered with a server error");
+    return 2;
+  }
+  return 0;
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
