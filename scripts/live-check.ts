@@ -13,28 +13,27 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import type { HealthReport } from "../src/commands/health.js";
 import {
+  UNOBSERVABLE,
+  UPSTREAM_MATRIX_URL,
+  parseUpstreamMatrix,
+  type Component,
+  type ComponentVersions,
+  type UpstreamMatrix,
+} from "../src/lib/upstream-matrix.js";
+import {
   versionMatches,
   type MatrixNetwork,
   type SupportMatrixFile,
   type VersionsReport,
 } from "../src/lib/versions.js";
 
+export { UPSTREAM_MATRIX_URL, parseUpstreamMatrix, versionFromTag } from "../src/lib/upstream-matrix.js";
+export type { Component, ComponentVersions, UpstreamMatrix } from "../src/lib/upstream-matrix.js";
+
 const execFileAsync = promisify(execFile);
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-export const UPSTREAM_MATRIX_URL =
-  "https://raw.githubusercontent.com/midnightntwrk/midnight-docs/main/docs/relnotes/support-matrix.json";
-
 export const EXIT = { clean: 0, drift: 10, outage: 20, error: 2 } as const;
-
-export type Component =
-  | "node"
-  | "indexer"
-  | "proofServer"
-  | "onChainRuntime"
-  | "compactRuntime";
-
-export type ComponentVersions = Partial<Record<Component, string>>;
 
 export type FindingKind =
   | "outage"
@@ -59,12 +58,6 @@ export interface Finding {
   upstream?: string;
 }
 
-export interface UpstreamMatrix {
-  versions: ComponentVersions;
-  /** Inconsistencies inside the upstream file itself (e.g. tag vs containerTag). */
-  notes: string[];
-}
-
 export interface LiveSnapshot extends ComponentVersions {
   runtimeSpec?: number;
   indexerProtocol?: number;
@@ -85,22 +78,6 @@ export interface Envelope<T> {
   data?: T | null;
   error?: { message: string } | null;
 }
-
-interface UpstreamFile {
-  components?: Array<{
-    component: string;
-    versions?: Record<string, { tag?: string; containerTag?: string }>;
-  }>;
-}
-
-// Upstream component display names -> our component keys.
-const UPSTREAM_COMPONENTS: Record<string, Component> = {
-  "Node (Midnight)": "node",
-  "Midnight Indexer": "indexer",
-  "Proof server": "proofServer",
-  "On-chain runtime": "onChainRuntime",
-  "Compact runtime": "compactRuntime",
-};
 
 const COMPONENTS: Component[] = [
   "node",
@@ -127,36 +104,6 @@ const UPSTREAM_KINDS = new Set<FindingKind>([
   "upstream-lag",
   "upstream-unavailable",
 ]);
-
-/**
- * Never visible from the public endpoints, whatever a given run manages to
- * reach. For these Midnight's published matrix is the only source of truth;
- * node and proof server are checked against the live network instead.
- */
-const UNOBSERVABLE = new Set<Component>(["indexer", "onChainRuntime", "compactRuntime"]);
-
-/** "node-1.0.400" / "midnight-indexer-4.3.302" -> "1.0.400" */
-export function versionFromTag(tag: string | undefined): string | undefined {
-  const match = /(\d+\.\d+\.\d+)$/.exec((tag ?? "").trim());
-  return match?.[1];
-}
-
-export function parseUpstreamMatrix(json: unknown, network: string): UpstreamMatrix {
-  const versions: ComponentVersions = {};
-  const notes: string[] = [];
-  for (const component of (json as UpstreamFile)?.components ?? []) {
-    const key = UPSTREAM_COMPONENTS[component.component];
-    const entry = component.versions?.[network];
-    if (!key || !entry) continue;
-    const version = versionFromTag(entry.tag);
-    if (version) versions[key] = version;
-    const container = versionFromTag(entry.containerTag);
-    if (version && container && container !== version) {
-      notes.push(`${key}: upstream tag ${version} but containerTag ${container}`);
-    }
-  }
-  return { versions, notes };
-}
 
 /** Bundled matrix entry for a network, with compact-runtime taken from the package pins. */
 export function bundledVersions(
