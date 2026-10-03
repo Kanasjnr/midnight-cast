@@ -196,7 +196,7 @@ describe("reporting", () => {
     emit(result, {});
     expect(err).toEqual(["RPC unreachable", expect.stringMatching(/^Hint: Nothing is listening/)]);
     emit(result, { json: true });
-    expect(JSON.parse(out[0]!)).toMatchObject({ ok: false, error: "RPC unreachable", errorKind: "refused" });
+    expect(JSON.parse(out[0]!)).toMatchObject({ ok: false, error: { message: "RPC unreachable", kind: "refused" } });
   });
 
   it("labels each failed ping row with its kind", async () => {

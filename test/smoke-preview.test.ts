@@ -47,7 +47,7 @@ describe.skipIf(!integration)("smoke (live preview)", () => {
   it("mn versions preview reports a consistent live stack", async () => {
     const { stdout } = await runMn(["versions", "preview", "--json", "--no-local"]);
     const parsed = JSON.parse(stdout) as {
-      error?: string;
+      error: { message: string } | null;
       data: {
         network: string;
         live: {
@@ -59,7 +59,7 @@ describe.skipIf(!integration)("smoke (live preview)", () => {
         checks: Array<{ label: string; ok: boolean }>;
       };
     };
-    expect(parsed.data, parsed.error).toBeDefined();
+    expect(parsed.data, parsed.error?.message).toBeDefined();
     expect(parsed.data.network).toBe("preview");
     expect(parsed.data.expected.node).toMatch(/^\d+\.\d+\.\d+/);
     expect(parsed.data.live.nodeVersion).toMatch(/^\d+\.\d+\.\d+/);

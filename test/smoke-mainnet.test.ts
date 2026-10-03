@@ -50,14 +50,14 @@ describe.skipIf(!enabled)("smoke (live mainnet via Blockfrost)", () => {
   it("mn versions mainnet reports a consistent live stack", async () => {
     const { stdout } = await runMn(["versions", "mainnet", "--json", "--no-local"]);
     const parsed = JSON.parse(stdout) as {
-      error?: string;
+      error: { message: string } | null;
       data: {
         network: string;
         live: { nodeVersion: string; runtimeSpecVersion: number; indexerProtocolVersion: number };
         checks: Array<{ label: string; ok: boolean }>;
       };
     };
-    expect(parsed.data, parsed.error).toBeDefined();
+    expect(parsed.data, parsed.error?.message).toBeDefined();
     expect(parsed.data.network).toBe("mainnet");
     expect(parsed.data.live.nodeVersion).toMatch(/^\d+\.\d+\.\d+/);
     expect(parsed.data.live.indexerProtocolVersion).toBe(parsed.data.live.runtimeSpecVersion);

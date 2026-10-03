@@ -42,9 +42,17 @@ program
     "Blockfrost project ID for mainnet (or set BLOCKFROST_PROJECT_ID)",
   );
 
+function commandPath(cmd: Command): string {
+  const names: string[] = [];
+  for (let c: Command | null = cmd; c?.parent; c = c.parent) {
+    if (c.name() && !/^[[<]/.test(c.name())) names.unshift(c.name());
+  }
+  return names.join(" ");
+}
+
 function globalOpts(cmd: Command): GlobalOptions {
   const o = cmd.optsWithGlobals();
-  return { json: o.json };
+  return { json: o.json, command: commandPath(cmd) };
 }
 
 function decodeOpts(cmd: Command, networkPositional?: string): DecodeOptions {

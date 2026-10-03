@@ -41,7 +41,7 @@ describe("cli positional network", () => {
     ]);
     expect(stderr).not.toContain("too many arguments");
     // Parsing succeeded and the command ran; the closed port keeps it offline.
-    expect(JSON.parse(stdout)).toMatchObject({ ok: false, error: "Indexer unreachable" });
+    expect(JSON.parse(stdout)).toMatchObject({ ok: false, error: { message: "Indexer unreachable" } });
   });
 
   it("decode accepts network as second positional arg", async () => {
@@ -69,6 +69,6 @@ describe("cli positional network", () => {
       CLOSED_PORT,
     ]);
     expect(stderr).not.toContain("too many arguments");
-    expect(JSON.parse(stdout)).toMatchObject({ ok: false, error: "RPC unreachable" });
+    expect(JSON.parse(stdout)).toMatchObject({ ok: false, error: { message: "RPC unreachable" } });
   });
 });

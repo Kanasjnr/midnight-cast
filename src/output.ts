@@ -1,6 +1,13 @@
 import { NetworkError } from "./lib/network-error.js";
 import { sanitizeDeep, sanitizeForOutput } from "./lib/sanitize.js";
 
+export const SCHEMA_VERSION = 1;
+
+export interface NextStep {
+  command: string;
+  reason: string;
+}
+
 export interface EmitResult<T = unknown> {
   ok: boolean;
   error?: string;
@@ -8,10 +15,24 @@ export interface EmitResult<T = unknown> {
   hint?: string;
   data?: T;
   exitCode?: number;
+  network?: string;
+  next?: NextStep[];
 }
 
 export interface GlobalOptions {
   json?: boolean;
+  command?: string;
+}
+
+export interface Envelope<T = unknown> {
+  schemaVersion: typeof SCHEMA_VERSION;
+  ok: boolean;
+  command: string | null;
+  network: string | null;
+  data: T | null;
+  warnings: string[];
+  error: { message: string; kind: string | null; hint: string | null } | null;
+  next: NextStep[];
 }
 
 const pendingWarnings: string[] = [];
@@ -24,15 +45,13 @@ export function emit<T>(
   result: EmitResult<T>,
   options: GlobalOptions,
 ): number {
-  for (const message of pendingWarnings.splice(0)) {
-    console.error(sanitizeForOutput(message));
-  }
+  const warnings = pendingWarnings.splice(0).map(sanitizeForOutput);
   const safe = sanitizeEmitResult(result);
 
   if (options.json) {
-    const { exitCode: _exitCode, ...publicPayload } = safe;
-    console.log(JSON.stringify(publicPayload, null, 2));
+    console.log(JSON.stringify(toEnvelope(safe, options.command, warnings), null, 2));
   } else {
+    for (const message of warnings) console.error(message);
     if (safe.data !== undefined) printHuman(safe.data);
     if (!safe.ok && safe.error) console.error(safe.error);
     if (!safe.ok && safe.hint) console.error(`Hint: ${safe.hint}`);
@@ -42,6 +61,22 @@ export function emit<T>(
     return safe.exitCode ?? 1;
   }
   return safe.exitCode ?? 0;
+}
+
+export function toEnvelope<T>(result: EmitResult<T>, command: string | undefined, warnings: string[]): Envelope<T> {
+  const dataNetwork = (result.data as { network?: unknown } | undefined)?.network;
+  return {
+    schemaVersion: SCHEMA_VERSION,
+    ok: result.ok,
+    command: command ?? null,
+    network: result.network ?? (typeof dataNetwork === "string" ? dataNetwork : null),
+    data: result.data ?? null,
+    warnings,
+    error: result.ok
+      ? null
+      : { message: result.error ?? "Command failed", kind: result.errorKind ?? null, hint: result.hint ?? null },
+    next: result.next ?? [],
+  };
 }
 
 function sanitizeEmitResult<T>(result: EmitResult<T>): EmitResult<T> {
@@ -54,6 +89,9 @@ function sanitizeEmitResult<T>(result: EmitResult<T>): EmitResult<T> {
   }
   if (next.data !== undefined) {
     next.data = sanitizeDeep(next.data);
+  }
+  if (next.next !== undefined) {
+    next.next = sanitizeDeep(next.next);
   }
   return next;
 }
