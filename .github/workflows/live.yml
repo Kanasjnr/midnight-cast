@@ -156,3 +156,21 @@ jobs:
         run: npm run test:smoke
         env:
           INTEGRATION: "1"
+
+  error-codes:
+    name: Error codes (node source, Midnight Expert)
+    if: github.event_name != 'workflow_dispatch' || inputs.network == 'all'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+
+      - name: Compare the ledger error map with the deployed node
+        run: npm run error-codes

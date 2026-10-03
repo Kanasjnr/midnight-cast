@@ -31,6 +31,14 @@ Each finding is classified, and the classification decides what happens:
 
 `scripts/live-issue.ts` keeps one issue per network, titled `Live check: <network>` and labelled `live-check`. The issue is edited only when the findings change, tracked by a fingerprint stored in the issue body. It is closed automatically once the network is clean again. The report and a JSON result are also attached to each run as an artifact and shown in the job summary. Pull request runs never touch issues. Scheduled runs fire only from the default branch, so the schedule takes effect once this workflow reaches `main`.
 
+## Error codes
+
+`live.yml` also runs `npm run error-codes` (`scripts/error-code-parity.ts`) on the same triggers. It reads the `LedgerApiError` table from the midnight-node source at the release the bundled support matrix names for mainnet (`node-1.0.300` today) and fails if `src/data/error-codes.json` is missing a code, has one the node doesn't, or names one differently. Error codes come from the on-chain runtime, so the node's release tag, not `main`, is the reference: `main` can already carry the next runtime's codes. During a rollout, when preview or preprod runs a newer node than mainnet, the map keeps following mainnet and the check notes which codes the newer table adds or removes, so a staggered upgrade doesn't block releases.
+
+It also compares Midnight Expert's status-codes catalog, pinned to a commit in the script, and fails if it names a code differently. Codes that catalog marks retired while the deployed node still emits them, and codes the node doesn't emit yet, are only noted; the first is reported upstream as midnightntwrk/midnight-expert#272. Moving the pin is a deliberate change: update `MIDNIGHT_EXPERT_REF` and rerun the check.
+
+Fetches are retried. If the sources still can't be read, or the node file no longer contains the table the parser expects, the check exits 2 and says it is incomplete rather than reporting drift; re-run it, or update the parser if the table has moved. A scheduled run that finds drift shows as a failed run rather than opening an issue.
+
 ## Mainnet and Blockfrost
 
 Midnight retired its hosted mainnet RPC and indexer on 30 September 2026. Blockfrost now serves both, and every request needs a Midnight Mainnet project token. To enable the mainnet checks, create a project for the Midnight Mainnet network on [blockfrost.io](https://blockfrost.io). Then add its project ID as the repository secret `BLOCKFROST_MAINNET_PROJECT_ID` (Settings → Secrets and variables → Actions).
