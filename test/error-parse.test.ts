@@ -51,6 +51,11 @@ describe("parseRawErrorMessage", () => {
     expect(parsed.ledgerCodes).toEqual([]);
   });
 
+  it("reads standalone hex codes only with a 0x prefix", () => {
+    expect(parseRawErrorMessage("received a block made with an old node").ledgerCodes).toEqual([]);
+    expect(parseRawErrorMessage("failed after 10 retries").ledgerCodes).toEqual([]);
+  });
+
   it("does not treat Invalid Transaction alone as 1010", () => {
     const parsed = parseRawErrorMessage("Invalid Transaction");
     expect(parsed.substrate1010).toBe(false);
