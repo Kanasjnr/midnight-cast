@@ -221,8 +221,8 @@
     },
     "117": {
       "name": "NotNormalized",
-      "description": "Transaction not in normal form",
-      "fix": "Rebuild with SDK"
+      "description": "The transaction is not in normal form. The most common cause on a local devnet is a zero fee: when feesWithMargin evaluates to 0 and no additionalFeeOverhead is set, the wallet builds an empty DustActions, which DustActions::well_formed rejects. A ContractDeploy is accepted but the first contract call fails; there is no special minimum-cost floor on ContractDeploy.",
+      "fix": "Set a small positive additionalFeeOverhead (e.g. 1_000_000n) in the wallet's costParameters so a real DUST fee is spent. Any positive amount the wallet can cover in DUST works (the basic-start tutorial and compact-cli-dev template use 300_000_000_000_000n). Build the transaction with the SDK so it is normalized."
     },
     "118": {
       "name": "FallibleWithoutCheckpoint",
@@ -326,8 +326,8 @@
     },
     "138": {
       "name": "BalanceCheckOverspend",
-      "description": "Negative balance in segment",
-      "fix": "Check segment amounts"
+      "description": "A token balance went negative after fees were applied (balancing_check, midnight-ledger ledger/src/verify.rs). The transaction or one of its segments spends more of a token than it has once fees are applied. Because fees are paid in DUST, a DUST-side 138 means the DUST fee exceeded available DUST — not a NIGHT funding-level problem. DUST registration does NOT cause this: registration is self-funding (its fee is paid by the DUST the registered NIGHT UTXOs generate, not the wallet's existing DUST balance), so it succeeds even at a 0 DUST balance — verified on a local devnet, including with additionalFeeOverhead set.",
+      "fix": "Reduce the transaction outputs or add more inputs of the overspent token. For a DUST-side overspend, ensure the wallet holds enough DUST for the fee. Do not raise NIGHT funding to fix this — fees are denominated in DUST, not NIGHT."
     },
     "139": {
       "name": "UnknownError",
@@ -391,8 +391,8 @@
     },
     "170": {
       "name": "InvalidDustSpendProof",
-      "description": "DUST spend proof verification failed",
-      "fix": "Regenerate DUST spend proof"
+      "description": "The DUST fee spend proof failed node verification: it was proven against a DUST state the chain has already advanced past, so it no longer validates at the current tip. This is the fee leg, not a fault in the contract or its ZK proof.",
+      "fix": "Sync the wallet's DUST state to the current chain tip before submitting. A stale wallet checkpoint or a public indexer running behind the node yields a spend proof the node rejects. On 170, rebuild and re-balance the transaction rather than resubmitting the same finalized tx: the stale dust proof is baked into that tx, so resubmitting or re-proving the identical transaction cannot clear it. Diagnostic: an instant failure with \"could not balance dust\" (no proving delay) means the DUST state is too stale to balance at all - resync first; a failure after proving with 170 is the block-advance race, which rebuilding the tx on each retry rides through."
     },
     "171": {
       "name": "OutOfDustValidityWindow",
