@@ -39,6 +39,12 @@ It also compares Midnight Expert's status-codes catalog, pinned to a commit in t
 
 Fetches are retried. If the sources still can't be read, or the node file no longer contains the table the parser expects, the check exits 2 and says it is incomplete rather than reporting drift; re-run it, or update the parser if the table has moved. A scheduled run that finds drift shows as a failed run rather than opening an issue.
 
+## Recorded responses
+
+`test/fixtures/<network>/` holds what preview and preprod returned for every request midnight-cast makes: RPC calls, indexer GraphQL queries, the proof server, and a DUST subscription. It also holds each indexer's GraphQL schema from introspection. The unit tests replay them through the real commands, with `fetch` answered from the fixtures and a local WebSocket server standing in for the indexer. They check that every output matches the published JSON Schemas and that every query midnight-cast sends is valid against the recorded indexer schema. A request with no recorded response fails the test, so a new query can't ship unrecorded.
+
+`npm run fixtures` re-records them (`--discover` picks a fresh transaction with DUST events instead of the recorded one). `live.yml` runs `npm run fixtures -- --check` on the same triggers as the other live checks. It re-records into memory and compares shapes, keys and value types rather than values, plus the indexer schema. It fails on schema drift: a request midnight-cast no longer makes, a new one, a changed status, a field that disappeared or changed type, or any change to the GraphQL schema. A field that is null on one run and set on another isn't drift. When it fails, re-record, review the diff, and fix any parser it affects.
+
 ## Mainnet and Blockfrost
 
 Midnight retired its hosted mainnet RPC and indexer on 30 September 2026. Blockfrost now serves both, and every request needs a Midnight Mainnet project token. To enable the mainnet checks, create a project for the Midnight Mainnet network on [blockfrost.io](https://blockfrost.io). Then add its project ID as the repository secret `BLOCKFROST_MAINNET_PROJECT_ID` (Settings → Secrets and variables → Actions).
