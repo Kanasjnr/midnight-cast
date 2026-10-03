@@ -57,4 +57,34 @@ describe("--json envelope", () => {
       error: { message: "Required services unreachable: rpc, indexer", kind: "refused" },
     });
   });
+
+  it("points a failed check at the configured endpoints", async () => {
+    const { envelope } = await runJson(["tip", "preprod", "--rpc", REFUSED]);
+    expect(envelope.next).toEqual([
+      expect.objectContaining({ command: "midnight-cast config show --network preprod" }),
+    ]);
+  });
+});
+
+describe("next steps", () => {
+  it("never sends decode --raw back to decode", async () => {
+    const { envelope } = await runJson(["decode", "--raw", "1010: Invalid Transaction: Custom error: 180"]);
+    const commands = (envelope.next as Array<{ command: string }>).map((s) => s.command);
+    expect(commands).toEqual(["midnight-cast explain 1010", "midnight-cast explain transcript"]);
+  });
+
+  it("suggests only commands that run", async () => {
+    const suggested = new Set<string>();
+    for (const args of [["decode", "1010"], ["decode", "180"], ["decode", "pallet", "5", "3"]]) {
+      const { envelope } = await runJson(args);
+      for (const step of envelope.next as Array<{ command: string }>) suggested.add(step.command);
+    }
+    const runnable = [...suggested].filter((c) => !c.includes("<"));
+    expect(runnable.length).toBeGreaterThan(0);
+    for (const command of runnable) {
+      const { envelope, code } = await runJson(command.split(" ").slice(1));
+      expect(code, command).toBe(0);
+      expect(envelope.ok, command).toBe(true);
+    }
+  });
 });
