@@ -3,7 +3,7 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { configPath } from "../config.js";
 import { loadDataJson } from "./data-path.js";
-import type { MatrixNetwork, SupportMatrixFile } from "./versions.js";
+import { parseMatrixUpdated, type MatrixNetwork, type SupportMatrixFile } from "./versions.js";
 
 export const UPSTREAM_MATRIX_URL =
   "https://raw.githubusercontent.com/midnightntwrk/midnight-docs/main/docs/relnotes/support-matrix.json";
@@ -128,12 +128,19 @@ export interface ResolveOptions {
   bundled?: SupportMatrixFile;
 }
 
-const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
+const CACHE_TTL_MS = 6 * HOUR_MS;
+// After a failed fetch, later runs don't wait on the timeout again for this long.
+const RETRY_AFTER_FAILURE_MS = HOUR_MS;
+// How old a cached copy may be to stand in when a refresh fails.
+const FALLBACK_MAX_AGE_MS = 7 * 24 * HOUR_MS;
 const FETCH_TIMEOUT_MS = 3_000;
 
 interface CacheFile {
   fetchedAt: string;
   body: unknown;
+  failedAt?: string;
+  failure?: string;
 }
 
 export function matrixCacheDir(): string {
@@ -170,13 +177,12 @@ function fromUpstream(
   reason?: string,
 ): ResolvedMatrix {
   const { matrix, notes } = overlayUpstream(bundled, cache.body);
-  const fetched = new Date(cache.fetchedAt);
   return {
-    matrix: { ...matrix, updated: cache.fetchedAt.slice(0, 10) },
+    matrix,
     source: {
       kind,
       updated: cache.fetchedAt,
-      ageMinutes: Math.max(0, Math.round((now - fetched.getTime()) / 60_000)),
+      ageMinutes: Math.max(0, Math.round((now - Date.parse(cache.fetchedAt)) / 60_000)),
       ...(reason ? { reason } : {}),
     },
     notes,
@@ -209,8 +215,22 @@ export async function resolveSupportMatrix(options: ResolveOptions = {}): Promis
   const now = options.now ?? Date.now();
   const cachePath = join(options.cacheDir ?? matrixCacheDir(), "published-support-matrix.json");
   const cached = readCache(cachePath);
-  if (cached && !options.refresh && now - Date.parse(cached.fetchedAt) < CACHE_TTL_MS) {
-    return fromUpstream(bundled, cached, "cache", now);
+  const age = (at: string | undefined) => (at ? now - Date.parse(at) : Number.NaN);
+  // A timestamp in the future (clock skew, a copied cache) counts as expired.
+  const within = (at: string | undefined, limit: number) => age(at) >= 0 && age(at) < limit;
+  // An old cache shouldn't stand in for the newer matrix a later release bundles.
+  const usable =
+    cached && within(cached.fetchedAt, FALLBACK_MAX_AGE_MS) && !bundledIsNewer(bundled.updated, cached.fetchedAt)
+      ? cached
+      : undefined;
+  const fallback = (reason: string) =>
+    usable ? fromUpstream(bundled, usable, "cache", now, reason) : fromBundled(reason);
+
+  if (!options.refresh) {
+    if (usable && within(usable.fetchedAt, CACHE_TTL_MS)) return fromUpstream(bundled, usable, "cache", now);
+    if (cached?.failedAt && within(cached.failedAt, RETRY_AFTER_FAILURE_MS)) {
+      return fallback(`published matrix unavailable (${cached.failure ?? "fetch failed"}; retrying after an hour)`);
+    }
   }
 
   try {
@@ -223,9 +243,20 @@ export async function resolveSupportMatrix(options: ResolveOptions = {}): Promis
     writeCache(cachePath, fresh);
     return fromUpstream(bundled, fresh, "upstream", now);
   } catch (err) {
-    const reason = `published matrix unavailable (${err instanceof Error ? err.message : String(err)})`;
-    return cached ? fromUpstream(bundled, cached, "cache", now, reason) : fromBundled(reason);
+    const failure = err instanceof Error ? err.message : String(err);
+    writeCache(cachePath, {
+      fetchedAt: cached?.fetchedAt ?? new Date(0).toISOString(),
+      body: cached?.body ?? null,
+      failedAt: new Date(now).toISOString(),
+      failure,
+    });
+    return fallback(`published matrix unavailable (${failure})`);
   }
+}
+
+function bundledIsNewer(bundledUpdated: string, fetchedAt: string): boolean {
+  const published = parseMatrixUpdated(bundledUpdated);
+  return published !== null && published.getTime() > Date.parse(fetchedAt);
 }
 
 export function describeMatrixSource(source: MatrixSource): string {

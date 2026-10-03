@@ -127,4 +127,59 @@ describe("published support matrix", () => {
     expect(result.source.kind).toBe("bundled");
     expect(() => readFileSync(join(options.cacheDir, "published-support-matrix.json"))).toThrow();
   });
+
+  it("keeps the bundled date as the matrix date, since node and runtime still come from it", async () => {
+    const result = await resolveSupportMatrix({ ...setup(), fetchImpl: respond(published) });
+    expect(result.matrix.updated).toBe("2026-10");
+  });
+
+  it("treats a cache dated in the future as expired", async () => {
+    const options = setup();
+    const now = Date.parse("2026-10-03T10:00:00Z");
+    await resolveSupportMatrix({ ...options, now: now + 30 * 24 * 60 * 60_000, fetchImpl: respond(published) });
+    const result = await resolveSupportMatrix({ ...options, now, fetchImpl: respond(published) });
+    expect(result.source).toMatchObject({ kind: "upstream", ageMinutes: 0 });
+  });
+
+  it("remembers a failed fetch for an hour instead of waiting on it every run", async () => {
+    const options = setup();
+    const now = Date.parse("2026-10-03T10:00:00Z");
+    let calls = 0;
+    const counting = (async () => {
+      calls++;
+      throw new Error("timed out");
+    }) as unknown as typeof fetch;
+    await resolveSupportMatrix({ ...options, now, fetchImpl: counting });
+    const soon = await resolveSupportMatrix({ ...options, now: now + 30 * 60_000, fetchImpl: counting });
+    expect(calls).toBe(1);
+    expect(soon.source).toMatchObject({ kind: "bundled", reason: expect.stringContaining("retrying after an hour") });
+    await resolveSupportMatrix({ ...options, now: now + 2 * 60 * 60_000, fetchImpl: counting });
+    expect(calls).toBe(2);
+  });
+
+  it("falls back to an old cache only within a week, and never over a newer bundled matrix", async () => {
+    const options = setup();
+    const fetchedAt = Date.parse("2026-10-03T10:00:00Z");
+    await resolveSupportMatrix({ ...options, now: fetchedAt, fetchImpl: respond(published) });
+
+    const twoDays = await resolveSupportMatrix({ ...options, now: fetchedAt + 2 * 24 * 60 * 60_000, fetchImpl: unreachable });
+    expect(twoDays.source.kind).toBe("cache");
+
+    const tenDays = await resolveSupportMatrix({
+      ...options,
+      now: fetchedAt + 10 * 24 * 60 * 60_000,
+      refresh: true,
+      fetchImpl: unreachable,
+    });
+    expect(tenDays.source.kind).toBe("bundled");
+
+    const newerRelease = await resolveSupportMatrix({
+      ...options,
+      bundled: { ...bundled, updated: "2026-10-04" },
+      now: fetchedAt + 2 * 24 * 60 * 60_000,
+      refresh: true,
+      fetchImpl: unreachable,
+    });
+    expect(newerRelease.source.kind).toBe("bundled");
+  });
 });

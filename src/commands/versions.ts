@@ -15,6 +15,7 @@ import type { EmitResult, GlobalOptions } from "../output.js";
 import { fail, failReaching } from "../output.js";
 import { EXPLAIN_VERSIONS } from "../lib/next-steps.js";
 import { resolveSupportMatrix } from "../lib/upstream-matrix.js";
+import { settle } from "../lib/settle.js";
 
 export async function versionsCommand(
   networkArg: string | undefined,
@@ -28,6 +29,7 @@ export async function versionsCommand(
     return fail(err);
   }
 
+  const liveResult = settle(fetchLiveVersions(endpoints.rpc, endpoints.indexerHttp));
   const { matrix, source: matrixSource, notes } = await resolveSupportMatrix({
     offline: flags.offline,
     refresh: flags.refreshMatrix,
@@ -41,12 +43,9 @@ export async function versionsCommand(
     );
   }
 
-  let live;
-  try {
-    live = await fetchLiveVersions(endpoints.rpc, endpoints.indexerHttp);
-  } catch (err) {
-    return failReaching(err, endpoints.network, flags);
-  }
+  const liveOutcome = await liveResult;
+  if (!liveOutcome.ok) return failReaching(liveOutcome.error, endpoints.network, flags);
+  const live = liveOutcome.value;
 
   let liveProofServer: string | undefined;
   if (endpoints.proofServer) {
@@ -66,7 +65,7 @@ export async function versionsCommand(
     checks.every((c) => c.ok) &&
     (localPackageChecks?.every((c) => c.ok) ?? true);
 
-  const matrixStale = matrixSource.kind === "bundled" && isMatrixStale(matrix.updated);
+  const matrixStale = isMatrixStale(matrix.updated);
   const networkWarning = buildNetworkMismatchWarning(
     endpoints.network,
     matrix,
@@ -77,7 +76,7 @@ export async function versionsCommand(
     network: endpoints.network,
     matrixUpdated: matrix.updated,
     matrixStale,
-    matrixWarning: matrixSource.kind === "bundled" ? matrixStalenessWarning(matrix.updated, matrix.docUrl) : undefined,
+    matrixWarning: matrixStalenessWarning(matrix.updated, matrix.docUrl),
     matrixSource,
     ...(matrixNotes.length ? { matrixNotes } : {}),
     networkWarning,

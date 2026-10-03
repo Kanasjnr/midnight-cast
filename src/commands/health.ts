@@ -11,6 +11,7 @@ import {
 } from "../lib/versions.js";
 import { runServiceChecks } from "./ping.js";
 import { describeMatrixSource, resolveSupportMatrix, type MatrixSource } from "../lib/upstream-matrix.js";
+import { settle } from "../lib/settle.js";
 import type { EmitResult, GlobalOptions } from "../output.js";
 import { fail, failReaching } from "../output.js";
 import { EXPLAIN_VERSIONS, checkEndpoints, narrowDown } from "../lib/next-steps.js";
@@ -114,6 +115,7 @@ export async function healthCommand(
   }
 
   const threshold = flags.threshold ?? 100;
+  const liveResult = settle(fetchLiveVersions(endpoints.rpc, endpoints.indexerHttp));
   const { matrix, source: matrixSource, notes } = await resolveSupportMatrix({
     offline: flags.offline,
     refresh: flags.refreshMatrix,
@@ -155,12 +157,9 @@ export async function healthCommand(
   const inSync = Math.abs(delta) < threshold;
   syncOk = tipExitCode(delta, threshold, flags.failOnLag) === 0;
 
-  let live;
-  try {
-    live = await fetchLiveVersions(endpoints.rpc, endpoints.indexerHttp);
-  } catch (err) {
-    return failReaching(err, endpoints.network, flags);
-  }
+  const liveOutcome = await liveResult;
+  if (!liveOutcome.ok) return failReaching(liveOutcome.error, endpoints.network, flags);
+  const live = liveOutcome.value;
 
   let liveProofServer: string | undefined;
   if (endpoints.proofServer) {
@@ -174,7 +173,7 @@ export async function healthCommand(
 
   const versionChecks = buildVersionChecks(expected, live, liveProofServer);
   const versionsOk = versionChecks.every((c) => c.ok);
-  const matrixStale = matrixSource.kind === "bundled" && isMatrixStale(matrix.updated);
+  const matrixStale = isMatrixStale(matrix.updated);
 
   const healthy =
     servicesOk &&
@@ -202,7 +201,7 @@ export async function healthCommand(
     versions: {
       matrixUpdated: matrix.updated,
       matrixStale,
-      matrixWarning: matrixSource.kind === "bundled" ? matrixStalenessWarning(matrix.updated, matrix.docUrl) : undefined,
+      matrixWarning: matrixStalenessWarning(matrix.updated, matrix.docUrl),
       matrixSource,
       ...(matrixNotes.length ? { matrixNotes } : {}),
       allOk: versionsOk,
