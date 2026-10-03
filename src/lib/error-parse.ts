@@ -59,7 +59,7 @@ function extractCustomLedgerCodes(raw: string): string[] {
 function extractStandaloneHexCodes(raw: string): string[] {
   const codes: string[] = [];
   const hexPattern =
-    /(?:^|[\s(,;{])(?:0x)?([0-9a-fA-F]{1,2})(?=[\s),;}\]]|$)/gi;
+    /(?:^|[\s(,;{])0x([0-9a-fA-F]{1,2})(?=[\s),;}\]]|$)/gi;
   for (const match of raw.matchAll(hexPattern)) {
     if (match[1]) addLedgerCode(codes, String(parseInt(match[1], 16)));
   }
@@ -80,7 +80,7 @@ export function parseRawErrorMessage(raw: string): ParsedRawError {
   if (ledgerCodes.length === 0) {
     ledgerCodes.push(...extractStandaloneHexCodes(raw));
     const hintPattern =
-      /\b(?:ledger|custom)\s*[=:#]?\s*(\d{1,3})\b/gi;
+      /\b(?:ledger\s+(?:error|code)|custom)\s*[=:#]?\s*(\d{1,3})\b(?!\.\d)/gi;
     for (const match of raw.matchAll(hintPattern)) {
       if (match[1]) addLedgerCode(ledgerCodes, match[1]);
     }
@@ -159,7 +159,8 @@ export function findLedgerCodesByName(
   );
 
   for (const [code, name] of entries) {
-    if (name.length < minNameLength) continue;
+    // Single-word names such as "Transaction" also appear in ordinary error text ("Invalid Transaction").
+    if (name.length < minNameLength || (name.match(/[A-Z]/g) ?? []).length < 2) continue;
     const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     if (new RegExp(`\\b${escaped}\\b`).test(raw) && !matched.has(code)) {
       found.push(code);

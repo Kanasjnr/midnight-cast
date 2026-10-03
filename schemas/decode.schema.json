@@ -142,6 +142,33 @@
     {
       "type": "object",
       "required": [
+        "kind",
+        "id",
+        "name",
+        "description",
+        "fix"
+      ],
+      "properties": {
+        "kind": {
+          "const": "message"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "fix": {
+          "type": "string"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "required": [
         "raw",
         "parsed",
         "decodings"
@@ -281,6 +308,33 @@
                   },
                   "code": {
                     "type": "integer"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "fix": {
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "required": [
+                  "kind",
+                  "id",
+                  "name",
+                  "description",
+                  "fix"
+                ],
+                "properties": {
+                  "kind": {
+                    "const": "message"
+                  },
+                  "id": {
+                    "type": "string"
                   },
                   "name": {
                     "type": "string"

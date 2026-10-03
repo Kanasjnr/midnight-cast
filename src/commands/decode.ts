@@ -3,6 +3,7 @@ import {
   findLedgerCodesByName,
   parseRawErrorMessage,
 } from "../lib/error-parse.js";
+import { matchKnownMessages, type KnownMessage } from "../lib/known-messages.js";
 import { loadSupportMatrix } from "../lib/versions.js";
 import { NETWORK_NAMES } from "../networks.js";
 import type { EmitResult, GlobalOptions, NextStep } from "../output.js";
@@ -71,14 +72,38 @@ const SUBSTRATE_1010 = {
 
 const TRANSCRIPT_LEDGER_CODES = ["179", "180", "181"] as const;
 
-function transcriptVersionHint(code: string): string | undefined {
-  if (!TRANSCRIPT_LEDGER_CODES.includes(code as (typeof TRANSCRIPT_LEDGER_CODES)[number])) {
-    return undefined;
+interface RelatedNote {
+  hint: string;
+  next: NextStep[];
+}
+
+function relatedNoteFor(code: string, network: string | undefined): RelatedNote | undefined {
+  const n = parseInt(code, 10);
+  if (TRANSCRIPT_LEDGER_CODES.includes(code as (typeof TRANSCRIPT_LEDGER_CODES)[number])) {
+    return {
+      hint:
+        "Related proof/transcript codes: 179 UnsupportedProofVersion, " +
+        "180 GuaranteedTranscriptVersion, 181 FallibleTranscriptVersion",
+      next: [{ command: "midnight-cast explain transcript", reason: "Why proof and transcript versions get rejected" }],
+    };
   }
-  return (
-    "Related proof/transcript codes: 179 UnsupportedProofVersion, " +
-    "180 GuaranteedTranscriptVersion, 181 FallibleTranscriptVersion"
-  );
+  if (n === 171) {
+    return {
+      hint:
+        "Indexers before 4.3.5 could also reject the first transaction of a block with this error " +
+        "(fixed in 4.3.4 and 4.3.5). If only first-in-block transactions fail, check the indexer version.",
+      next: [{ command: `midnight-cast versions ${network ?? "<network>"}`, reason: "Compare the indexer version with the support matrix" }],
+    };
+  }
+  if (n >= 0 && n <= 11) {
+    return {
+      hint:
+        "Since ledger 8.1.2 the node rejects non-canonical encodings and values that break their type's rules. " +
+        "Make sure the ledger and SDK packages that built this match the network.",
+      next: [{ command: "midnight-cast explain versions", reason: "Which package versions the network expects" }],
+    };
+  }
+  return undefined;
 }
 
 function palletTransactionHint(variantName: string): string | undefined {
@@ -164,7 +189,7 @@ function decodeLedger(input: string, options: DecodeOptions): EmitResult {
   const entry = data.codes[code]!;
   const ledgerMeta = ledgerMapMeta(options, data);
   const mapMismatch = ledgerMapMismatch(options, data);
-  const transcriptHint = transcriptVersionHint(code);
+  const related = relatedNoteFor(code, options.network);
   const payload = {
     kind: "ledger" as const,
     code: parseInt(code, 10),
@@ -180,11 +205,9 @@ function decodeLedger(input: string, options: DecodeOptions): EmitResult {
       : undefined,
     mapUpdated: data.updated,
     ...(mapMismatch ? { mapMismatch } : {}),
-    ...(transcriptHint ? { relatedHint: transcriptHint } : {}),
+    ...(related ? { relatedHint: related.hint } : {}),
   };
-  const next: NextStep[] = transcriptHint
-    ? [{ command: "midnight-cast explain transcript", reason: "Why proof and transcript versions get rejected" }]
-    : [];
+  const next = related?.next ?? [];
 
   if (options.json) {
     return { ...success(payload), next };
@@ -197,7 +220,7 @@ function decodeLedger(input: string, options: DecodeOptions): EmitResult {
     `Name:   ${entry.name}`,
     `Desc:   ${entry.description}`,
     `Fix:    ${entry.fix}`,
-    ...(transcriptHint ? [`Hint:   ${transcriptHint}`] : []),
+    ...(related ? [`Hint:   ${related.hint}`] : []),
     ...(mapMismatch ? [`Warn:   ${mapMismatch}`] : []),
     ...(meta ? [meta] : []),
     `Docs:   ${data.docUrl}`,
@@ -414,6 +437,10 @@ function decodeRaw(raw: string, options: DecodeOptions): EmitResult {
     else if (r.error) failures.push(r.error);
   }
 
+  for (const message of matchKnownMessages(raw)) {
+    appendDecodeResult(parts, sections, decodeKnownMessage(message, options), options.json);
+  }
+
   if (parts.length === 0) {
     const fallbackLedger = decodeLedger(raw.trim(), options);
     if (fallbackLedger.ok) {
@@ -454,6 +481,22 @@ function decodeRaw(raw: string, options: DecodeOptions): EmitResult {
   }
 
   return { ...success(sections.join("\n").trimEnd()), next };
+}
+
+function decodeKnownMessage(message: KnownMessage, options: DecodeOptions): EmitResult {
+  const next = message.next.map((step) =>
+    options.network ? { ...step, command: step.command.replace("<network>", options.network) } : step,
+  );
+  if (options.json) {
+    const { next: _, ...rest } = message;
+    return { ...success({ kind: "message" as const, ...rest }), next };
+  }
+  const text = [
+    `Kind:   message (${message.name})`,
+    `Desc:   ${message.description}`,
+    `Fix:    ${message.fix}`,
+  ].join("\n");
+  return { ...success(text), next };
 }
 
 // The raw decoder has already tried every decode route, so suggesting one again would loop.

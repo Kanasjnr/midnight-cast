@@ -134,6 +134,8 @@ describe("schemas", () => {
       ["decode", "jsonrpc", "--code", "-32602"],
       ["decode", "--raw", "1010: Invalid Transaction: Custom error: 170"],
       ["decode", "raw", "1010: Invalid Transaction: Custom error: 170"],
+      ["decode", "--raw", "Error: UnsupportedBlockVersion(1000300)"],
+      ["decode", "--raw", "Invalid project token. ENOTFOUND indexer.mainnet.midnight.network"],
       ["explain", "dust"],
       ["explain"],
       ["config", "show", "--network", "preprod"],
