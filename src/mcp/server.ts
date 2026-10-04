@@ -16,6 +16,7 @@ import { loadConfigFile } from "../config.js";
 import { NETWORK_NAMES } from "../networks.js";
 import { envelopeOf, fail, withOwnWarnings, type EmitResult } from "../output.js";
 import { RateLimiter, callsPerMinute } from "./rate-limit.js";
+import { runAsMcpCall } from "../lib/surface.js";
 
 export interface McpOptions {
   version: string;
@@ -76,13 +77,15 @@ const OFFLINE = { readOnlyHint: true, destructiveHint: false, idempotentHint: tr
 
 // Like the CLI's run(): an exception still becomes a redacted envelope, and each call keeps its own warnings.
 async function respond(command: string, work: () => Promise<EmitResult> | EmitResult) {
-  const { value: result, warnings } = await withOwnWarnings(async () => {
-    try {
-      return await work();
-    } catch (err) {
-      return fail(err);
-    }
-  });
+  const { value: result, warnings } = await withOwnWarnings(() =>
+    runAsMcpCall(async () => {
+      try {
+        return await work();
+      } catch (err) {
+        return fail(err);
+      }
+    }),
+  );
   const envelope = envelopeOf(result, command, warnings);
   return {
     structuredContent: envelope as z.infer<typeof envelopeSchema>,

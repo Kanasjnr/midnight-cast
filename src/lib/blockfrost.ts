@@ -1,3 +1,4 @@
+import { inMcpCall } from "./surface.js";
 // The token is kept as a project_id URL parameter, since WebSockets can't send
 // headers, and the HTTP clients move it into the project_id header.
 
@@ -64,7 +65,8 @@ export function blockfrostHttpError(service: "RPC" | "Indexer", status: number):
     return (
       `${service} rejected by Blockfrost (403): the project token is missing, invalid, ` +
       `or for a different network. Mainnet needs a Midnight Mainnet project ID (it starts with "nightmainnet"). ` +
-      `It is read from ${PROJECT_ID_SOURCES}. See ${BLOCKFROST_DOCS}`
+      `${inMcpCall() ? "This MCP server reads it from BLOCKFROST_PROJECT_ID in its environment, then config.toml" : `It is read from ${PROJECT_ID_SOURCES}`}. ` +
+      `See ${BLOCKFROST_DOCS}`
     );
   }
   if (status === 402 || status === 429) {
@@ -74,6 +76,13 @@ export function blockfrostHttpError(service: "RPC" | "Indexer", status: number):
 }
 
 export function missingProjectIdError(network: string): string {
+  if (inMcpCall()) {
+    return (
+      `The ${network} RPC and indexer are served by Blockfrost and need a project ID, and this MCP server has none. ` +
+      `Create a Midnight Mainnet project at https://blockfrost.io, then add ${BLOCKFROST_ENV} with its project ID to this server's ` +
+      `env in the MCP client's configuration and restart the server. See ${BLOCKFROST_DOCS}`
+    );
+  }
   return (
     `The ${network} RPC and indexer are served by Blockfrost and need a project token. ` +
     `Create a Midnight Mainnet project at https://blockfrost.io, then set ${BLOCKFROST_ENV}=<project id>, ` +

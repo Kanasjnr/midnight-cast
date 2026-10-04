@@ -3,6 +3,7 @@ import WebSocket from "ws";
 import type { NetworkEndpoints } from "../networks.js";
 import { postJson, readJson } from "../lib/http.js";
 import { blockfrostHttpError, isBlockfrostUrl, takeProjectId } from "../lib/blockfrost.js";
+import { inMcpCall } from "../lib/surface.js";
 import { NetworkError, statusKind, transportKind } from "../lib/network-error.js";
 
 const DEFAULT_TIMEOUT_MS = 10_000;
@@ -293,17 +294,26 @@ export function truncateRaw(raw: string, verbose: boolean): string {
 }
 
 export function subscriptionTimeout(connected: boolean, waitingForId: boolean): NetworkError {
+  const mcp = inMcpCall();
   const hint = !connected
-    ? "The indexer WebSocket never connected. Check the URL (--indexer-ws) and your network."
+    ? mcp
+      ? "The indexer WebSocket never connected. Check the network's indexer_ws in config.toml and the connection."
+      : "The indexer WebSocket never connected. Check the URL (--indexer-ws) and your network."
     : waitingForId
-      ? "Connected, but that event didn't arrive in time. The id may not exist yet on this network; try a longer --timeout, or list recent ids with dust-events --from."
-      : "Connected, but no events arrived in time. Try an earlier --from or a longer --timeout.";
+      ? mcp
+        ? "Connected, but that event didn't arrive in time. The id may not exist yet; dust_events lists the latest ids."
+        : "Connected, but that event didn't arrive in time. The id may not exist yet on this network; try a longer --timeout, or list recent ids with dust-events."
+      : mcp
+        ? "Connected, but no events arrived in time. Try an earlier from id."
+        : "Connected, but no events arrived in time. Try an earlier --from or a longer --timeout.";
   return new NetworkError("Event not received within timeout", "timeout", "Indexer", undefined, hint);
 }
 
 const CLOSE_AS_HTTP: Record<number, number> = { 1008: 403, 4400: 400, 4401: 401, 4403: 403, 4500: 500 };
-const WS_TIMEOUT_HINT =
-  "The indexer WebSocket didn't answer in time. Try again, or point at another endpoint with --indexer-ws.";
+const wsTimeoutHint = () =>
+  inMcpCall()
+    ? "The indexer WebSocket didn't answer in time. Try again shortly."
+    : "The indexer WebSocket didn't answer in time. Try again, or point at another endpoint with --indexer-ws.";
 
 export function wsFailure(err: unknown, url?: string): NetworkError {
   const event = err as { code?: unknown; reason?: unknown; message?: unknown; error?: { message?: unknown; code?: unknown } };
@@ -313,7 +323,7 @@ export function wsFailure(err: unknown, url?: string): NetworkError {
     const status = CLOSE_AS_HTTP[event.code];
     if (status) return new NetworkError(message, statusKind(status), "Indexer", status);
     return event.code === 4408
-      ? new NetworkError(message, "timeout", "Indexer", undefined, WS_TIMEOUT_HINT)
+      ? new NetworkError(message, "timeout", "Indexer", undefined, wsTimeoutHint())
       : new NetworkError(message, "network", "Indexer");
   }
   const detail = event?.message || event?.error?.message || event?.error?.code || "connection failed";
@@ -345,6 +355,6 @@ export function wsFailure(err: unknown, url?: string): NetworkError {
     kind,
     "Indexer",
     undefined,
-    kind === "timeout" ? WS_TIMEOUT_HINT : undefined,
+    kind === "timeout" ? wsTimeoutHint() : undefined,
   );
 }
