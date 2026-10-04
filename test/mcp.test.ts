@@ -157,6 +157,21 @@ describe("MCP server", () => {
     }
   });
 
+  it("checks the project directory it is given and says what it found", async () => {
+    const { mkdtempSync, writeFileSync } = await import("node:fs");
+    const project = mkdtempSync(join(tmpdir(), "mc-project-"));
+    writeFileSync(join(project, "package.json"), JSON.stringify({ dependencies: { "@midnight-ntwrk/ledger-v8": "8.1.2" } }));
+    const found = await call("versions", { network: "preprod", projectDir: project });
+    expect(found.envelope.data).toMatchObject({
+      localProject: { dir: project, packageJson: true },
+      localPackages: { "@midnight-ntwrk/ledger-v8": "8.1.2" },
+    });
+    const empty = await call("versions", { network: "preprod", projectDir: tmpdir() });
+    expect(empty.envelope.data).toMatchObject({ localProject: { packageJson: false } });
+    const missing = await call("versions", { network: "preprod", projectDir: join(project, "nope") });
+    expect(missing.envelope.error?.message).toMatch(/No such directory/);
+  });
+
   it("never echoes the Blockfrost project ID", async () => {
     const { text, envelope } = await call("versions", { network: "mainnet", checkLocalPackages: false });
     expect(envelope.ok).toBe(true);

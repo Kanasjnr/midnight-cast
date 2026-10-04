@@ -343,6 +343,7 @@ function registerVersions(alias: string, description: string): void {
     .description(description)
     .option("--fail-on-mismatch", "Exit 1 when live node/api checks fail (CI)")
     .option("--no-local", "Skip reading package.json in current directory")
+    .option("--project-dir <dir>", "Check the Midnight packages of the project in this directory (default: current directory)")
     .option("--refresh-matrix", "Fetch Midnight's support matrix even if a cached copy is fresh")
     .action(async (network: string | undefined, opts, cmd) => {
       await run(
@@ -353,6 +354,7 @@ function registerVersions(alias: string, description: string): void {
               ...resolveFlags(cmd),
               failOnMismatch: opts.failOnMismatch,
               local: opts.local,
+              projectDir: opts.projectDir,
               ...matrixFlags(cmd),
             },
             globalOpts(cmd),

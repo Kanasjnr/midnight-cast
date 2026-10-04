@@ -178,6 +178,22 @@
         "type": "string"
       },
       "description": "Inconsistencies inside Midnight's published matrix for this network"
+    },
+    "localProject": {
+      "type": "object",
+      "required": [
+        "dir",
+        "packageJson"
+      ],
+      "properties": {
+        "dir": {
+          "type": "string"
+        },
+        "packageJson": {
+          "type": "boolean"
+        }
+      },
+      "description": "Where local packages were looked for, and whether a package.json was there"
     }
   }
 }

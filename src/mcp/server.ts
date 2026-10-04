@@ -173,13 +173,19 @@ export function createMcpServer(options: McpOptions): McpServer {
   tool(
     "versions",
     "versions",
-    "Compare the network's live node, runtime, indexer API and proof server with Midnight's support matrix, and the Midnight packages in package.json in the current directory with the matrix pins.",
+    "Compare the network's live node, runtime, indexer API and proof server with Midnight's support matrix, and a project's Midnight packages (package.json and package-lock.json) with the matrix pins. data.localProject says which directory was checked and whether it had a package.json.",
     LIVE,
     {
       network,
-      checkLocalPackages: z.boolean().optional().describe("Also check package.json in the server's working directory (default true)"),
+      projectDir: z
+        .string()
+        .min(1)
+        .optional()
+        .describe("Absolute path of the user's project; defaults to the server's working directory, which may not be the project"),
+      checkLocalPackages: z.boolean().optional().describe("Check the project's packages at all (default true)"),
     },
-    ({ network, checkLocalPackages }) => versionsCommand(network, { local: checkLocalPackages ?? true }, json),
+    ({ network, projectDir, checkLocalPackages }) =>
+      versionsCommand(network, { local: checkLocalPackages ?? true, projectDir }, json),
   );
   tool(
     "block",
