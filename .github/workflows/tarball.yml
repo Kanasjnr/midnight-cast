@@ -1,0 +1,43 @@
+name: Tarball
+
+# Packs the package the way npm publishes it, installs it into an empty project
+# and runs the installed CLI. A release PR into main must pass it, and publish.yml
+# runs it again before publishing.
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Tarball (${{ matrix.os }}, Node ${{ matrix.node-version }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, node-version: "20" }
+          - { os: ubuntu-latest, node-version: "22" }
+          - { os: ubuntu-latest, node-version: "24" }
+          # npx runs bins through .cmd shims on Windows.
+          - { os: windows-latest, node-version: "22" }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+
+      - name: Pack, install and run the tarball
+        run: npm run smoke:tarball
