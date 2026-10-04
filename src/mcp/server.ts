@@ -1,5 +1,4 @@
-import { readFileSync } from "node:fs";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { blockAtHeightCommand, blockLatestCommand } from "../commands/block.js";
 import { decodeCommand } from "../commands/decode.js";
@@ -42,7 +41,7 @@ export function allowedNetworks(
   return requested;
 }
 
-const envelopeShape = {
+const envelopeSchema = z.object({
   schemaVersion: z.literal(1),
   ok: z.boolean(),
   command: z.string().nullable(),
@@ -51,7 +50,7 @@ const envelopeShape = {
   warnings: z.array(z.string()),
   error: z.object({ message: z.string(), kind: z.string().nullable(), hint: z.string().nullable() }).nullable(),
   next: z.array(z.object({ command: z.string(), reason: z.string() })),
-};
+});
 
 // Tools only read. Those that reach a network say so; decode and explain work from bundled data.
 const LIVE = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true } as const;
@@ -68,7 +67,7 @@ async function respond(command: string, work: () => Promise<EmitResult> | EmitRe
   });
   const envelope = envelopeOf(result, command, warnings);
   return {
-    structuredContent: envelope as z.infer<z.ZodObject<typeof envelopeShape>>,
+    structuredContent: envelope as z.infer<typeof envelopeSchema>,
     content: [{ type: "text" as const, text: JSON.stringify(envelope) }],
     isError: !envelope.ok,
   };
@@ -97,7 +96,13 @@ export function createMcpServer(options: McpOptions): McpServer {
   ) =>
     server.registerTool(
       name,
-      { title: `midnight-cast ${command}`, description, inputSchema, outputSchema: envelopeShape, annotations },
+      {
+        title: `midnight-cast ${command}`,
+        description,
+        inputSchema: z.object(inputSchema),
+        outputSchema: envelopeSchema,
+        annotations,
+      },
       // The SDK validates input against inputSchema before calling this. Its callback type is
       // conditional on the schema, which TypeScript can't resolve while Shape is generic.
       ((input: z.infer<z.ZodObject<Shape>>) => respond(command, () => run(input))) as never,
@@ -233,8 +238,4 @@ export function createMcpServer(options: McpOptions): McpServer {
   );
 
   return server;
-}
-
-export function packageVersion(packageJsonPath: string): string {
-  return (JSON.parse(readFileSync(packageJsonPath, "utf8")) as { version: string }).version;
 }

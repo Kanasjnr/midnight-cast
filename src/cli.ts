@@ -458,9 +458,9 @@ program
       process.exitCode = 2;
       return;
     }
-    const { StdioServerTransport } = await import("@modelcontextprotocol/sdk/server/stdio.js");
-    const server = createMcpServer({ version: cliVersion(), catalog: () => buildCatalog(program, TOPICS), networks });
-    await server.connect(new StdioServerTransport());
+    const { serveStdio } = await import("@modelcontextprotocol/server/stdio");
+    // serveStdio answers both the 2025 handshake and the stateless 2026-07-28 protocol.
+    serveStdio(() => createMcpServer({ version: cliVersion(), catalog: () => buildCatalog(program, TOPICS), networks }));
   });
 
 const argv = normalizeArgv(process.argv);
