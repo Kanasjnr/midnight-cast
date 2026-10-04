@@ -28,7 +28,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "tsc && node scripts/copy-data.mjs",
+    "build": "tsc && tsx scripts/copy-data.ts",
     "cli": "node dist/cli.js",
     "dev": "tsx src/cli.ts",
     "test": "vitest run",
@@ -38,7 +38,8 @@
     "typecheck": "tsc --noEmit && tsc -p tsconfig.scripts.json",
     "live-check": "tsx scripts/live-check.ts",
     "error-codes": "tsx scripts/error-code-parity.ts",
-    "fixtures": "tsx scripts/record-fixtures.ts"
+    "fixtures": "tsx scripts/record-fixtures.ts",
+    "smoke:tarball": "tsx scripts/smoke-tarball.ts"
   },
   "keywords": [
     "midnight",
