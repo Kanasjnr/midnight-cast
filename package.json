@@ -28,7 +28,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "build": "tsc && node scripts/copy-data.mjs",
+    "build": "tsc && tsx scripts/copy-data.ts",
     "cli": "node dist/cli.js",
     "dev": "tsx src/cli.ts",
     "test": "vitest run",
