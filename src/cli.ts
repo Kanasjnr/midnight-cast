@@ -450,9 +450,12 @@ program
   .action(async () => {
     // Loaded here so other commands don't pay for the MCP SDK.
     const { allowedNetworks, createMcpServer } = await import("./mcp/server.js");
-    let networks;
+    const { callsPerMinute } = await import("./mcp/rate-limit.js");
+    let networks: string[];
+    let perMinute: number;
     try {
       networks = allowedNetworks();
+      perMinute = callsPerMinute();
     } catch (err) {
       console.error(err instanceof Error ? err.message : String(err));
       process.exitCode = 2;
@@ -460,7 +463,9 @@ program
     }
     const { serveStdio } = await import("@modelcontextprotocol/server/stdio");
     // serveStdio answers both the 2025 handshake and the stateless 2026-07-28 protocol.
-    serveStdio(() => createMcpServer({ version: cliVersion(), catalog: () => buildCatalog(program, TOPICS), networks }));
+    serveStdio(() =>
+      createMcpServer({ version: cliVersion(), catalog: () => buildCatalog(program, TOPICS), networks, callsPerMinute: perMinute }),
+    );
     // The client is gone once stdin ends; don't wait for in-flight network calls to time out.
     process.stdin.once("end", () => process.exit(0));
   });

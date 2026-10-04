@@ -85,6 +85,8 @@ describe("MCP server", () => {
       version: "test",
       catalog: () => ({ cli: "midnight-cast" }) as never,
       networks: ["preprod", "mainnet"],
+      // The limit has its own test; here every tool needs to run.
+      callsPerMinute: 10_000,
     });
     const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
     client = new Client({ name: "test", version: "0" });
@@ -192,6 +194,27 @@ describe("MCP server", () => {
     expect(JSON.parse((matrix.contents[0] as { text: string }).text).networks.preprod).toBeDefined();
     const codes = await client.readResource({ uri: "midnight-cast://error-codes" });
     expect(JSON.parse((codes.contents[0] as { text: string }).text).ledger.codes["170"].name).toBe("InvalidDustSpendProof");
+  });
+});
+
+describe("MCP rate limit end to end", () => {
+  it("refuses network calls over budget but still decodes", async () => {
+    const server = createMcpServer({ version: "test", catalog: () => ({}) as never, networks: ["preprod"], callsPerMinute: 3 });
+    const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: "test", version: "0" });
+    await Promise.all([server.connect(serverSide), client.connect(clientSide)]);
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = replayFetch(fixture, BUILTIN_NETWORKS.preprod!.proofServer);
+    try {
+      expect((await client.callTool({ name: "tip", arguments: { network: "preprod" } })).isError).toBe(false);
+      const limited = await client.callTool({ name: "tip", arguments: { network: "preprod" } });
+      expect(limited.isError).toBe(true);
+      expect(limited.structuredContent).toMatchObject({ error: { kind: "rate_limited" } });
+      expect((await client.callTool({ name: "decode", arguments: { message: "170" } })).isError).toBe(false);
+    } finally {
+      globalThis.fetch = realFetch;
+      await client.close();
+    }
   });
 });
 

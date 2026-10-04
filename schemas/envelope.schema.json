@@ -66,6 +66,7 @@
               "enum": [
                 null,
                 "usage",
+                "rate_limited",
                 "dns",
                 "refused",
                 "timeout",

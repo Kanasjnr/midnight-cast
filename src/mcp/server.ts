@@ -15,12 +15,15 @@ import { resolveSupportMatrix } from "../lib/upstream-matrix.js";
 import { loadConfigFile } from "../config.js";
 import { NETWORK_NAMES } from "../networks.js";
 import { envelopeOf, fail, withOwnWarnings, type EmitResult } from "../output.js";
+import { RateLimiter, callsPerMinute } from "./rate-limit.js";
 
 export interface McpOptions {
   version: string;
   catalog: () => Catalog;
   /** Networks the model may query. Defaults to MIDNIGHT_CAST_NETWORKS, then every built-in network. */
   networks?: string[];
+  /** Calls a minute to the tools that reach a network. Defaults to MIDNIGHT_CAST_MAX_CALLS_PER_MINUTE, then 30. */
+  callsPerMinute?: number;
 }
 
 /** Built-in networks plus any defined in the config file, which the CLI accepts too. */
@@ -99,6 +102,14 @@ export function createMcpServer(options: McpOptions): McpServer {
     .enum(networks as [string, ...string[]])
     .describe(`Midnight network to query: ${networks.join(", ")}`);
   const json = { json: true };
+  // Network tools share one budget, so a looping agent can't exhaust public endpoints or a Blockfrost plan.
+  const limiter = new RateLimiter(options.callsPerMinute ?? callsPerMinute());
+  const rateLimited = (retryAfterMs: number): EmitResult => ({
+    ok: false,
+    error: `Rate limited: this server allows ${limiter.perMinute} network calls a minute. Try again in ${Math.ceil(retryAfterMs / 1000)} s.`,
+    errorKind: "rate_limited",
+    hint: "Wait before retrying. The limit is set with MIDNIGHT_CAST_MAX_CALLS_PER_MINUTE in this server's environment.",
+  });
   const server = new McpServer(
     {
       name: "midnight-cast",
@@ -129,7 +140,10 @@ export function createMcpServer(options: McpOptions): McpServer {
       },
       // The SDK validates input against inputSchema before calling this. Its callback type is
       // conditional on the schema, which TypeScript can't resolve while Shape is generic.
-      ((input: z.infer<z.ZodObject<Shape>>) => respond(command, () => run(input))) as never,
+      ((input: z.infer<z.ZodObject<Shape>>) => {
+        const allowed = annotations.openWorldHint ? limiter.take() : { ok: true as const };
+        return respond(command, () => (allowed.ok ? run(input) : rateLimited(allowed.retryAfterMs)));
+      }) as never,
     );
 
   tool(
