@@ -442,6 +442,27 @@ program
     await run(async () => explainCommand(topic, globalOpts(cmd), () => buildCatalog(program, TOPICS)), cmd);
   });
 
+program
+  .command("mcp")
+  .description(
+    "Run a read-only MCP server on stdio for AI agents (networks from MIDNIGHT_CAST_NETWORKS, Blockfrost ID from BLOCKFROST_PROJECT_ID)",
+  )
+  .action(async () => {
+    // Loaded here so other commands don't pay for the MCP SDK.
+    const { allowedNetworks, createMcpServer } = await import("./mcp/server.js");
+    let networks;
+    try {
+      networks = allowedNetworks();
+    } catch (err) {
+      console.error(err instanceof Error ? err.message : String(err));
+      process.exitCode = 2;
+      return;
+    }
+    const { StdioServerTransport } = await import("@modelcontextprotocol/sdk/server/stdio.js");
+    const server = createMcpServer({ version: cliVersion(), catalog: () => buildCatalog(program, TOPICS), networks });
+    await server.connect(new StdioServerTransport());
+  });
+
 const argv = normalizeArgv(process.argv);
 
 program.parseAsync(argv).catch((err: unknown) => {

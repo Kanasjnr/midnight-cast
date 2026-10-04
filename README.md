@@ -165,6 +165,14 @@ midnight-cast decode --raw "1010: Invalid Transaction: Custom error: 186" --json
 midnight-cast explain --json
 ```
 
+Agents that speak MCP can use midnight-cast directly: `midnight-cast mcp` runs a read-only MCP server on stdio with tools for `health`, `ping`, `tip`, `versions`, `block`, `tx`, the DUST events, `decode` and `explain`, each returning the same envelope. For example, in Claude Code:
+
+```bash
+claude mcp add --transport stdio midnight-cast -- npx -y midnight-cast mcp
+```
+
+[docs/MCP.md](docs/MCP.md) has the setup for Codex, Gemini CLI, Cursor, VS Code and others, the network allow-list, and how the Blockfrost project ID stays out of the model's sight.
+
 ## Community & support
 
 | Need | Where |

@@ -15,7 +15,8 @@ export interface CatalogCommand {
   arguments: Array<{ name: string; required: boolean; variadic: boolean }>;
   options: CatalogOption[];
   readOnly: boolean;
-  outputSchema: string;
+  /** Absent for commands that don't print a JSON envelope, such as mcp. */
+  outputSchema?: string;
 }
 
 export interface Catalog {
@@ -51,6 +52,7 @@ const ERROR_KINDS: Record<NetworkErrorKind | "usage", string> = {
 
 const SCHEMA_BASE = "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/main/schemas/";
 const WRITES_FILES = new Set(["config init"]);
+const NO_ENVELOPE = new Set(["mcp"]);
 
 export function outputSchemaFor(command: string): string {
   const [first = "", second] = command.split(" ");
@@ -103,7 +105,7 @@ function walk(cmd: Command, prefix: string[]): CatalogCommand[] {
               arguments: args,
               options,
               readOnly: !WRITES_FILES.has(path.join(" ")),
-              outputSchema: outputSchemaFor(path.join(" ")),
+              ...(NO_ENVELOPE.has(path.join(" ")) ? {} : { outputSchema: outputSchemaFor(path.join(" ")) }),
             },
           ]
         : [];
