@@ -7,6 +7,8 @@
 - Usage errors (an unknown command or option, a missing argument or subcommand) exit `2` instead of `1`
 
 ### Agents & JSON
+- `midnight-cast mcp` runs a read-only MCP server on stdio, built on the official MCP SDK. Its tools (`health`, `ping`, `tip`, `versions`, `block`, `tx`, `dust_event`, `dust_events`, `decode`, `explain`) run the matching commands and return the `--json` envelope as structured content, with typed inputs and read-only annotations. The support matrix and error codes are resources. `MIDNIGHT_CAST_NETWORKS` limits the networks the model may query, the model can't supply endpoint URLs, and the Blockfrost project ID from `BLOCKFROST_PROJECT_ID` is redacted from every response. Setup for Claude Code, Codex, Gemini CLI, Cursor, VS Code, Windsurf and generic clients is in `docs/MCP.md`
+- In the `explain --json` catalog, `outputSchema` is absent for `mcp`, which prints no envelope
 - `next` lists follow-up commands, spelled `midnight-cast …`: `decode` points at the ledger code inside a 1010 and at `explain` topics, `tx` at `decode --raw` for a failed segment and at `dust-event` for each DUST event, a failed `health` at `ping` or `tip`, and an unreachable configured endpoint at `config show`. Suggestions keep any endpoint overrides, but never the project ID
 - `ping`, `health`, `tip` and `versions` failures say what failed, e.g. "Required services unreachable: rpc" or "Indexer is 120 blocks behind the node (threshold 100)", instead of no message
 - Warnings, such as a config pointing at the retired mainnet hosts, are included in the envelope's `warnings` as well as printed on stderr in human mode
