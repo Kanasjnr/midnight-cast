@@ -447,6 +447,17 @@ id=565902  typename=DustInitialUtxo  protocolVersion=22000  raw=0x6d69646e696768
 
 ---
 
+## `midnight-cast mcp`
+
+Runs a read-only MCP server on stdio, for AI agents. It exposes `health`, `ping`, `tip`, `versions`, `block`, `tx`, `dust_event`, `dust_events`, `decode` and `explain` as tools that return the [JSON envelope](#json-output), plus the support matrix and error codes as resources. `MIDNIGHT_CAST_NETWORKS` (for example `preview,preprod`) limits the networks the model may query, and `BLOCKFROST_PROJECT_ID` supplies the mainnet project ID, which never appears in a response. Setup for each agent is in [MCP.md](./MCP.md).
+
+```bash
+midnight-cast mcp
+MIDNIGHT_CAST_NETWORKS=preview,preprod midnight-cast mcp
+```
+
+---
+
 ## `midnight-cast explain [topic]`
 
 Static help (no network). Topics: `dust`, `1010`, `versions`, `transcript`.

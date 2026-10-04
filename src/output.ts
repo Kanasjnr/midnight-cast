@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { NetworkError } from "./lib/network-error.js";
 import type { ResolveFlags } from "./config.js";
 import { checkEndpoints } from "./lib/next-steps.js";
@@ -38,21 +39,40 @@ export interface Envelope<T = unknown> {
 }
 
 const pendingWarnings: string[] = [];
+// Concurrent work, such as MCP tool calls, keeps its own warnings instead of sharing pendingWarnings.
+const scopedWarnings = new AsyncLocalStorage<string[]>();
 
 export function warn(message: string): void {
-  if (!pendingWarnings.includes(message)) pendingWarnings.push(message);
+  const warnings = scopedWarnings.getStore() ?? pendingWarnings;
+  if (!warnings.includes(message)) warnings.push(message);
+}
+
+/** Runs work with its own warnings, so concurrent calls don't take each other's. */
+export async function withOwnWarnings<T>(work: () => Promise<T>): Promise<{ value: T; warnings: string[] }> {
+  const warnings: string[] = [];
+  const value = await scopedWarnings.run(warnings, work);
+  return { value, warnings };
+}
+
+/** The redacted envelope for a result, with the warnings collected since the last one unless given. */
+export function envelopeOf<T>(
+  result: EmitResult<T>,
+  command: string | undefined,
+  warnings: string[] = pendingWarnings.splice(0),
+): Envelope<T> {
+  return toEnvelope(sanitizeEmitResult(result), command, warnings.map(sanitizeForOutput));
 }
 
 export function emit<T>(
   result: EmitResult<T>,
   options: GlobalOptions,
 ): number {
-  const warnings = pendingWarnings.splice(0).map(sanitizeForOutput);
   const safe = sanitizeEmitResult(result);
 
   if (options.json) {
-    console.log(JSON.stringify(toEnvelope(safe, options.command, warnings), null, 2));
+    console.log(JSON.stringify(envelopeOf(result, options.command), null, 2));
   } else {
+    const warnings = pendingWarnings.splice(0).map(sanitizeForOutput);
     for (const message of warnings) console.error(message);
     if (safe.data !== undefined) printHuman(safe.data);
     if (!safe.ok && safe.error) console.error(safe.error);
