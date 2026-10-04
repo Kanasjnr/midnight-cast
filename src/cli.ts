@@ -15,6 +15,7 @@ import { blockAtHeightCommand, blockLatestCommand } from "./commands/block.js";
 import { dustEventCommand, dustEventsCommand } from "./commands/dust.js";
 import { TOPICS, explainCommand } from "./commands/explain.js";
 import { buildCatalog, isDefaultSubcommand } from "./lib/catalog.js";
+import { allowedNetworks, createMcpServer } from "./mcp/server.js";
 import { txCommand } from "./commands/tx.js";
 import { versionsCommand } from "./commands/versions.js";
 import type { ResolveFlags } from "./config.js";
@@ -440,6 +441,25 @@ program
   .description("Static help (e.g. explain dust); with --json and no topic, a catalog of every command")
   .action(async (topic: string | undefined, _opts, cmd) => {
     await run(async () => explainCommand(topic, globalOpts(cmd), () => buildCatalog(program, TOPICS)), cmd);
+  });
+
+program
+  .command("mcp")
+  .description(
+    "Run a read-only MCP server on stdio for AI agents (networks from MIDNIGHT_CAST_NETWORKS, Blockfrost ID from BLOCKFROST_PROJECT_ID)",
+  )
+  .action(async () => {
+    let networks;
+    try {
+      networks = allowedNetworks();
+    } catch (err) {
+      console.error(err instanceof Error ? err.message : String(err));
+      process.exitCode = 2;
+      return;
+    }
+    const { StdioServerTransport } = await import("@modelcontextprotocol/sdk/server/stdio.js");
+    const server = createMcpServer({ version: cliVersion(), catalog: () => buildCatalog(program, TOPICS), networks });
+    await server.connect(new StdioServerTransport());
   });
 
 const argv = normalizeArgv(process.argv);
