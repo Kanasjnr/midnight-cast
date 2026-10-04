@@ -14,7 +14,7 @@ import type { Catalog } from "../lib/catalog.js";
 import { loadDataJson } from "../lib/data-path.js";
 import { resolveSupportMatrix } from "../lib/upstream-matrix.js";
 import { NETWORK_NAMES } from "../networks.js";
-import { envelopeOf, type EmitResult } from "../output.js";
+import { envelopeOf, fail, withOwnWarnings, type EmitResult } from "../output.js";
 
 export interface McpOptions {
   version: string;
@@ -51,8 +51,16 @@ const envelopeShape = {
 const LIVE = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true } as const;
 const OFFLINE = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false } as const;
 
-function respond(command: string, result: EmitResult) {
-  const envelope = envelopeOf(result, command);
+// Like the CLI's run(): an exception still becomes a redacted envelope, and each call keeps its own warnings.
+async function respond(command: string, work: () => Promise<EmitResult> | EmitResult) {
+  const { value: result, warnings } = await withOwnWarnings(async () => {
+    try {
+      return await work();
+    } catch (err) {
+      return fail(err);
+    }
+  });
+  const envelope = envelopeOf(result, command, warnings);
   return {
     structuredContent: envelope as z.infer<z.ZodObject<typeof envelopeShape>>,
     content: [{ type: "text" as const, text: JSON.stringify(envelope) }],
@@ -86,7 +94,7 @@ export function createMcpServer(options: McpOptions): McpServer {
       { title: `midnight-cast ${command}`, description, inputSchema, outputSchema: envelopeShape, annotations },
       // The SDK validates input against inputSchema before calling this. Its callback type is
       // conditional on the schema, which TypeScript can't resolve while Shape is generic.
-      (async (input: z.infer<z.ZodObject<Shape>>) => respond(command, await run(input))) as never,
+      ((input: z.infer<z.ZodObject<Shape>>) => respond(command, () => run(input))) as never,
     );
 
   tool(

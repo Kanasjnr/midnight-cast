@@ -160,6 +160,22 @@ describe("MCP server", () => {
     expect(failed.text).not.toContain(SECRET);
   });
 
+  it("turns a thrown error into a redacted envelope", async () => {
+    const { writeFileSync, mkdirSync } = await import("node:fs");
+    const configDir = join(process.env.XDG_CONFIG_HOME!, "midnight-cast");
+    mkdirSync(configDir, { recursive: true });
+    writeFileSync(join(configDir, "support-matrix.json"), `{ "not": "a matrix", "id": "${SECRET}" }`);
+    try {
+      const { envelope, text } = await call("versions", { network: "preprod", checkLocalPackages: false });
+      expect(envelope.ok).toBe(false);
+      expect(envelope.error?.message).toMatch(/not a support matrix/);
+      expect(text).not.toContain(SECRET);
+    } finally {
+      const { rmSync } = await import("node:fs");
+      rmSync(join(configDir, "support-matrix.json"));
+    }
+  });
+
   it("serves the support matrix and error codes as resources", async () => {
     process.env.MN_OFFLINE = "1";
     const { resources } = await client.listResources();
@@ -176,5 +192,18 @@ describe("network allow-list", () => {
     expect(allowedNetworks(undefined)).toEqual(["preview", "preprod", "mainnet", "local"]);
     expect(allowedNetworks(" preprod , mainnet ")).toEqual(["preprod", "mainnet"]);
     expect(() => allowedNetworks("preprod,devnet")).toThrow(/unknown networks: devnet/);
+  });
+});
+
+describe("warnings", () => {
+  it("stay with the call that raised them", async () => {
+    const { warn, withOwnWarnings } = await import("../src/output.js");
+    const slow = withOwnWarnings(async () => {
+      warn("from the slow call");
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    const fast = await withOwnWarnings(async () => undefined);
+    expect(fast.warnings).toEqual([]);
+    expect((await slow).warnings).toEqual(["from the slow call"]);
   });
 });
