@@ -7,6 +7,7 @@ Extended docs for the midnight-cast CLI. **GitHub only** — not included in the
 | [WORKFLOWS.md](./WORKFLOWS.md) | Scenario-based guides with real sample output (`health`, tx failure, 1010, DUST, version skew) |
 | [COMMANDS.md](./COMMANDS.md) | Reference-style command docs with examples and output snippets |
 | [LIVE-CHECKS.md](./LIVE-CHECKS.md) | How CI tests against the live networks, the scheduled drift check, and the mainnet Blockfrost secret |
+| [MCP.md](./MCP.md) | The read-only MCP server for AI agents: tools, configuration and setup in each client |
 | [RELEASING.md](./RELEASING.md) | How a release is prepared, gated and published to npm |
 
 Quick start lives in the repo [README](../README.md).
