@@ -49,6 +49,12 @@
 - Codes 117 (NotNormalized), 138 (BalanceCheckOverspend) and 170 (InvalidDustSpendProof) carry the fuller, devnet-verified descriptions and fixes from Midnight Expert's status-codes catalog, credited in `NOTICE`
 - Code 208 (InvalidBasisPoints) said the valid range was 0-9999; the ledger accepts up to 10000
 
+### Release
+- A release can only publish a package that works once installed. `npm run smoke:tarball` packs midnight-cast as npm would, checks that every data file, schema and notice ships and that no source, test or fixture does, installs it into an empty project, and runs both `midnight-cast` and `mn` through `npx`, validating their JSON against the shipped schemas. `tarball.yml` runs it on Node 20, 22 and 24 and on Windows for release pull requests, and `publish.yml` runs it again before publishing
+- `publish.yml` also requires a successful live check on `main` within the last 24 hours
+- `docs/RELEASING.md` describes the release, from refreshing the bundled data to checking the published package
+- The build's data copy step is TypeScript (`scripts/copy-data.ts`)
+
 ### Tests & CI (recorded responses)
 - Recorded preview, preprod and mainnet (Blockfrost) responses for every request midnight-cast makes, plus each indexer's GraphQL schema, live in `test/fixtures/` and are replayed through the real commands in the unit tests. Every output is checked against the published JSON Schemas and every indexer query against the recorded schema. `npm run fixtures` re-records them
 - `live.yml` re-records on the usual triggers and fails on schema drift: a request no longer made or newly made, a changed status, a field that disappeared or changed type, or a changed indexer schema
