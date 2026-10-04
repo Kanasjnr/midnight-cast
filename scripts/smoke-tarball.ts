@@ -43,9 +43,15 @@ export function packageProblems(packed: string[], dataFiles: string[], schemaFil
   ];
 }
 
+/** Quotes an argument for cmd.exe, which would otherwise split it at spaces. */
+export function quoteForCmd(arg: string): string {
+  return /[\s"]/.test(arg) ? `"${arg.replace(/"/g, '""')}"` : arg;
+}
+
 async function sh(command: string, args: string[], cwd: string, env = process.env) {
-  // npm and npx are .cmd shims on Windows, which execFile only runs through a shell.
-  return run(command, args, { cwd, env, shell: windows, maxBuffer: 16 * 1024 * 1024 });
+  // npm and npx are .cmd shims on Windows, which execFile only runs through a shell, and the
+  // shell joins arguments with plain spaces.
+  return run(command, windows ? args.map(quoteForCmd) : args, { cwd, env, shell: windows, maxBuffer: 16 * 1024 * 1024 });
 }
 
 async function cli(cwd: string, bin: string, args: string[]): Promise<{ stdout: string; code: number }> {

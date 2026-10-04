@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { packageProblems } from "../scripts/smoke-tarball.js";
+import { packageProblems, quoteForCmd } from "../scripts/smoke-tarball.js";
 
 describe("package contents", () => {
   const complete = [
@@ -28,5 +28,11 @@ describe("package contents", () => {
   it("rejects sources, tests and fixtures", () => {
     expect(packageProblems([...complete, "test/fixtures/preview/responses.json"], ["error-codes.json"], ["envelope.schema.json"]))
       .toEqual(["should not ship test/fixtures/preview/responses.json"]);
+  });
+
+  it("quotes arguments with spaces for cmd.exe", () => {
+    expect(quoteForCmd("decode")).toBe("decode");
+    expect(quoteForCmd("1010: Invalid Transaction: Custom error: 171")).toBe('"1010: Invalid Transaction: Custom error: 171"');
+    expect(quoteForCmd('say "hi"')).toBe('"say ""hi"""');
   });
 });
