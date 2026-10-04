@@ -49,7 +49,13 @@ const envelopeSchema = z.object({
   data: z.unknown(),
   warnings: z.array(z.string()),
   error: z.object({ message: z.string(), kind: z.string().nullable(), hint: z.string().nullable() }).nullable(),
-  next: z.array(z.object({ command: z.string(), reason: z.string() })),
+  next: z.array(
+    z.object({
+      command: z.string(),
+      reason: z.string(),
+      tool: z.object({ name: z.string(), arguments: z.record(z.string(), z.unknown()) }).optional(),
+    }),
+  ),
 });
 
 // Tools only read. Those that reach a network say so; decode and explain work from bundled data.
