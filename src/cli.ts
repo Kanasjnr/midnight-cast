@@ -461,6 +461,8 @@ program
     const { serveStdio } = await import("@modelcontextprotocol/server/stdio");
     // serveStdio answers both the 2025 handshake and the stateless 2026-07-28 protocol.
     serveStdio(() => createMcpServer({ version: cliVersion(), catalog: () => buildCatalog(program, TOPICS), networks }));
+    // The client is gone once stdin ends; don't wait for in-flight network calls to time out.
+    process.stdin.once("end", () => process.exit(0));
   });
 
 const argv = normalizeArgv(process.argv);
