@@ -68,6 +68,7 @@ export function toolCallFor(command: string): ToolCall | undefined {
   if (bin !== "midnight-cast" || !name) return undefined;
   if (name === "explain" && args.length === 1) return { name, arguments: { topic: args[0] } };
   if (NETWORK_TOOLS.has(name) && args.length === 1) return { name, arguments: { network: args[0] } };
+  if (name === "dust-events" && args.length === 1) return { name: "dust_events", arguments: { network: args[0] } };
   if (name === "dust-event" && args.length === 2 && /^\d+$/.test(args[0]!)) {
     return { name: "dust_event", arguments: { id: Number(args[0]), network: args[1] } };
   }

@@ -221,11 +221,11 @@ export function createMcpServer(options: McpOptions): McpServer {
   tool(
     "dust_events",
     "dust-events",
-    "Read a run of DUST ledger events from the indexer subscription, starting at an id.",
+    "Read DUST ledger events from the indexer: the latest ones, or a run starting at an id.",
     LIVE,
     {
       network,
-      from: z.number().int().min(0).optional().describe("First event id (default: the oldest available)"),
+      from: z.number().int().min(0).optional().describe("First event id; omit for the latest events"),
       limit: z.number().int().min(1).max(50).optional().describe("How many events to read (default 10, at most 50)"),
     },
     ({ network, from, limit }) => dustEventsCommand(network, { from, limit: limit ?? 10 }, json),

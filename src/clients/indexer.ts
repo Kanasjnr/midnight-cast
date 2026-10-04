@@ -145,8 +145,11 @@ export async function subscribeDustEvents(
   options: {
     fromId?: number;
     targetId?: number;
+    /** Stop once an event with this id or later has arrived, even if fewer than limit did. */
+    untilId?: number;
     limit?: number;
     timeoutMs?: number;
+    signal?: AbortSignal;
   },
 ): Promise<DustLedgerEventPayload[]> {
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
@@ -210,6 +213,8 @@ export async function subscribeDustEvents(
       }
     };
 
+    options.signal?.addEventListener("abort", () => finish(new Error("DUST subscription cancelled")), { once: true });
+
     unsubscribe = client.subscribe(
       {
         query: DUST_SUBSCRIPTION,
@@ -249,7 +254,7 @@ export async function subscribeDustEvents(
             return;
           }
 
-          if (events.length >= limit) {
+          if (events.length >= limit || (options.untilId !== undefined && event.id >= options.untilId)) {
             finish();
           }
         },
@@ -268,6 +273,16 @@ export async function subscribeDustEvents(
       },
     );
   });
+}
+
+/** The id of the newest DUST event: every event carries it, and the oldest arrives first. */
+export async function latestDustEventId(
+  endpoints: Pick<NetworkEndpoints, "indexerWs">,
+  options: { timeoutMs?: number; signal?: AbortSignal } = {},
+): Promise<number> {
+  const [first] = await subscribeDustEvents(endpoints, { limit: 1, timeoutMs: options.timeoutMs ?? 10_000, signal: options.signal });
+  if (first === undefined) throw new NetworkError("Indexer sent no DUST events", "invalid_response", "Indexer");
+  return first.maxId;
 }
 
 export function truncateRaw(raw: string, verbose: boolean): string {
