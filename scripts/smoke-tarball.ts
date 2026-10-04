@@ -80,7 +80,15 @@ async function mcpTools(cwd: string): Promise<string[]> {
       child.stdout.on("data", (chunk: Buffer) => {
         buffered += chunk.toString();
         for (const line of buffered.split("\n").slice(0, -1)) {
-          const reply = JSON.parse(line) as { id?: number; result?: { tools: Array<{ name: string }> } };
+          let reply: { id?: number; result?: { tools: Array<{ name: string }> } };
+          try {
+            reply = JSON.parse(line);
+          } catch {
+            // Anything but protocol messages on stdout breaks MCP clients, so it fails the check.
+            clearTimeout(timer);
+            reject(new Error(`non-JSON line on the server's stdout: ${line.slice(0, 80)}`));
+            return;
+          }
           if (reply.id === 2 && reply.result) {
             clearTimeout(timer);
             resolve(reply.result.tools.map((t) => t.name));
@@ -89,10 +97,13 @@ async function mcpTools(cwd: string): Promise<string[]> {
         buffered = buffered.slice(buffered.lastIndexOf("\n") + 1);
       });
       child.on("exit", (code) => reject(new Error(`mcp exited with ${code}`)));
+      child.on("error", reject);
     });
   } finally {
     child.stdin.end();
-    child.kill();
+    // With a shell, child is cmd.exe; the server under it only goes with the whole tree.
+    if (windows && child.pid) spawn("taskkill", ["/pid", String(child.pid), "/T", "/F"]);
+    else child.kill();
   }
 }
 
