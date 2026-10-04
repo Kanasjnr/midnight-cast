@@ -43,16 +43,21 @@ export function warn(message: string): void {
   if (!pendingWarnings.includes(message)) pendingWarnings.push(message);
 }
 
+/** The redacted envelope for a result, with the warnings collected since the last one. */
+export function envelopeOf<T>(result: EmitResult<T>, command: string | undefined): Envelope<T> {
+  return toEnvelope(sanitizeEmitResult(result), command, pendingWarnings.splice(0).map(sanitizeForOutput));
+}
+
 export function emit<T>(
   result: EmitResult<T>,
   options: GlobalOptions,
 ): number {
-  const warnings = pendingWarnings.splice(0).map(sanitizeForOutput);
   const safe = sanitizeEmitResult(result);
 
   if (options.json) {
-    console.log(JSON.stringify(toEnvelope(safe, options.command, warnings), null, 2));
+    console.log(JSON.stringify(envelopeOf(result, options.command), null, 2));
   } else {
+    const warnings = pendingWarnings.splice(0).map(sanitizeForOutput);
     for (const message of warnings) console.error(message);
     if (safe.data !== undefined) printHuman(safe.data);
     if (!safe.ok && safe.error) console.error(safe.error);
