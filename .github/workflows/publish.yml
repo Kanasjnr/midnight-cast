@@ -14,18 +14,21 @@ jobs:
     uses: ./.github/workflows/tarball.yml
 
   live-recent:
-    name: Live check passed in the last 24h
+    name: Networks checked clean in the last 24h
     if: github.event.release.target_commitish == 'main'
     runs-on: ubuntu-latest
     permissions:
       actions: read
+      issues: read
     steps:
-      - name: Find the latest successful live check on main
+      # Only scheduled runs and pushes to main check every network and job; a manual run can check one.
+      - name: Find the latest full live check on main
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           last=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow live.yml --branch main --status success \
-            --limit 1 --json createdAt --jq '.[0].createdAt // empty')
+            --limit 20 --json createdAt,event \
+            --jq '[.[] | select(.event == "schedule" or .event == "push")][0].createdAt // empty')
           if [ -z "$last" ]; then
             echo "::error::No successful live check on main. Run live.yml from the Actions tab, then re-run this job."
             exit 1
@@ -36,6 +39,17 @@ jobs:
             exit 1
           fi
           echo "Live check passed at $last"
+
+      # Drift only warns in a scheduled run, but it keeps a live-check issue open until the network is clean.
+      - name: Make sure no network has open drift or outage
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          open=$(gh issue list --repo "$GITHUB_REPOSITORY" --label live-check --state open --json title --jq 'map(.title) | join(", ")')
+          if [ -n "$open" ]; then
+            echo "::error::Open live-check issues: $open. Resolve them before publishing."
+            exit 1
+          fi
 
   publish:
     needs: [tarball, live-recent]
