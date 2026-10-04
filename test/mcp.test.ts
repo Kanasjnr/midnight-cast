@@ -197,6 +197,23 @@ describe("MCP server", () => {
     }
   });
 
+  it("offers prompts for the common investigations, completing network names", async () => {
+    const { prompts } = await client.listPrompts();
+    expect(prompts.map((p) => p.name).sort()).toEqual(["check-network", "diagnose-error", "investigate-transaction"]);
+    const prompt = await client.getPrompt({
+      name: "diagnose-error",
+      arguments: { error: "1010: Invalid Transaction: Custom error: 170", network: "preprod" },
+    });
+    const text = (prompt.messages[0]!.content as { text: string }).text;
+    expect(text).toContain("Custom error: 170");
+    expect(text).toMatch(/Call decode with the whole message and network preprod/);
+    const completion = await client.complete({
+      ref: { type: "ref/prompt", name: "check-network" },
+      argument: { name: "network", value: "pre" },
+    });
+    expect(completion.completion.values).toEqual(["preprod"]);
+  });
+
   it("serves the support matrix and error codes as resources", async () => {
     process.env.MN_OFFLINE = "1";
     const { resources } = await client.listResources();

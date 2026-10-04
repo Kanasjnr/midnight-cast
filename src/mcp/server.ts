@@ -1,4 +1,4 @@
-import { McpServer } from "@modelcontextprotocol/server";
+import { McpServer, completable } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { blockAtHeightCommand, blockLatestCommand } from "../commands/block.js";
 import { decodeCommand } from "../commands/decode.js";
@@ -251,6 +251,63 @@ export function createMcpServer(options: McpOptions): McpServer {
     OFFLINE,
     { topic: z.enum(TOPICS).describe("Topic to explain") },
     ({ topic }) => explainCommand(topic, json, options.catalog),
+  );
+
+  // Prompts are user-invoked (slash commands in most clients): ready-made investigations over the tools.
+  const networkArg = (description: string) =>
+    completable(z.string().describe(description), (value) => networks.filter((n) => n.startsWith(value ?? "")));
+  const ask = (text: string) => ({ messages: [{ role: "user" as const, content: { type: "text" as const, text } }] });
+
+  server.registerPrompt(
+    "diagnose-error",
+    {
+      title: "Diagnose a Midnight error",
+      description: "Explain an error from a wallet, node, toolkit, indexer or Blockfrost, and how to fix it",
+      argsSchema: z.object({
+        error: z.string().describe("The full error message"),
+        network: networkArg("Network the error came from, if known").optional(),
+      }),
+    },
+    ({ error, network }) =>
+      ask(
+        `A Midnight developer hit this error${network ? ` on ${network}` : ""}:\n\n${error}\n\n` +
+          `Use the midnight-cast tools. Call decode with the whole message${network ? ` and network ${network}` : ""}, ` +
+          "then follow the next steps it returns, calling a step's tool with its arguments when it has one. " +
+          `If the error points at the network rather than the code, call health${network ? ` for ${network}` : ""}. ` +
+          "Finish with what the error means, the most likely cause here, and the fix.",
+      ),
+  );
+  server.registerPrompt(
+    "check-network",
+    {
+      title: "Check a Midnight network",
+      description: "Whether a network's RPC node, indexer and versions are healthy, and what to do if not",
+      argsSchema: z.object({ network: networkArg("Network to check") }),
+    },
+    ({ network }) =>
+      ask(
+        `Check whether the Midnight ${network} network is healthy with the midnight-cast tools. Call health for ${network}. ` +
+          "If anything fails, use ping or tip to narrow it down, and follow the next steps in the results. " +
+          "Report what works, what doesn't, whether it looks like an outage or a local configuration problem, and what to do.",
+      ),
+  );
+  server.registerPrompt(
+    "investigate-transaction",
+    {
+      title: "Investigate a Midnight transaction",
+      description: "What happened to a transaction: its status, failed segments, fees and DUST events",
+      argsSchema: z.object({
+        hash: z.string().describe("Transaction hash"),
+        network: networkArg("Network the transaction was sent to"),
+      }),
+    },
+    ({ hash, network }) =>
+      ask(
+        `Find out what happened to transaction ${hash} on Midnight ${network} with the midnight-cast tools. Call tx, ` +
+          "then follow its next steps, such as dust_event for the DUST events it produced. " +
+          "If a segment failed, explain that the indexer records only that it failed, and ask for the wallet or node error " +
+          "to decode. Summarise the outcome in plain language.",
+      ),
   );
 
   server.registerResource(
