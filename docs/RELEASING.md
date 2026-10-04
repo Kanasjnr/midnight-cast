@@ -40,10 +40,10 @@ The live checks fail during a network outage. Report the outage to Midnight's se
 After the pull request merges, create a GitHub release that targets `main`, tagged `v<x.y.z>`, with the changelog section as its notes. Publishing it starts `publish.yml`, which:
 
 1. runs the tarball smoke test again on the merged code;
-2. confirms that a live check on `main` succeeded within the last 24 hours, since the scheduled run every six hours keeps that true unless a network is down or has drifted;
+2. confirms that a full live check on `main` (a scheduled run or a push, not a manual run that may cover one network) succeeded within the last 24 hours, and that no `live-check` issue is open, since the live check keeps one open for each network while it reports drift or an outage;
 3. builds and publishes to npm with provenance.
 
-If the live check is older than 24 hours, run `live.yml` from the Actions tab, then re-run the failed job.
+If the last full live check is older than 24 hours, wait for the next scheduled run or push to `main`, then re-run the failed job. If a `live-check` issue is open, resolve the drift or wait for the outage to clear; the issue closes itself once the network is clean.
 
 Once it has published, check the release from a clean directory:
 
