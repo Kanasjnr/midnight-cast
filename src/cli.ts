@@ -15,7 +15,6 @@ import { blockAtHeightCommand, blockLatestCommand } from "./commands/block.js";
 import { dustEventCommand, dustEventsCommand } from "./commands/dust.js";
 import { TOPICS, explainCommand } from "./commands/explain.js";
 import { buildCatalog, isDefaultSubcommand } from "./lib/catalog.js";
-import { allowedNetworks, createMcpServer } from "./mcp/server.js";
 import { txCommand } from "./commands/tx.js";
 import { versionsCommand } from "./commands/versions.js";
 import type { ResolveFlags } from "./config.js";
@@ -449,6 +448,8 @@ program
     "Run a read-only MCP server on stdio for AI agents (networks from MIDNIGHT_CAST_NETWORKS, Blockfrost ID from BLOCKFROST_PROJECT_ID)",
   )
   .action(async () => {
+    // Loaded here so other commands don't pay for the MCP SDK.
+    const { allowedNetworks, createMcpServer } = await import("./mcp/server.js");
     let networks;
     try {
       networks = allowedNetworks();
