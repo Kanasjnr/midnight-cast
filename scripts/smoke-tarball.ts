@@ -6,7 +6,7 @@
 //
 // --offline skips the one command that needs a network (health preview).
 
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -61,6 +61,38 @@ async function cli(cwd: string, bin: string, args: string[]): Promise<{ stdout: 
   } catch (err) {
     const e = err as { stdout?: string; stderr?: string; code?: number };
     return { stdout: e.stdout ?? "", code: typeof e.code === "number" ? e.code : 1 };
+  }
+}
+
+/** Starts the installed MCP server, initialises a session and lists its tools. */
+async function mcpTools(cwd: string): Promise<string[]> {
+  const child = spawn("npx", ["--no-install", "midnight-cast", "mcp"], { cwd, shell: windows });
+  const messages = [
+    { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "smoke", version: "0" } } },
+    { jsonrpc: "2.0", method: "notifications/initialized" },
+    { jsonrpc: "2.0", id: 2, method: "tools/list" },
+  ];
+  for (const message of messages) child.stdin.write(`${JSON.stringify(message)}\n`);
+  try {
+    return await new Promise<string[]>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error("no tools/list answer within 30s")), 30_000);
+      let buffered = "";
+      child.stdout.on("data", (chunk: Buffer) => {
+        buffered += chunk.toString();
+        for (const line of buffered.split("\n").slice(0, -1)) {
+          const reply = JSON.parse(line) as { id?: number; result?: { tools: Array<{ name: string }> } };
+          if (reply.id === 2 && reply.result) {
+            clearTimeout(timer);
+            resolve(reply.result.tools.map((t) => t.name));
+          }
+        }
+        buffered = buffered.slice(buffered.lastIndexOf("\n") + 1);
+      });
+      child.on("exit", (code) => reject(new Error(`mcp exited with ${code}`)));
+    });
+  } finally {
+    child.stdin.end();
+    child.kill();
   }
 }
 
@@ -128,6 +160,12 @@ async function main(): Promise<number> {
 
   const usage = await cli(project, "midnight-cast", ["no-such-command", "--json"]);
   check(usage.code === 2 && valid(usage.stdout), "a usage error exits 2 with a valid envelope");
+
+  const tools: string[] = await mcpTools(project).catch((err: unknown) => {
+    console.log(`     ${err instanceof Error ? err.message : String(err)}`);
+    return [];
+  });
+  check(tools.length === 10 && tools.includes("decode"), `midnight-cast mcp lists its tools (${tools.length})`);
 
   if (!offline) {
     // The network may be down; the gate is about the package, so any valid envelope passes.
