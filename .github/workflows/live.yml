@@ -174,3 +174,27 @@ jobs:
 
       - name: Compare the ledger error map with the deployed node
         run: npm run error-codes
+
+  response-shapes:
+    name: Response shapes (preview, preprod, mainnet)
+    if: github.event_name != 'workflow_dispatch' || inputs.network == 'all'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+
+      - name: Configure mainnet (Blockfrost)
+        uses: ./.github/actions/blockfrost-mainnet
+        with:
+          project-id: ${{ secrets.BLOCKFROST_MAINNET_PROJECT_ID }}
+          required: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
+
+      - name: Compare live responses and the indexer schema with the recorded fixtures
+        run: npm run fixtures -- --check
