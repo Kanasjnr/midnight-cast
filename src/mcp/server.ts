@@ -13,6 +13,7 @@ import { versionsCommand } from "../commands/versions.js";
 import type { Catalog } from "../lib/catalog.js";
 import { loadDataJson } from "../lib/data-path.js";
 import { resolveSupportMatrix } from "../lib/upstream-matrix.js";
+import { loadConfigFile } from "../config.js";
 import { NETWORK_NAMES } from "../networks.js";
 import { envelopeOf, fail, withOwnWarnings, type EmitResult } from "../output.js";
 
@@ -23,15 +24,20 @@ export interface McpOptions {
   networks?: string[];
 }
 
-export function allowedNetworks(env = process.env.MIDNIGHT_CAST_NETWORKS): string[] {
+/** Built-in networks plus any defined in the config file, which the CLI accepts too. */
+export function allowedNetworks(
+  env = process.env.MIDNIGHT_CAST_NETWORKS,
+  configured: string[] = Object.keys(loadConfigFile().networks ?? {}),
+): string[] {
   const requested = env
     ?.split(",")
     .map((n) => n.trim())
     .filter(Boolean);
   if (!requested?.length) return NETWORK_NAMES;
-  const unknown = requested.filter((n) => !NETWORK_NAMES.includes(n));
+  const known = [...new Set([...NETWORK_NAMES, ...configured])];
+  const unknown = requested.filter((n) => !known.includes(n));
   if (unknown.length) {
-    throw new Error(`MIDNIGHT_CAST_NETWORKS has unknown networks: ${unknown.join(", ")}. Known: ${NETWORK_NAMES.join(", ")}`);
+    throw new Error(`MIDNIGHT_CAST_NETWORKS has unknown networks: ${unknown.join(", ")}. Known: ${known.join(", ")}`);
   }
   return requested;
 }

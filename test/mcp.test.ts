@@ -188,10 +188,11 @@ describe("MCP server", () => {
 });
 
 describe("network allow-list", () => {
-  it("defaults to every built-in network and rejects unknown names", () => {
-    expect(allowedNetworks(undefined)).toEqual(["preview", "preprod", "mainnet", "local"]);
-    expect(allowedNetworks(" preprod , mainnet ")).toEqual(["preprod", "mainnet"]);
-    expect(() => allowedNetworks("preprod,devnet")).toThrow(/unknown networks: devnet/);
+  it("defaults to every built-in network, accepts configured ones and rejects unknown names", () => {
+    expect(allowedNetworks(undefined, [])).toEqual(["preview", "preprod", "mainnet", "local"]);
+    expect(allowedNetworks(" preprod , mainnet ", [])).toEqual(["preprod", "mainnet"]);
+    expect(allowedNetworks("preprod,devnet", ["devnet"])).toEqual(["preprod", "devnet"]);
+    expect(() => allowedNetworks("preprod,devnet", [])).toThrow(/unknown networks: devnet/);
   });
 });
 

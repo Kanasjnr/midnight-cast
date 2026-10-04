@@ -29,7 +29,7 @@ Two resources are available as well: `midnight-cast://support-matrix`, the versi
 
 The server reads two environment variables:
 
-- `MIDNIGHT_CAST_NETWORKS` limits which networks the model may query, as a comma-separated list such as `preview,preprod`. By default every built-in network is allowed: `preview`, `preprod`, `mainnet` and `local`. An unknown name stops the server at startup.
+- `MIDNIGHT_CAST_NETWORKS` limits which networks the model may query, as a comma-separated list such as `preview,preprod`. By default every built-in network is allowed: `preview`, `preprod`, `mainnet` and `local`. A network defined in your `config.toml` can be allowed by naming it here. An unknown name stops the server at startup.
 - `BLOCKFROST_PROJECT_ID` is the Blockfrost project ID mainnet needs. It is sent only to Blockfrost and is redacted from every response, so the model never sees it.
 
 The model chooses a network by name but can't pass endpoint URLs, so it can't point the server at other hosts. Endpoints come from the built-in networks and your `~/.config/midnight-cast/config.toml`, as they do for the CLI.
