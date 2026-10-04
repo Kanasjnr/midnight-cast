@@ -5,14 +5,44 @@ on:
     types: [published]
 
 permissions:
-  id-token: write
   contents: read
 
 jobs:
-  publish:
+  tarball:
     # Only publish when the GitHub release targets main (not next-release).
     if: github.event.release.target_commitish == 'main'
+    uses: ./.github/workflows/tarball.yml
+
+  live-recent:
+    name: Live check passed in the last 24h
+    if: github.event.release.target_commitish == 'main'
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+    steps:
+      - name: Find the latest successful live check on main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          last=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow live.yml --branch main --status success \
+            --limit 1 --json createdAt --jq '.[0].createdAt // empty')
+          if [ -z "$last" ]; then
+            echo "::error::No successful live check on main. Run live.yml from the Actions tab, then re-run this job."
+            exit 1
+          fi
+          age=$(( $(date -u +%s) - $(date -u -d "$last" +%s) ))
+          if [ "$age" -gt 86400 ]; then
+            echo "::error::The last successful live check on main was at $last, more than 24h ago. Run live.yml, then re-run this job."
+            exit 1
+          fi
+          echo "Live check passed at $last"
+
+  publish:
+    needs: [tarball, live-recent]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
