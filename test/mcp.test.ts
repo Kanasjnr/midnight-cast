@@ -98,6 +98,11 @@ describe("MCP server", () => {
     process.env = saved;
   });
 
+  it("introduces itself and tells the model how to use the tools", () => {
+    expect(client.getServerVersion()).toMatchObject({ name: "midnight-cast", description: expect.stringContaining("Read-only") });
+    expect(client.getInstructions()).toMatch(/call decode with the whole message first/);
+  });
+
   it("lists ten read-only tools with typed inputs and the envelope as output", async () => {
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual(
@@ -178,7 +183,11 @@ describe("MCP server", () => {
   it("serves the support matrix and error codes as resources", async () => {
     process.env.MN_OFFLINE = "1";
     const { resources } = await client.listResources();
-    expect(resources.map((r) => r.uri).sort()).toEqual(["midnight-cast://error-codes", "midnight-cast://support-matrix"]);
+    expect(resources.map((r) => r.uri).sort()).toEqual([
+      "midnight-cast://catalog",
+      "midnight-cast://error-codes",
+      "midnight-cast://support-matrix",
+    ]);
     const matrix = await client.readResource({ uri: "midnight-cast://support-matrix" });
     expect(JSON.parse((matrix.contents[0] as { text: string }).text).networks.preprod).toBeDefined();
     const codes = await client.readResource({ uri: "midnight-cast://error-codes" });

@@ -58,6 +58,15 @@ const envelopeSchema = z.object({
   ),
 });
 
+// Sent to the client at connection and usually shown to the model: how to get good answers from these tools.
+export const INSTRUCTIONS = `midnight-cast reads the public Midnight networks and explains Midnight errors. Every tool only reads; nothing needs a wallet or keys.
+
+- When the user has an error message, call decode with the whole message first.
+- When a network might be the problem rather than the user's code, call health; ping and tip narrow it down.
+- To see what happened to a transaction, call tx with its hash.
+- Every result is an envelope: ok, data, error { message, kind, hint }, warnings and next. Follow next: when a step has a tool field, call that tool with exactly those arguments; otherwise the command is for a terminal.
+- Mainnet goes through Blockfrost and needs BLOCKFROST_PROJECT_ID in this server's environment. If a mainnet call says it is missing, ask the user to add it to this server's MCP configuration.`;
+
 // Tools only read. Those that reach a network say so; decode and explain work from bundled data.
 const LIVE = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true } as const;
 const OFFLINE = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false } as const;
@@ -90,7 +99,16 @@ export function createMcpServer(options: McpOptions): McpServer {
     .enum(networks as [string, ...string[]])
     .describe(`Midnight network to query: ${networks.join(", ")}`);
   const json = { json: true };
-  const server = new McpServer({ name: "midnight-cast", version: options.version });
+  const server = new McpServer(
+    {
+      name: "midnight-cast",
+      title: "midnight-cast",
+      version: options.version,
+      description: "Read-only access to the public Midnight networks: health, transactions, DUST events and error decoding",
+      websiteUrl: "https://github.com/Kanasjnr/midnight-cast",
+    },
+    { instructions: INSTRUCTIONS },
+  );
 
   const tool = <Shape extends z.ZodRawShape>(
     name: string,
@@ -206,9 +224,9 @@ export function createMcpServer(options: McpOptions): McpServer {
   tool(
     "explain",
     "explain",
-    `Background on a topic (${TOPICS.join(", ")}), or, with no topic, a catalog of every midnight-cast command, its options, exit codes and error kinds.`,
+    `Background on a Midnight topic: ${TOPICS.join(", ")}.`,
     OFFLINE,
-    { topic: z.enum(TOPICS).optional().describe("Topic; omit for the command catalog") },
+    { topic: z.enum(TOPICS).describe("Topic to explain") },
     ({ topic }) => explainCommand(topic, json, options.catalog),
   );
 
@@ -241,6 +259,17 @@ export function createMcpServer(options: McpOptions): McpServer {
       };
       return { contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(catalog, null, 2) }] };
     },
+  );
+
+  server.registerResource(
+    "catalog",
+    "midnight-cast://catalog",
+    {
+      title: "midnight-cast command catalog",
+      description: "Every midnight-cast CLI command with its options, exit codes and error kinds, for agents that also have a terminal",
+      mimeType: "application/json",
+    },
+    (uri) => ({ contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(options.catalog(), null, 2) }] }),
   );
 
   return server;
