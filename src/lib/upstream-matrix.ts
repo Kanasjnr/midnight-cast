@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { configPath } from "../config.js";
-import { cacheDir, readCache, writeCache, type CacheFile } from "./cache.js";
+import { cacheDir, cachedFetch, formatAge, isOffline } from "./cache.js";
 import { loadDataJson } from "./data-path.js";
 import { parseMatrixUpdated, type MatrixNetwork, type SupportMatrixFile } from "./versions.js";
 
@@ -128,38 +128,9 @@ export interface ResolveOptions {
   bundled?: SupportMatrixFile;
 }
 
-const HOUR_MS = 60 * 60 * 1000;
-const CACHE_TTL_MS = 6 * HOUR_MS;
-// After a failed fetch, later runs don't wait on the timeout again for this long.
-const RETRY_AFTER_FAILURE_MS = HOUR_MS;
-// How old a cached copy may be to stand in when a refresh fails.
-const FALLBACK_MAX_AGE_MS = 7 * 24 * HOUR_MS;
-const FETCH_TIMEOUT_MS = 3_000;
+export { isOffline };
 
-
-export function isOffline(flag: boolean | undefined): boolean {
-  return flag ?? process.env.MN_OFFLINE === "1";
-}
-
-function fromUpstream(
-  bundled: SupportMatrixFile,
-  cache: CacheFile,
-  kind: "upstream" | "cache",
-  now: number,
-  reason?: string,
-): ResolvedMatrix {
-  const { matrix, notes } = overlayUpstream(bundled, cache.body);
-  return {
-    matrix,
-    source: {
-      kind,
-      updated: cache.fetchedAt,
-      ageMinutes: Math.max(0, Math.round((now - Date.parse(cache.fetchedAt)) / 60_000)),
-      ...(reason ? { reason } : {}),
-    },
-    notes,
-  };
-}
+const isPublishedMatrix = (body: unknown): body is UpstreamFile => !!(body as UpstreamFile)?.components?.length;
 
 /**
  * The support matrix `versions` and `health` judge against: a user override
@@ -184,51 +155,35 @@ export async function resolveSupportMatrix(options: ResolveOptions = {}): Promis
   });
   if (isOffline(options.offline)) return fromBundled("offline");
 
-  const now = options.now ?? Date.now();
-  const cachePath = join(options.cacheDir ?? cacheDir(), "published-support-matrix.json");
-  const cached = readCache(cachePath);
-  const age = (at: string | undefined) => (at ? now - Date.parse(at) : Number.NaN);
-  // A timestamp in the future (clock skew, a copied cache) counts as expired.
-  const within = (at: string | undefined, limit: number) => age(at) >= 0 && age(at) < limit;
-  // An old cache shouldn't stand in for the newer matrix a later release bundles.
-  const usable =
-    cached && within(cached.fetchedAt, FALLBACK_MAX_AGE_MS) && !bundledIsNewer(bundled.updated, cached.fetchedAt)
-      ? cached
-      : undefined;
-  const fallback = (reason: string) =>
-    usable ? fromUpstream(bundled, usable, "cache", now, reason) : fromBundled(reason);
-
-  if (!options.refresh) {
-    if (usable && within(usable.fetchedAt, CACHE_TTL_MS)) return fromUpstream(bundled, usable, "cache", now);
-    if (cached?.failedAt && within(cached.failedAt, RETRY_AFTER_FAILURE_MS)) {
-      return fallback(`published matrix unavailable (${cached.failure ?? "fetch failed"}; retrying after an hour)`);
-    }
-  }
-
-  try {
-    const response = await (options.fetchImpl ?? fetch)(UPSTREAM_MATRIX_URL, {
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const fresh: CacheFile = { fetchedAt: new Date(now).toISOString(), body: await response.json() };
-    if (!(fresh.body as UpstreamFile)?.components?.length) throw new Error("no components in the published matrix");
-    writeCache(cachePath, fresh);
-    return fromUpstream(bundled, fresh, "upstream", now);
-  } catch (err) {
-    const failure = err instanceof Error ? err.message : String(err);
-    writeCache(cachePath, {
-      fetchedAt: cached?.fetchedAt ?? new Date(0).toISOString(),
-      body: cached?.body ?? null,
-      failedAt: new Date(now).toISOString(),
-      failure,
-    });
-    return fallback(`published matrix unavailable (${failure})`);
-  }
-}
-
-function bundledIsNewer(bundledUpdated: string, fetchedAt: string): boolean {
-  const published = parseMatrixUpdated(bundledUpdated);
-  return published !== null && published.getTime() > Date.parse(fetchedAt);
+  const fetched = await cachedFetch({
+    path: join(options.cacheDir ?? cacheDir(), "published-support-matrix.json"),
+    url: UPSTREAM_MATRIX_URL,
+    label: "published matrix",
+    read: async (response) => {
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const body: unknown = await response.json();
+      if (!isPublishedMatrix(body)) throw new Error("no components in the published matrix");
+      return body;
+    },
+    valid: isPublishedMatrix,
+    // An old cache shouldn't stand in for the newer matrix a later release bundles.
+    bundledAt: parseMatrixUpdated(bundled.updated)?.getTime(),
+    refresh: options.refresh,
+    now: options.now,
+    fetchImpl: options.fetchImpl,
+  });
+  if ("unavailable" in fetched) return fromBundled(fetched.unavailable);
+  const { matrix, notes } = overlayUpstream(bundled, fetched.body);
+  return {
+    matrix,
+    source: {
+      kind: fetched.kind,
+      updated: fetched.fetchedAt,
+      ageMinutes: fetched.ageMinutes,
+      ...(fetched.reason ? { reason: fetched.reason } : {}),
+    },
+    notes,
+  };
 }
 
 export function describeMatrixSource(source: MatrixSource): string {
@@ -239,10 +194,7 @@ export function describeMatrixSource(source: MatrixSource): string {
       return `bundled (updated ${source.updated}${source.reason ? `; ${source.reason}` : ""})`;
     case "upstream":
       return "Midnight's published matrix (fetched now)";
-    case "cache": {
-      const age = source.ageMinutes ?? 0;
-      const ago = age < 60 ? `${age}m` : `${Math.round(age / 60)}h`;
-      return `Midnight's published matrix (cached ${ago} ago${source.reason ? `; ${source.reason}` : ""})`;
-    }
+    case "cache":
+      return `Midnight's published matrix (cached ${formatAge(source.ageMinutes ?? 0)} ago${source.reason ? `; ${source.reason}` : ""})`;
   }
 }
