@@ -30,7 +30,7 @@ Available on every command:
 | `--indexer-ws <url>` | Override indexer WebSocket URL |
 | `--proof-server <url>` | Override proof server URL (ping / health) |
 | `--project-id <id>` | Blockfrost project ID for mainnet |
-| `--offline` | `versions`, `matrix` and `health` use the bundled support matrix instead of fetching Midnight's |
+| `--offline` | `versions`, `matrix` and `health` use the bundled support matrix and examples-report summaries instead of fetching from GitHub |
 
 Environment: `MN_NETWORK` sets the default network (same as `--network`). `BLOCKFROST_PROJECT_ID` supplies the Blockfrost project ID for any Blockfrost network that has none in its config section; `--project-id` overrides both. `MN_OFFLINE=1` is the same as `--offline`.
 
@@ -192,7 +192,7 @@ midnight-cast versions preprod --project-dir ~/code/my-dapp
 | `--fail-on-mismatch` | Exit `1` if live checks fail (CI) |
 | `--no-local` | Do not check local packages |
 | `--project-dir <dir>` | Check the project in this directory instead of the current one |
-| `--refresh-matrix` | Fetch Midnight's published matrix even if the cached copy is fresh (also on `health`) |
+| `--refresh-matrix` | Fetch Midnight's published matrix and the examples report even if the cached copies are fresh (also on `health`) |
 
 **Live checks:** node `system_version` against the matrix minimum (`>=minNode`; exact match for rows without one), node runtime `specVersion` against the matrix `runtimeSpec`, indexer API path (`v4`), RPC `specVersion` vs indexer `protocolVersion`, and proof server `GET /version` when a URL is configured. A minimum rather than an exact node version is used because different operators run different compatible builds: on 2 October 2026 Midnight's endpoints reported node 1.0.400 and Blockfrost's mainnet node 2.1.0, both on runtime 1000300.
 
@@ -214,10 +214,9 @@ The published matrix updates only what the endpoints can't reveal: the indexer, 
 
 <a id="midnights-examples"></a>**Midnight's examples:** for each node release, the maintainers of [midnight-examples](https://github.com/midnightntwrk/midnight-examples) run every example's test suite against public preprod and commit the result as `reports/node-<version>-regression.json`. `versions` and `health` show that report for the node version the network runs (`examples` in JSON): how many tests passed and failed, on which network and when, the report's own verdict when some failed, its known issues, and a link. It answers "is it the network or my code?": if the examples pass on this node and the network is healthy, look at your code or setup first.
 
-- `status` is `passed` when every test passed and `failures` when some failed; read the verdict and known issues, since a failure can be a test problem rather than a node one.
-- A node version with no report is `unverified`, never matched to an older report. So is a report from a different runtime `spec_version` than the network runs.
-- The report is fetched for that exact version with a 3-second timeout and cached like the published matrix: six hours, a week as a fallback, and no retry for an hour after a failure. Offline, or when nothing can be fetched, the summaries bundled with this release are used. `source` says which, and how old it is.
-- The reports test preprod, so the network and date are always shown. Another network running the same node version is covered only as far as that run goes.
+- `status` is `passed` when every suite and test passed, and `failures` when any failed; read the verdict and known issues, since a failure can be a test problem rather than a node one.
+- It is `unverified`, with a `reason`, when the node version has no report (it is never matched to an older one), when the report ran a different runtime `spec_version` or another network, or when it has no passing tests. The runs are on preprod, so mainnet and preview show the preprod run for context but stay unverified: the same node on another network isn't what the examples tested.
+- The report is fetched for that exact version with a 3-second timeout and cached like the published matrix: six hours, a week as a fallback, and no retry for an hour after a failure. A report that says it's about a different node version is rejected. Offline, or when nothing can be fetched, the summaries bundled with this release are used, and a cached copy older than them is ignored. `source` says which was used, and how old it is. Reading the report never fails `versions` or `health`; a problem shows as `unverified` with the reason.
 
 Example output:
 
