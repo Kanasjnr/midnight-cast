@@ -171,7 +171,7 @@ export function createMcpServer(options: McpOptions): McpServer {
     "Compare the node's latest block height with the indexer's, to see whether the indexer is behind.",
     LIVE,
     { network, threshold: z.number().int().min(0).optional().describe("Lag in blocks that counts as out of sync (default 100)") },
-    ({ network, threshold }) => tipCommand(network, { threshold, failOnLag: true }, json),
+    ({ network, threshold }) => tipCommand(network, { threshold }, json),
   );
   tool(
     "versions",

@@ -127,7 +127,18 @@ describe("DUST defaults", () => {
       const result = await dustEventsCommand("preprod", { indexerWs: indexer.url, limit: 3, timeoutMs: 5000 }, { json: true });
       expect((result.data as { table: Array<{ id: number }> }).table.map((e) => e.id)).toEqual([33, 34, 40]);
       const more = await dustEventsCommand("preprod", { indexerWs: indexer.url, limit: 8, timeoutMs: 5000 }, { json: true });
-      expect((more.data as { table: Array<{ id: number }> }).table.map((e) => e.id)).toEqual([30, 31, 33, 34, 40]);
+      expect((more.data as { table: Array<{ id: number }> }).table.map((e) => e.id)).toEqual([1, 30, 31, 33, 34, 40]);
+    } finally {
+      indexer.stop();
+    }
+  });
+
+  it("reads a network whose only event has id 0", async () => {
+    const { dustEventsCommand } = await import("../src/commands/dust.js");
+    const indexer = await indexerWithEvents([0]);
+    try {
+      const result = await dustEventsCommand("preprod", { indexerWs: indexer.url, limit: 5, timeoutMs: 5000 }, { json: true });
+      expect((result.data as { table: Array<{ id: number }> }).table.map((e) => e.id)).toEqual([0]);
     } finally {
       indexer.stop();
     }
