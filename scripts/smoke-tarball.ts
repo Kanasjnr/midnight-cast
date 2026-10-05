@@ -176,7 +176,7 @@ async function main(): Promise<number> {
     console.log(`     ${err instanceof Error ? err.message : String(err)}`);
     return [];
   });
-  check(tools.length === 10 && tools.includes("decode"), `midnight-cast mcp lists its tools (${tools.length})`);
+  check(tools.length === 12 && tools.includes("contract"), `midnight-cast mcp lists its tools (${tools.length})`);
 
   if (!offline) {
     // The network may be down; the gate is about the package, so any valid envelope passes.

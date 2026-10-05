@@ -105,10 +105,23 @@ describe("MCP server", () => {
     expect(client.getInstructions()).toMatch(/call decode with the whole message first/);
   });
 
-  it("lists ten read-only tools with typed inputs and the envelope as output", async () => {
+  it("lists twelve read-only tools with typed inputs and the envelope as output", async () => {
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual(
-      ["block", "decode", "dust_event", "dust_events", "explain", "health", "ping", "tip", "tx", "versions"].sort(),
+      [
+        "block",
+        "contract",
+        "decode",
+        "dust_event",
+        "dust_events",
+        "dust_status",
+        "explain",
+        "health",
+        "ping",
+        "tip",
+        "tx",
+        "versions",
+      ].sort(),
     );
     for (const t of tools) {
       expect(t.annotations, t.name).toMatchObject({ readOnlyHint: true, destructiveHint: false });

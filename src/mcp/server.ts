@@ -9,6 +9,8 @@ import { pingCommand } from "../commands/ping.js";
 import { tipCommand } from "../commands/tip.js";
 import { txCommand } from "../commands/tx.js";
 import { versionsCommand } from "../commands/versions.js";
+import { contractCommand } from "../commands/contract.js";
+import { dustStatusCommand } from "../commands/dust-status.js";
 import type { Catalog } from "../lib/catalog.js";
 import { loadDataJson } from "../lib/data-path.js";
 import { resolveSupportMatrix } from "../lib/upstream-matrix.js";
@@ -232,6 +234,33 @@ export function createMcpServer(options: McpOptions): McpServer {
       limit: z.number().int().min(1).max(50).optional().describe("How many events to read (default 10, at most 50)"),
     },
     ({ network, from, limit }) => dustEventsCommand(network, { from, limit: limit ?? 10 }, json),
+  );
+  tool(
+    "contract",
+    "contract",
+    "Look up a deployed contract by address: whether it exists, its latest action (deploy, call or update) and the circuit a call ran, the deploy transaction and block, unshielded balances, and the state's size and sha256.",
+    LIVE,
+    {
+      network,
+      address: z.string().min(1).describe("Contract address, hex, optionally prefixed with 0x"),
+      includeState: z.boolean().optional().describe("Also return the full state hex, which can be hundreds of kilobytes (default false)"),
+    },
+    ({ network, address, includeState }) => contractCommand(address, network, { state: includeState }, json),
+  );
+  tool(
+    "dust_status",
+    "dust-status",
+    "DUST generation for Cardano reward addresses: whether each is registered, its NIGHT balance, generation rate, and current and maximum DUST capacity. Use when a wallet has no DUST.",
+    LIVE,
+    {
+      network,
+      addresses: z
+        .array(z.string().min(1))
+        .min(1)
+        .max(20)
+        .describe("Cardano reward addresses (stake1… on mainnet, stake_test1… on test networks)"),
+    },
+    ({ network, addresses }) => dustStatusCommand(addresses, network, {}, json),
   );
   tool(
     "decode",
