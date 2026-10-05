@@ -11,7 +11,9 @@ const SERVICE_DESK = "https://github.com/midnightntwrk/servicedesk";
 
 export interface Attempt {
   at: string;
+  /** `ping --json`'s table: every service, with the error kind when it failed. */
   services: Array<{ service: string; status: string; latencyMs: number; detail?: string; errorKind?: string }>;
+  /** From `health --json`, which only has it when both RPC and indexer answered. */
   sync?: { rpcHeight: number; indexerHeight: number; delta: number; threshold: number; inSync: boolean };
   error?: string;
 }
@@ -23,45 +25,60 @@ export interface HeadSample {
   error?: string;
 }
 
-export interface ReportInput {
-  network: string;
+/** What a live check saw, kept so a draft can quote it. */
+export interface Evidence {
   attempts: Attempt[];
   heads?: HeadSample[];
   endpoints?: { rpc: string; indexerHttp: string; blockfrost: boolean };
-  nodeVersion?: string;
   environment?: string;
   runUrl?: string;
+}
+
+export interface ReportInput extends Evidence {
+  network: string;
+  nodeVersion?: string;
 }
 
 /** A head this many blocks below the highest one already seen means a backend is behind. */
 export const HEAD_TOLERANCE = 2;
 
+/** Each sample with how far it fell below the highest head before it, when that's past the tolerance. */
+export function stepsBack(heads: HeadSample[] = []): Array<{ sample: HeadSample; highest?: number; drop?: number }> {
+  let highest: number | undefined;
+  return heads.map((sample) => {
+    const { head } = sample;
+    if (head === undefined || !Number.isFinite(head)) return { sample };
+    const drop = highest !== undefined && highest - head > HEAD_TOLERANCE ? highest - head : undefined;
+    const step = drop === undefined ? { sample } : { sample, highest, drop };
+    highest = Math.max(highest ?? head, head);
+    return step;
+  });
+}
+
 /** The largest step back in a series of heads, or undefined if it never went back past the tolerance. */
 export function headRegression(heads: HeadSample[] = []): { from: number; to: number; drop: number } | undefined {
-  let highest: number | undefined;
   let worst: { from: number; to: number; drop: number } | undefined;
-  for (const { head } of heads) {
-    if (head === undefined) continue;
-    if (highest !== undefined && highest - head > HEAD_TOLERANCE && highest - head > (worst?.drop ?? 0)) {
-      worst = { from: highest, to: head, drop: highest - head };
-    }
-    highest = Math.max(highest ?? head, head);
+  for (const { sample, highest, drop } of stepsBack(heads)) {
+    if (drop !== undefined && drop > (worst?.drop ?? 0)) worst = { from: highest!, to: sample.head!, drop };
   }
   return worst;
 }
 
 type Problem =
-  | { kind: "unreachable"; services: string[] }
-  | { kind: "lag" }
-  | { kind: "heads"; from: number; to: number; drop: number };
+  | { key: string; kind: "unreachable"; services: string[] }
+  | { key: string; kind: "lag"; behind: "indexer" | "rpc" }
+  | { key: string; kind: "heads"; from: number; to: number; drop: number };
 
 const REQUIRED = new Set(["rpc", "indexer"]);
 const failed = (a: Attempt) => a.services.filter((s) => REQUIRED.has(s.service) && s.status !== "OK");
+const rejected = (s: Attempt["services"][number]) =>
+  s.errorKind === "http_4xx" && /\((401|403)\)|rejected by Blockfrost/.test(s.detail ?? "");
 
 /** Blockfrost refusing the project ID is a problem with our secret, not with the network. */
 export function rejectedCredentials(input: ReportInput): boolean {
   const last = input.attempts.at(-1);
-  return !!input.endpoints?.blockfrost && !!last && failed(last).some((s) => s.errorKind === "http_4xx");
+  const down = last ? failed(last) : [];
+  return !!input.endpoints?.blockfrost && down.length > 0 && down.every(rejected);
 }
 
 export function problems(input: ReportInput): Problem[] {
@@ -69,12 +86,29 @@ export function problems(input: ReportInput): Problem[] {
   const last = input.attempts.at(-1);
   if (last && !rejectedCredentials(input)) {
     const down = failed(last).map((s) => s.service);
-    if (down.length) found.push({ kind: "unreachable", services: down });
-    else if (last.sync && !last.sync.inSync) found.push({ kind: "lag" });
+    if (down.length) found.push({ key: `unreachable:${down.join("+")}`, kind: "unreachable", services: down });
+    else if (last.sync && !last.sync.inSync) {
+      const behind = last.sync.delta > 0 ? "indexer" : "rpc";
+      found.push({ key: `lag:${behind}`, kind: "lag", behind });
+    }
   }
   const regression = headRegression(input.heads);
-  if (regression) found.push({ kind: "heads", ...regression });
+  if (regression) found.push({ key: "heads", kind: "heads", ...regression });
   return found;
+}
+
+/** When a problem showed: the attempts, or the head samples, that had it. */
+function sightings(problem: Problem, input: ReportInput): string[] {
+  if (problem.kind === "heads") {
+    return stepsBack(input.heads).filter((s) => s.drop !== undefined).map((s) => s.sample.at);
+  }
+  return input.attempts
+    .filter((a) =>
+      problem.kind === "unreachable"
+        ? problem.services.every((service) => failed(a).some((s) => s.service === service))
+        : !!a.sync && !a.sync.inSync && a.sync.delta > 0 === (problem.behind === "indexer"),
+    )
+    .map((a) => a.at);
 }
 
 const NETWORK: Record<string, string> = { mainnet: "Mainnet", preprod: "Preprod", preview: "Preview" };
@@ -135,6 +169,8 @@ function headLoop(rpc: string, blockfrost: boolean): string {
 }
 
 const time = (iso: string) => iso.replace(/\.\d+Z$/, "Z");
+const checker = (input: ReportInput) =>
+  input.environment?.includes("GitHub Actions") ? "a scheduled check running in GitHub Actions" : "a check";
 const clock = (iso: string) => iso.slice(11, 19);
 
 function attemptLines(input: ReportInput): string[] {
@@ -144,19 +180,24 @@ function attemptLines(input: ReportInput): string[] {
       .map((s) =>
         [`${s.service}=${s.status}`, `${s.latencyMs}ms`, s.errorKind, s.detail && `"${s.detail}"`].filter(Boolean).join(" "),
       );
-    const sync = a.sync ? ` node=${a.sync.rpcHeight} indexer=${a.sync.indexerHeight} behind=${a.sync.delta}` : "";
+    const sync = a.sync ? ` node=${a.sync.rpcHeight} indexer=${a.sync.indexerHeight} delta=${a.sync.delta}` : "";
     return `${time(a.at)} ${a.error ? `error "${a.error}"` : services.join(" ")}${sync}`;
   });
 }
 
 function headLines(heads: HeadSample[]): string[] {
-  let highest: number | undefined;
-  return heads.map((h) => {
-    if (h.head === undefined) return `${clock(h.at)} no response (${h.error ?? "failed"}) ${h.ms}ms`;
-    const back = highest !== undefined && h.head < highest ? `   <- ${highest - h.head} below ${highest}` : "";
-    highest = Math.max(highest ?? h.head, h.head);
-    return `${clock(h.at)} head=${h.head} ${h.ms}ms${back}`;
-  });
+  return stepsBack(heads).map(({ sample, highest, drop }) =>
+    sample.head === undefined
+      ? `${clock(sample.at)} no response (${sample.error ?? "failed"}) ${sample.ms}ms`
+      : `${clock(sample.at)} head=${sample.head} ${sample.ms}ms${drop === undefined ? "" : `   <- ${drop} below ${highest}`}`,
+  );
+}
+
+/** "all 3 attempts between A and B", "2 of 3 attempts between A and B" or "the check's one attempt, at A". */
+function attemptsPhrase(seen: string[], total: number): string {
+  if (total === 1) return `the check's one attempt, at ${time(seen[0]!)}`;
+  const when = seen.length === 1 ? `at ${time(seen[0]!)}` : `between ${time(seen[0]!)} and ${time(seen.at(-1)!)}`;
+  return `${seen.length === total ? `all ${total}` : `${seen.length} of ${total}`} attempts, ${when}`;
 }
 
 interface Draft {
@@ -174,13 +215,12 @@ interface Draft {
   logs: string[];
 }
 
-function draft(problem: Problem, input: ReportInput, window: { firstSeen: string; lastSeen: string }): Draft {
+function draft(problem: Problem, input: ReportInput, seen: string[]): Draft {
   const net = NETWORK[input.network] ?? input.network;
   const rpc = input.endpoints?.rpc ?? "<rpc url>";
   const indexer = input.endpoints?.indexerHttp ?? "<indexer url>";
   const blockfrost = !!input.endpoints?.blockfrost;
   const attempts = input.attempts;
-  const span = `${attempts.length} attempt${attempts.length === 1 ? "" : "s"} between ${time(attempts[0]?.at ?? window.lastSeen)} and ${time(attempts.at(-1)?.at ?? window.lastSeen)}`;
 
   if (problem.kind === "unreachable") {
     const both = problem.services.length > 1;
@@ -199,7 +239,7 @@ function draft(problem: Problem, input: ReportInput, window: { firstSeen: string
               "P1 only if the network is down for everyone. Confirm it from another location with the commands below first, and page Midnight as their P1 process requires: a GitHub issue alone isn't enough. If it isn't down everywhere, file it as P2.",
           }
         : {}),
-      description: `The public ${net} ${names} ${both ? "were" : "was"} unreachable from a scheduled check running in GitHub Actions. Every one of ${span} failed.`,
+      description: `The public ${net} ${names} ${both ? "were" : "was"} unreachable from ${checker(input)}, in ${attemptsPhrase(seen, attempts.length)}.`,
       expected: [
         ...(problem.services.includes("rpc") ? ["`system_health` on the public RPC answers with HTTP 200 and a JSON-RPC result."] : []),
         ...(problem.services.includes("indexer") ? ["The indexer's GraphQL endpoint answers `{ block { height } }` with HTTP 200 and data."] : []),
@@ -214,18 +254,34 @@ function draft(problem: Problem, input: ReportInput, window: { firstSeen: string
   }
 
   if (problem.kind === "lag") {
-    const sync = attempts.at(-1)!.sync!;
-    return {
-      title: `[Bug]: ${net} indexer ${sync.delta} blocks behind the node`,
-      component: "indexer",
-      severity: "P3",
-      description: `The public ${net} indexer is behind the node it indexes. A scheduled check running in GitHub Actions saw it behind in every one of ${span}, so reads from the indexer (wallet sync, DApp queries) return stale state.`,
-      expected: `The indexer stays within ${sync.threshold} blocks of the node.`,
-      actual: `At ${time(attempts.at(-1)!.at)} the node was at block ${sync.rpcHeight} and the indexer at ${sync.indexerHeight}: ${sync.delta} blocks behind.`,
+    const last = attempts.at(-1)!;
+    const sync = last.sync!;
+    const gap = Math.abs(sync.delta);
+    const compare = {
       stepsBefore: "Compare the node's head with the indexer's latest block.",
       steps: `${curl(rpc, RPC_HEADER, blockfrost)}\n\n${curl(indexer, INDEXER_HEIGHT, blockfrost)}`,
       stepsAfter: "The node's `number` is hex; `printf '%d\\n' 0x...` converts it.",
       logs: attemptLines(input),
+    };
+    if (problem.behind === "indexer") {
+      return {
+        title: `[Bug]: ${net} indexer ${gap} blocks behind the node`,
+        component: "indexer",
+        severity: "P3",
+        description: `The public ${net} indexer is behind the node it indexes, in ${attemptsPhrase(seen, attempts.length)} of ${checker(input)}. Reads from the indexer (wallet sync, DApp queries) return stale state.`,
+        expected: `The indexer stays within ${sync.threshold} blocks of the node.`,
+        actual: `At ${time(last.at)} the node was at block ${sync.rpcHeight} and the indexer at ${sync.indexerHeight}: ${gap} blocks behind.`,
+        ...compare,
+      };
+    }
+    return {
+      title: `[Bug]: ${net} public RPC ${gap} blocks behind the indexer`,
+      component: "node",
+      severity: "P3",
+      description: `The public ${net} RPC reports a head behind the indexer's latest block, in ${attemptsPhrase(seen, attempts.length)} of ${checker(input)}. The node answering RPC calls isn't keeping up; on a load-balanced RPC that is usually one lagging backend, though we can't see which backend served each response.`,
+      expected: "The RPC's head is at or ahead of the indexer's latest block.",
+      actual: `At ${time(last.at)} the RPC's head was block ${sync.rpcHeight} and the indexer's latest block ${sync.indexerHeight}: the RPC was ${gap} blocks behind.`,
+      ...compare,
     };
   }
 
@@ -236,7 +292,7 @@ function draft(problem: Problem, input: ReportInput, window: { firstSeen: string
     severity: "P3",
     description: `Consecutive \`chain_getHeader\` calls to the public ${net} RPC, about two seconds apart, returned block numbers that went backwards and then forward again. The responses are well-formed. This is consistent with a node behind the load balancer that isn't keeping up; we can't see which backend served each response, so that part is an inference.`,
     expected: "Consecutive `chain_getHeader` calls return a non-decreasing block number that tracks the network head.",
-    actual: `Between ${clock(heads[0]?.at ?? window.firstSeen)} and ${clock(heads.at(-1)?.at ?? window.lastSeen)} UTC on ${(heads[0]?.at ?? window.firstSeen).slice(0, 10)}, the head went back by up to ${problem.drop} blocks (from ${problem.from} to ${problem.to}). Clients reading the head see a different chain depending on which response they get.`,
+    actual: `Between ${clock(heads[0]!.at)} and ${clock(heads.at(-1)!.at)} UTC on ${heads[0]!.at.slice(0, 10)}, the head went back by up to ${problem.drop} blocks (from ${problem.from} to ${problem.to}). Clients reading the head see a different chain depending on which response they get.`,
     stepsBefore: "While the problem is active, the printed numbers alternate between the current head and a lower one.",
     steps: headLoop(rpc, blockfrost),
     logs: headLines(heads),
@@ -297,7 +353,7 @@ function render(d: Draft, input: ReportInput, window: { firstSeen: string; lastS
     ...(input.nodeVersion ? ["### Node Version (if applicable)", "", `midnight-node ${input.nodeVersion} (reported by the network)`, ""] : []),
     "### Additional Context",
     "",
-    `First seen ${time(window.firstSeen)}, last seen ${time(window.lastSeen)} (UTC), by a check that runs every six hours.${input.runUrl ? ` Latest run: ${input.runUrl}` : ""}`,
+    `First seen ${time(window.firstSeen)}, last seen ${time(window.lastSeen)} (UTC), by ${input.environment?.includes("GitHub Actions") ? "a check that runs every six hours" : "a check run by hand"}.${input.runUrl ? ` Latest run: ${input.runUrl}` : ""}`,
     ...(input.endpoints?.blockfrost
       ? ["", "Mainnet's public RPC and indexer are run by Blockfrost, so Blockfrost may need to hear about this too."]
       : []),
@@ -328,8 +384,11 @@ function render(d: Draft, input: ReportInput, window: { firstSeen: string; lastS
   ].join("\n");
 }
 
-/** The service-desk section of a live-check report, or "" when there is nothing to report. */
-export function serviceDeskSection(input: ReportInput, firstSeen?: string): string {
+/**
+ * The service-desk section of a live-check report, or "" when there is nothing to report.
+ * `history` maps each problem to when the live-check issue first saw it.
+ */
+export function serviceDeskSection(input: ReportInput, history: Record<string, string> = {}): string {
   if (rejectedCredentials(input)) {
     return [
       START,
@@ -341,25 +400,32 @@ export function serviceDeskSection(input: ReportInput, firstSeen?: string): stri
   }
   const found = problems(input);
   if (!found.length) return "";
-  const times = [...input.attempts.map((a) => a.at), ...(input.heads ?? []).map((h) => h.at)].sort();
-  const window = {
-    firstSeen: [firstSeen, times[0]].filter((t): t is string => !!t).sort()[0]!,
-    lastSeen: times.at(-1)!,
-  };
+  const drafts = found.map((problem) => {
+    const seen = sightings(problem, input);
+    const firstSeen = [history[problem.key], seen[0]!].filter((t): t is string => !!t).sort()[0]!;
+    return { problem, seen, window: { firstSeen, lastSeen: seen.at(-1)! } };
+  });
+  const lastSeen = drafts.map((d) => d.window.lastSeen).sort().at(-1)!;
   return [
     START,
-    `<!-- service-desk first seen: ${window.firstSeen} -->`,
+    ...drafts.map((d) => `<!-- service-desk first seen: ${d.problem.key} ${d.window.firstSeen} -->`),
+    `<!-- service-desk last seen: ${lastSeen} -->`,
     "### Service desk",
     "",
     `This is a draft for [Midnight's service desk](${SERVICE_DESK}/issues/new?template=bug-report.yml). Nothing is filed automatically: Midnight's [AI reporting guidelines](${SERVICE_DESK}/blob/main/ai-reports.md) need a person to re-run the commands, check every number against the output and submit the report. After review, file it in the form or with \`gh issue create --repo midnightntwrk/servicedesk --title "<title>" --body-file <report>\`.`,
     "",
-    ...found.map((p) => render(draft(p, input, window), input, window)),
+    ...drafts.map((d) => render(draft(d.problem, input, d.seen), input, d.window)),
     END,
   ].join("\n");
 }
 
-export function firstSeenOf(body: string | null | undefined): string | undefined {
-  return /<!-- service-desk first seen: (\S+) -->/.exec(body ?? "")?.[1];
+/** When the issue first saw each problem, from the markers in its body. */
+export function firstSeenOf(body: string | null | undefined): Record<string, string> {
+  return Object.fromEntries([...(body ?? "").matchAll(/<!-- service-desk first seen: (\S+) (\S+) -->/g)].map((m) => [m[1]!, m[2]!]));
+}
+
+export function lastSeenOf(body: string | null | undefined): string | undefined {
+  return /<!-- service-desk last seen: (\S+) -->/.exec(body ?? "")?.[1];
 }
 
 /** Swaps the service-desk section of a report for a new one. */

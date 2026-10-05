@@ -4,6 +4,7 @@ import {
   START,
   firstSeenOf,
   headRegression,
+  lastSeenOf,
   replaceSection,
   serviceDeskSection,
   type Attempt,
@@ -33,6 +34,7 @@ describe("service-desk drafts", () => {
     expect(headRegression(heads(100, 99, 101, 102))).toBeUndefined();
     expect(headRegression(heads(2804021, 2804011, 2804027, undefined, 2804020))).toEqual({ from: 2804021, to: 2804011, drop: 10 });
     expect(headRegression([])).toBeUndefined();
+    expect(headRegression(heads(2804021, Number.NaN, 2804011))).toEqual({ from: 2804021, to: 2804011, drop: 10 });
   });
 
   it("has nothing to report for a healthy network", () => {
@@ -56,9 +58,22 @@ describe("service-desk drafts", () => {
     expect(section).toContain("  https://rpc.preprod.midnight.network");
     expect(section).not.toContain("indexer.preprod");
     expect(section).toContain('2026-10-05T10:03:00Z rpc=FAIL 10004ms http_5xx "RPC unreachable (503)" indexer=OK 40ms');
+    expect(section).toContain("in all 3 attempts, between 2026-10-05T10:01:00Z and 2026-10-05T10:03:00Z");
     expect(section).toContain("First seen 2026-10-05T10:01:00Z, last seen 2026-10-05T10:03:00Z");
     expect(section).toContain("midnight-node 1.0.400");
-    expect(firstSeenOf(section)).toBe("2026-10-05T10:01:00.123Z");
+    expect(firstSeenOf(section)).toEqual({ "unreachable:rpc": "2026-10-05T10:01:00.123Z" });
+  });
+
+  it("counts only the attempts that had the problem", () => {
+    const attempts = [
+      { at: "2026-10-05T10:01:00.000Z", services: [ok("rpc"), ok("indexer")], error: "versions failed" },
+      { at: "2026-10-05T10:02:00.000Z", services: [down("rpc", "RPC unreachable", "timeout"), ok("indexer")] },
+      { at: "2026-10-05T10:03:00.000Z", services: [down("rpc", "RPC unreachable", "timeout"), ok("indexer")] },
+    ];
+    const section = serviceDeskSection(report(attempts));
+    expect(section).toContain("in 2 of 3 attempts, between 2026-10-05T10:02:00Z and 2026-10-05T10:03:00Z");
+    expect(section).toContain("First seen 2026-10-05T10:02:00Z");
+    expect(serviceDeskSection(report(attempts.slice(2)))).toContain("in the check's one attempt, at 2026-10-05T10:03:00Z");
   });
 
   it("suggests P1 only when both services are down, and says a page is needed", () => {
@@ -69,6 +84,14 @@ describe("service-desk drafts", () => {
     expect(section).toContain("page Midnight");
     expect(section).toContain("no response before the client timeout");
     expect(section).toContain("{ block { height } }");
+  });
+
+  it("blames the node, not the indexer, when the RPC's head is behind the indexer", () => {
+    const rpcBehind = { rpcHeight: 100, indexerHeight: 500, delta: -400, threshold: 100, inSync: false };
+    const section = serviceDeskSection(report([{ at: "2026-10-05T10:00:00.000Z", services: [ok("rpc"), ok("indexer")], sync: rpcBehind }]));
+    expect(section).toContain("Preprod public RPC 400 blocks behind the indexer");
+    expect(section).toContain("`component:midnight-node`, `priority:p3-medium`");
+    expect(section).not.toContain("-400 blocks");
   });
 
   it("drafts indexer lag as a degraded indexer", () => {
@@ -90,6 +113,14 @@ describe("service-desk drafts", () => {
     expect(section).toContain('"method":"chain_getHeader"');
   });
 
+  it("marks in the logs only the steps back that count", () => {
+    const section = serviceDeskSection(
+      report([{ at: "2026-10-02T11:55:30.000Z", services: [ok("rpc"), ok("indexer")], sync: synced }], { heads: heads(100, 99, 120, 108) }),
+    );
+    expect(section).toContain("head=108 500ms   <- 12 below 120");
+    expect(section).not.toContain("1 below 100");
+  });
+
   it("keeps the project ID out of mainnet reproductions and says Blockfrost runs the endpoints", () => {
     const withToken = { ...mainnet, rpc: `${mainnet.rpc}?project_id=nightmainnetSECRET123` };
     const section = serviceDeskSection(
@@ -104,25 +135,32 @@ describe("service-desk drafts", () => {
     expect(section).toContain("`network:mainnet`");
   });
 
-  it("says a rejected Blockfrost project ID isn't Midnight's outage", () => {
-    const section = serviceDeskSection(
-      report([{ at: "2026-10-05T10:00:00.000Z", services: [down("rpc", "RPC rejected by Blockfrost (403)", "http_4xx"), ok("indexer")] }], {
-        network: "mainnet",
-        endpoints: mainnet,
-      }),
-    );
-    expect(section).toContain("BLOCKFROST_MAINNET_PROJECT_ID");
-    expect(section).not.toContain("### Component");
+  it("says a rejected Blockfrost project ID isn't Midnight's outage, but still drafts rate limits and other failures", () => {
+    const mainnetReport = (services: Attempt["services"]) =>
+      serviceDeskSection(report([{ at: "2026-10-05T10:00:00.000Z", services }], { network: "mainnet", endpoints: mainnet }));
+    const rejectedId = mainnetReport([down("rpc", "RPC rejected by Blockfrost (403)", "http_4xx"), down("indexer", "Indexer rejected by Blockfrost (403)", "http_4xx")]);
+    expect(rejectedId).toContain("BLOCKFROST_MAINNET_PROJECT_ID");
+    expect(rejectedId).not.toContain("### Component");
+    const rateLimited = mainnetReport([down("rpc", "RPC rate-limited by Blockfrost (429)", "http_4xx"), down("indexer", "Indexer unreachable (503)", "http_5xx")]);
+    expect(rateLimited).toContain("### Component");
+    expect(rateLimited).not.toContain("rejected the project ID");
   });
 
   it("dates the draft from an earlier first sighting, and swaps only its own section", () => {
     const attempts = [{ at: "2026-10-05T16:00:00.000Z", services: [down("rpc", "RPC unreachable", "timeout"), ok("indexer")] }];
-    const section = serviceDeskSection(report(attempts), "2026-10-05T04:00:00.000Z");
+    const section = serviceDeskSection(report(attempts), { "unreachable:rpc": "2026-10-05T04:00:00.000Z" });
     expect(section).toContain("First seen 2026-10-05T04:00:00Z, last seen 2026-10-05T16:00:00Z");
     const before = `table\n\n${serviceDeskSection(report(attempts))}\n\n<!-- live-check fingerprint: abc -->\n`;
     const after = replaceSection(before, section);
     expect(after.startsWith("table\n\n")).toBe(true);
     expect(after).toContain("<!-- live-check fingerprint: abc -->");
-    expect(firstSeenOf(after)).toBe("2026-10-05T04:00:00.000Z");
+    expect(firstSeenOf(after)).toEqual({ "unreachable:rpc": "2026-10-05T04:00:00.000Z" });
+    expect(lastSeenOf(after)).toBe("2026-10-05T16:00:00.000Z");
+  });
+
+  it("doesn't date a new problem from an earlier, different one", () => {
+    const attempts = [{ at: "2026-10-06T10:00:00.000Z", services: [ok("rpc"), ok("indexer")], sync: synced }];
+    const section = serviceDeskSection(report(attempts, { heads: heads(2804021, 2804011) }), { "unreachable:rpc": "2026-10-05T04:00:00.000Z" });
+    expect(firstSeenOf(section)).toEqual({ heads: "2026-10-02T11:55:42.000Z" });
   });
 });
