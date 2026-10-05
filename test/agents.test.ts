@@ -37,7 +37,9 @@ describe("agent guidance", () => {
 
 describe("the Claude Code plugin", () => {
   const plugin = join(process.cwd(), "plugins", "midnight-cast");
-  const json = (path: string) => JSON.parse(readFileSync(path, "utf8"));
+  // A Windows checkout can have CRLF line endings.
+  const text = (path: string) => readFileSync(path, "utf8").replace(/\r\n/g, "\n");
+  const json = (path: string) => JSON.parse(text(path));
   const manifest = json(join(plugin, ".claude-plugin", "plugin.json"));
   const evals = join(plugin, "evals");
 
@@ -65,11 +67,11 @@ describe("the Claude Code plugin", () => {
       const mocks = join(evals, name, "mocks", "midnight-cast");
       for (const file of readdirSync(mocks).filter((f) => f.endsWith(".md") && !f.startsWith("_"))) {
         expect(tools.has(file.replace(/\.md$/, "")), `${name}/${file}`).toBe(true);
-        const body = readFileSync(join(mocks, file), "utf8").replace(/^---\n[\s\S]*?\n---\n/, "");
+        const body = text(join(mocks, file)).replace(/^---\n[\s\S]*?\n---\n/, "");
         expect(schemaErrors(JSON.parse(body)), `${name}/${file}`).toEqual([]);
       }
       for (const file of readdirSync(join(evals, name, "graders"))) {
-        const tool = /^tool: mcp__plugin_midnight-cast_midnight-cast__(\w+)$/m.exec(readFileSync(join(evals, name, "graders", file), "utf8"));
+        const tool = /^tool: mcp__plugin_midnight-cast_midnight-cast__(\w+)$/m.exec(text(join(evals, name, "graders", file)));
         if (tool) expect(tools.has(tool[1]!), `${name}/graders/${file}`).toBe(true);
       }
     }
