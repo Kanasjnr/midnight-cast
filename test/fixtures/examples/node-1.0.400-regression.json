@@ -1,0 +1,432 @@
+{
+  "$comment": "Regression suite for Midnight Node 1.0.400: every mn-examples suite run against the public preprod network, which is the deployment under test. 1.0.400 is a binary-only release; the on-chain runtime is unchanged (specVersion 1000300). Generated 2026-09-30.",
+  "subjectUnderTest": {
+    "component": "Midnight Node",
+    "version": "1.0.400",
+    "build": "1.0.400-c338b9ac",
+    "releaseKind": "node binary only; no runtime upgrade",
+    "runtimeSpecVersion": 1000300,
+    "runtimeSpecVersionNote": "Unchanged from 1.0.300: the tests exercise the 1.0.400 client on the 1.0.300 runtime, which is what preprod runs.",
+    "transactionVersion": 3,
+    "specName": "midnight",
+    "implName": "midnight",
+    "authoringVersion": 1,
+    "implVersion": 0,
+    "chain": "Midnight Preprod",
+    "source": "system_version / system_chain / state_getRuntimeVersion via https://rpc.preprod.midnight.network"
+  },
+  "run": {
+    "date": "2026-09-30",
+    "network": "preprod",
+    "repo": "mn-examples",
+    "gitCommit": "215da9e",
+    "gitBranch": "import-examples",
+    "workingTree": "dirty: Blockfrost preprod migration of every suite, re-cut preseed bundle (uncommitted at time of run)",
+    "host": "linux 6.6.87.2-microsoft-standard-WSL2 (x86_64)",
+    "suiteName": "Node 1.0.400 regression",
+    "nodeVersion": "1.0.400-c338b9ac",
+    "window": {
+      "preseedCutStart": "2026-09-30T17:46:39Z",
+      "suitesStart": "2026-09-30T18:54:38Z",
+      "suitesEnd": "2026-09-30T21:05:31Z"
+    }
+  },
+  "result": {
+    "suites": 10,
+    "suitesPassed": 9,
+    "suitesFailed": 1,
+    "testsPassed": 202,
+    "testsSkipped": 1,
+    "testsFailed": 1,
+    "verdict": "No Node 1.0.400 regression found. 9 of 10 suites pass. private-party passes 16/17 on re-run: its single remaining failure is a test assertion that a freshly funded sponsor's DUST balance goes down, which DUST accrual outpaces; the sponsored transaction itself succeeds and every other assertion in that test passes."
+  },
+  "suites": [
+    {
+      "name": "hello-world",
+      "passed": 2,
+      "skipped": 0,
+      "failed": 0,
+      "durationSeconds": 1349,
+      "wallets": [
+        "ALICE"
+      ],
+      "note": "duration includes ~19 min waiting for the faucet transfer to the freshly minted Alice; deploy 19 s, storeMessage 34 s"
+    },
+    {
+      "name": "calculator",
+      "passed": 6,
+      "skipped": 0,
+      "failed": 0,
+      "durationSeconds": 335,
+      "wallets": [
+        "ALICE"
+      ]
+    },
+    {
+      "name": "secret-message",
+      "passed": 16,
+      "skipped": 0,
+      "failed": 0,
+      "durationSeconds": 381,
+      "wallets": [
+        "ALICE"
+      ]
+    },
+    {
+      "name": "election",
+      "passed": 19,
+      "skipped": 0,
+      "failed": 0,
+      "durationSeconds": 465,
+      "wallets": [
+        "ALICE"
+      ]
+    },
+    {
+      "name": "token-transfers",
+      "passed": 9,
+      "skipped": 1,
+      "failed": 0,
+      "durationSeconds": 359,
+      "wallets": [
+        "ALICE"
+      ],
+      "note": "same 1 skip as the local and 1.0.300 runs; not preprod-specific"
+    },
+    {
+      "name": "zk-loan",
+      "passed": 82,
+      "skipped": 0,
+      "failed": 0,
+      "durationSeconds": 487,
+      "wallets": [
+        "ALICE"
+      ],
+      "newSince1_0_300": true,
+      "note": "new since the 1.0.300 report"
+    },
+    {
+      "name": "battleship",
+      "passed": 12,
+      "skipped": 0,
+      "failed": 0,
+      "durationSeconds": 551,
+      "wallets": [
+        "ALICE",
+        "BOB"
+      ]
+    },
+    {
+      "name": "silent-auction",
+      "passed": 11,
+      "skipped": 0,
+      "failed": 0,
+      "durationSeconds": 561,
+      "wallets": [
+        "ORGANIZER->ALICE",
+        "BIDDER_ONE->BOB",
+        "BIDDER_TWO->CHARLIE"
+      ]
+    },
+    {
+      "name": "shielded-chips",
+      "passed": 29,
+      "skipped": 0,
+      "failed": 0,
+      "durationSeconds": 1410,
+      "wallets": [
+        "ALICE",
+        "BOB",
+        "CHARLIE"
+      ],
+      "newSince1_0_300": true,
+      "note": "new since the 1.0.300 report; two files (roulette + privacy), five wallet builds"
+    },
+    {
+      "name": "private-party",
+      "passed": 16,
+      "skipped": 0,
+      "failed": 1,
+      "durationSeconds": 1037,
+      "wallets": [
+        "ALICE",
+        "BOB",
+        "CHARLIE",
+        "DAVE"
+      ],
+      "attempts": [
+        {
+          "attempt": 1,
+          "passed": 6,
+          "failed": 11,
+          "skipped": 0,
+          "durationSeconds": 834,
+          "failures": [
+            {
+              "file": "examples/private-party/src/test/party.test.ts",
+              "test": "Private Party smart contract via midnight-js (preprod) Deploys a contract (the easy way)",
+              "message": "RpcError: 1010: Invalid Transaction: Custom error: 170"
+            },
+            {
+              "file": "examples/private-party/src/test/party.test.ts",
+              "test": "Private Party smart contract via midnight-js (preprod) Allows Bob to rsvp (privately)",
+              "message": "TypeError: Input string must have non-zero length."
+            },
+            {
+              "file": "examples/private-party/src/test/party.test.ts",
+              "test": "Private Party smart contract via midnight-js (preprod) Blocks organizers from rsvp",
+              "message": "Error: Contract address not set. Call setContractAddress() before accessing private state."
+            },
+            {
+              "file": "examples/private-party/src/test/party.test.ts",
+              "test": "Private Party smart contract via midnight-js (preprod) Allows Charlie to rsvp(privately)",
+              "message": "TypeError: Input string must have non-zero length."
+            },
+            {
+              "file": "examples/private-party/src/test/party.test.ts",
+              "test": "Private Party smart contract via midnight-js (preprod) Blocks non-organizers from starting the party",
+              "message": "TypeError: Input string must have non-zero length."
+            },
+            {
+              "file": "examples/private-party/src/test/party.test.ts",
+              "test": "Private Party smart contract via midnight-js (preprod) starts the party",
+              "message": "Error: Contract address not set. Call setContractAddress() before accessing private state."
+            },
+            {
+              "file": "examples/private-party/src/test/party.test.ts",
+              "test": "Private Party smart contract via midnight-js (preprod) Allows Bob to check in",
+              "message": "TypeError: Input string must have non-zero length."
+            },
+            {
+              "file": "examples/private-party/src/test/party.test.ts",
+              "test": "Private Party smart contract via midnight-js (preprod) Blocks non-organizers from closing the doors",
+              "message": "TypeError: Input string must have non-zero length."
+            },
+            {
+              "file": "examples/private-party/src/test/party.test.ts",
+              "test": "Private Party smart contract via midnight-js (preprod) Closes the doors to the party",
+              "message": "Error: Contract address not set. Call setContractAddress() before accessing private state."
+            },
+            {
+              "file": "examples/private-party/src/test/party.test.ts",
+              "test": "Private Party smart contract via midnight-js (preprod) Allows Alice to claimFees",
+              "message": "Error: Contract address not set. Call setContractAddress() before accessing private state."
+            },
+            {
+              "file": "examples/private-party/src/test/sponsorship.test.ts",
+              "test": "DUST fee sponsorship — Alice pays Dave's fees (preprod) Alice sponsors Dave's check-in — Dave pays the entry fee, Alice pays the DUST",
+              "message": "AssertionError: expected 164347835427195413 to be less than 160090332964669394"
+            }
+          ]
+        },
+        {
+          "attempt": 2,
+          "passed": 16,
+          "failed": 1,
+          "skipped": 0,
+          "durationSeconds": 1037,
+          "failures": [
+            {
+              "file": "examples/private-party/src/test/sponsorship.test.ts",
+              "test": "DUST fee sponsorship — Alice pays Dave's fees (preprod) Alice sponsors Dave's check-in — Dave pays the entry fee, Alice pays the DUST",
+              "message": "AssertionError: expected 184684643306446689 to be less than 180137796016370290"
+            }
+          ]
+        }
+      ],
+      "note": "two files: party (11) + DUST sponsorship (6). Attempt 1: 11 failed (a transient InvalidDustSpendProof on the first deploy cascaded through party.test, plus the sponsor-DUST assertion). Attempt 2: party.test 11/11; sponsorship 5/6, same sponsor-DUST assertion"
+    }
+  ],
+  "comparisonTo1_0_300": {
+    "nodeVersion": {
+      "previous": "1.0.300-20bb37c9",
+      "now": "1.0.400-c338b9ac"
+    },
+    "runtimeSpecVersion": {
+      "previous": 1000300,
+      "now": 1000300
+    },
+    "indexer": {
+      "previous": "official preprod indexer",
+      "now": "Blockfrost preprod"
+    },
+    "suites": {
+      "previous": 8,
+      "now": 10
+    },
+    "testsPassed": {
+      "previous": 92,
+      "now": 202
+    },
+    "sameSuitesSameCounts": "all 8 suites from the 1.0.300 run have the same test counts; all pass except the one private-party sponsorship assertion described in issues",
+    "newSuites": [
+      "zk-loan (82)",
+      "shielded-chips (29)"
+    ]
+  },
+  "versions": {
+    "language": {
+      "compactPragma": "0.23",
+      "compactLanguageVersion": "0.23.0"
+    },
+    "toolchain": {
+      "compactCompiler": "0.31.1",
+      "compactDevTool": "0.5.1",
+      "node": "22.22.3",
+      "yarn": "4.18.0",
+      "vitest": "4.1.11",
+      "compactCompilerLatestAvailable": "0.35.0"
+    },
+    "npmPackages": {
+      "@midnight-ntwrk/midnight-js-contracts": "4.1.1",
+      "@midnight-ntwrk/midnight-js-protocol": "4.1.1",
+      "@midnight-ntwrk/midnight-js-types": "4.1.1",
+      "@midnight-ntwrk/midnight-js-indexer-public-data-provider": "4.1.1",
+      "@midnight-ntwrk/midnight-js-http-client-proof-provider": "4.1.1",
+      "@midnight-ntwrk/midnight-js-level-private-state-provider": "4.1.1",
+      "@midnight-ntwrk/midnight-js-network-id": "4.1.1",
+      "@midnight-ntwrk/midnight-js-node-zk-config-provider": "4.1.1",
+      "@midnight-ntwrk/midnight-js-utils": "4.1.1",
+      "@midnight-ntwrk/testkit-js": "4.1.1",
+      "@midnight-ntwrk/wallet-sdk": "1.2.0",
+      "@midnight-ntwrk/wallet-sdk-abstractions": "2.1.0",
+      "@midnight-ntwrk/ledger-v8": "8.1.2",
+      "@midnight-ntwrk/onchain-runtime-v3": "3.1.1",
+      "@midnight-ntwrk/zkir-v2": "2.1.1",
+      "@midnight-ntwrk/compact-runtime": "0.16.0"
+    },
+    "dockerImages": {
+      "$comment": "Only the proof server ran locally. The node and indexer were remote (preprod node, Blockfrost indexer); the compose.yml node/indexer images are for local devnet runs only.",
+      "proofServer_usedInThisRun": "midnightntwrk/proof-server:8.1.0",
+      "indexerStandalone_localDevnetOnly_notUsed": "midnightntwrk/indexer-standalone:4.3.3",
+      "midnightNode_localDevnetOnly_notUsed": "midnightntwrk/midnight-node:1.0.0"
+    },
+    "remoteServices": {
+      "midnightNode": "1.0.400-c338b9ac",
+      "midnightNodeRuntimeSpec": 1000300,
+      "indexer": "Blockfrost preprod (version not exposed); GraphQL served at /api/v0"
+    }
+  },
+  "environment": {
+    "networkId": "preprod",
+    "indexer": "https://midnight-preprod.blockfrost.io/api/v0?project_id=<redacted>",
+    "indexerWS": "wss://midnight-preprod.blockfrost.io/api/v0/ws?project_id=<redacted>",
+    "node": "https://rpc.midnight-preprod.blockfrost.io?project_id=<redacted>",
+    "nodeWS": "wss://rpc.midnight-preprod.blockfrost.io?project_id=<redacted>",
+    "proofServer": "http://127.0.0.1:6300 (local Docker)",
+    "faucet": "https://midnight-tmnight-preprod.nethermind.dev/",
+    "nodeVersion": "1.0.400-c338b9ac",
+    "indexerProvider": "Blockfrost",
+    "whyBlockfrost": "The official preprod indexer (indexer.preprod.midnight.network) returned HTTP 503 at ~17:20Z and ~17:40Z on 2026-09-30 (back at 200 by 17:48Z). Every suite was migrated to Blockfrost for this run, following the servicedesk indexer-to-Blockfrost migration runbook."
+  },
+  "preseedBundle": {
+    "$comment": "Re-cut from genesis against Blockfrost on 2026-09-30. The previously shipped bundle (height 2768501) was cut against the official indexer, and its cursors are not portable to Blockfrost (ledger-event ids differ by -22).",
+    "network": "preprod",
+    "height": 2779435,
+    "indexer": "midnight-preprod.blockfrost.io",
+    "cutMethod": "--from-genesis",
+    "cutDurationMinutes": 67.1,
+    "dustEventsPerSecond": 392,
+    "eventsApplied": {
+      "shielded": 1576364,
+      "dust": 1576656
+    },
+    "sizeBytes": {
+      "shieldedGz": 1909,
+      "unshieldedGz": 277,
+      "dustGz": 5920454,
+      "dustRaw": 12663325
+    },
+    "previousHeight": 2768501,
+    "previousIndexer": "official (indexer.preprod.midnight.network)"
+  },
+  "wallets": {
+    "$comment": "Four shared wallets minted into a repo-root .env.preprod (gitignored) right after the cut. Suite-specific role names alias onto these.",
+    "count": 4,
+    "birthday": 2779440,
+    "referenceHeight": 2779435,
+    "roles": {
+      "ALICE": {
+        "funded": "tNIGHT",
+        "dustRegistered": true,
+        "aliases": [
+          "ORGANIZER",
+          "bare MIDNIGHT_PREPROD_SEED"
+        ]
+      },
+      "BOB": {
+        "funded": "tNIGHT",
+        "dustRegistered": true,
+        "aliases": [
+          "BIDDER_ONE"
+        ]
+      },
+      "CHARLIE": {
+        "funded": "tNIGHT",
+        "dustRegistered": true,
+        "aliases": [
+          "BIDDER_TWO"
+        ]
+      },
+      "DAVE": {
+        "funded": "tNIGHT",
+        "dustRegistered": false,
+        "aliases": [],
+        "note": "deliberately DUST-less; the sponsorship suite asserts it"
+      }
+    }
+  },
+  "performance": {
+    "walletBringUpSeconds": {
+      "restore": "105-123",
+      "catchUp": "0.6-1.2",
+      "fundingGateAlreadyFunded": "<0.1",
+      "fundingGateFirstRun": 18,
+      "totalPerWallet": "~110-125"
+    },
+    "walletBuilds": 26,
+    "walletBuildsSeeded": 26,
+    "walletBuildsFromGenesis": 0,
+    "coldSyncBaselineMinutes": 67,
+    "firstSyncEmissionAppliedIndex": {
+      "shielded": 1576364,
+      "dust": 1576656,
+      "$comment": "starts at the reference cursor, not 0 - the pre-seed restore worked on Blockfrost"
+    },
+    "blockfrost": {
+      "rateLimitResponses": 0,
+      "webSocketDrops": "0 in every single-wallet suite and in the 67-min cut; 3 per additional wallet restored while an earlier wallet was live (battleship 3, silent-auction 6, shielded-chips 9, private-party 9-12); every drop resumed cleanly"
+    }
+  },
+  "issues": [
+    {
+      "severity": "test-assertion (not a node regression)",
+      "title": "private-party sponsorship: 'Alice pays the DUST' assertion fails with a freshly funded sponsor",
+      "detail": "sponsorship.test.ts:373 expects aliceDustAfter < aliceDustBefore. Alice was funded ~90 min earlier, so her DUST is still accruing toward its cap (~4.1e13 SPECK/s measured from funding-gate readings 14:39:26 -> 14:43:47). Over the ~110 s test window accrual (~4.5e15) exceeds the fee: attempt 1 160090332964669394 -> 164347835427195413, attempt 2 180137796016370290 -> 184684643306446689 (+4.55e15). The sponsored checkIn tx lands, Dave is checked in, Dave's NIGHT drops by exactly the 5-STAR fee, Dave's DUST stays 0. The 1.0.300 run's wallets were at their DUST cap, so the assertion held then.",
+      "followUp": "Make the assertion accrual-proof, e.g. compare against the balance projected to the post-tx time, or assert that one of Alice's DUST coins was spent (nullified) by the sponsored tx."
+    },
+    {
+      "severity": "transient",
+      "title": "One InvalidDustSpendProof (node error 170) on the first private-party deploy",
+      "detail": "Attempt 1: 'Deploys a contract (the easy way)' was rejected at submit with 'RpcError: 1010: Invalid Transaction: Custom error: 170' (InvalidDustSpendProof), 1.5 s after the funding gate. The 10 dependent tests failed with it. A second deploy by the same Alice wallet 28 s later passed, and on re-run all 11 party tests passed. Not seen in any other suite. Inferred (unconfirmed): Alice's dust tree lagged tip after ~4 min of Bob/Charlie bundle restores (CPU-bound, same thread, with WebSocket drops), so her fee proof referenced a stale root.",
+      "followUp": "Re-sync each wallet (or wait for a fresh dust root) after building the others and before its first transaction in multi-wallet suites."
+    },
+    {
+      "severity": "resolved",
+      "title": "Shipped preprod pre-seed bundle was cut against the official indexer",
+      "detail": "The bundle at height 2768501 (dust cursor 1575271 = the official indexer's maxId) is not portable to Blockfrost: check-indexer-cursor.mjs reports both cursors NOT PORTABLE with a -22 offset.",
+      "resolution": "Every suite, the template, the cutter and the wallet minter now share one Blockfrost preprodConfig() in packages/fast-sync. Re-cut --from-genesis against Blockfrost (height 2779435, 67 min), with the indexer host recorded in the manifest; minted and funded 4 new wallets at birthday 2779440."
+    },
+    {
+      "severity": "environment",
+      "title": "Official preprod indexer returned 503",
+      "detail": "HTTP 503 at ~17:20Z and ~17:40Z on 2026-09-30, 200 again by 17:48Z. The official node RPC stayed up throughout."
+    }
+  ],
+  "openFollowUps": [
+    "Fix the sponsorship DUST assertion so it holds for sponsors whose DUST is still accruing.",
+    "Multi-wallet suites: re-sync earlier wallets after the later wallets' bundle restores, before the first transaction.",
+    "Root test:preprod still bails on the first failure (yarn workspaces foreach); this run used a sequential driver that continues.",
+    "Blockfrost migration findings from this run go to the servicedesk runbook (new PR; #215 merged)."
+  ]
+}
