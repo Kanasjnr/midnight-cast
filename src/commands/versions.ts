@@ -18,6 +18,7 @@ import { fail, failReaching } from "../output.js";
 import { EXPLAIN_VERSIONS } from "../lib/next-steps.js";
 import { resolveSupportMatrix } from "../lib/upstream-matrix.js";
 import { settle } from "../lib/settle.js";
+import { examplesVerdict } from "../lib/examples-report.js";
 
 export async function versionsCommand(
   networkArg: string | undefined,
@@ -54,6 +55,7 @@ export async function versionsCommand(
   const liveOutcome = await liveResult;
   if (!liveOutcome.ok) return failReaching(liveOutcome.error, endpoints.network, flags);
   const live = liveOutcome.value;
+  const examples = examplesVerdict(live, { offline: flags.offline, refresh: flags.refreshMatrix });
 
   let liveProofServer: string | undefined;
   if (endpoints.proofServer) {
@@ -97,6 +99,7 @@ export async function versionsCommand(
     live,
     checks,
     ...local,
+    examples: await examples,
     allOk,
   };
 
