@@ -10,6 +10,7 @@ import type { EmitResult, GlobalOptions } from "../output.js";
 import { fail } from "../output.js";
 
 const LATEST_WINDOW = 4;
+const MAX_WIDENINGS = 3;
 
 function formatEvent(
   event: DustLedgerEventPayload,
@@ -99,13 +100,14 @@ export async function dustEventsCommand(
     // Without a starting id, show the latest events rather than the network's first ones. Ids have
     // gaps, so read a window wider than the limit up to the newest id and keep its last events.
     const newest = flags.from === undefined ? await latestDustEventId(endpoints, { timeoutMs }) : undefined;
-    const window = limit * LATEST_WINDOW;
-    const events = await subscribeDustEvents(endpoints, {
-      fromId: newest === undefined ? flags.from : Math.max(1, newest - window + 1),
-      untilId: newest,
-      limit: newest === undefined ? limit : window,
-      timeoutMs,
-    });
+    let events =
+      newest === undefined ? await subscribeDustEvents(endpoints, { fromId: flags.from, limit, timeoutMs }) : [];
+    // Widen the window while it holds fewer than limit events and older ids remain.
+    for (let window = limit * LATEST_WINDOW, round = 0; newest !== undefined; window *= LATEST_WINDOW, round++) {
+      const start = Math.max(0, newest - window + 1);
+      events = await subscribeDustEvents(endpoints, { fromId: start, untilId: newest, limit: window, timeoutMs });
+      if (events.length >= limit || start === 0 || round === MAX_WIDENINGS) break;
+    }
 
     if (events.length === 0) {
       return fail("No dust events received within timeout");
