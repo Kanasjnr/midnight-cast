@@ -14,7 +14,7 @@ midnight-cast is a read-only CLI for the Midnight networks (preview, preprod, ma
 **Debug ladder**
 
 1. The user has an error message: `midnight-cast decode --raw "<the whole message>" --json`, with `--network <network>` if known. It recognises 1010 rejections, `Custom(N)` ledger codes, pallet errors, JSON-RPC codes and messages from current tooling (old toolkit versions, Blockfrost tokens, Compact builds for ledger 9). Decode before explaining an error; don't rely on memory.
-2. The network might be the problem rather than the code: `midnight-cast health <network> --json`, then `ping` or `tip` to narrow it down.
+2. The network might be the problem rather than the code: `midnight-cast health <network> --json`, then `ping` or `tip` to narrow it down. Its `data.examples` says whether Midnight's own examples pass on the node that network runs; if they pass and the network is healthy, look at the user's code or setup first.
 3. Versions might not match: `midnight-cast versions <network> --project-dir <project> --json` compares the live network and the project's Midnight packages with the support matrix.
 4. Something happened on chain: `tx <hash>` for a transaction, `contract <address>` for a deployed contract (latest action, circuit, deploy block), `dust-status <cardano-reward-address>` when a wallet has no DUST, `dust-event <id>` and `dust-events` for DUST ledger events.
 5. Background on a topic: `midnight-cast explain dust|1010|versions|transcript`. `midnight-cast explain --json` lists every command, option, exit code and error kind.

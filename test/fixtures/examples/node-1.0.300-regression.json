@@ -1,0 +1,261 @@
+{
+  "$comment": "Regression suite for Midnight Node 1.0.300: every mn-examples suite run against the public preprod network, which is the deployment under test. Generated 2026-09-24.",
+  "subjectUnderTest": {
+    "component": "Midnight Node",
+    "version": "1.0.300",
+    "build": "1.0.300-20bb37c9",
+    "runtimeSpecVersion": 1000300,
+    "specName": "midnight",
+    "implName": "midnight",
+    "authoringVersion": 1,
+    "implVersion": 0,
+    "chain": "Midnight Preprod",
+    "source": "system_version / system_name / system_chain / state_getRuntimeVersion via https://rpc.preprod.midnight.network"
+  },
+  "run": {
+    "date": "2026-09-24",
+    "network": "preprod",
+    "repo": "mn-examples",
+    "gitCommit": "08b5b2e",
+    "gitBranch": "master",
+    "workingTree": "dirty (preprod harness changes uncommitted at time of run)",
+    "host": "darwin 24.6.0 (arm64)",
+    "suiteName": "Node 1.0.300 regression",
+    "nodeVersion": "1.0.300-20bb37c9"
+  },
+  "result": {
+    "suites": 8,
+    "suitesPassed": 8,
+    "suitesFailed": 0,
+    "testsPassed": 92,
+    "testsSkipped": 1,
+    "testsFailed": 0
+  },
+  "suites": [
+    {
+      "name": "hello-world",
+      "passed": 2,
+      "skipped": 0,
+      "failed": 0,
+      "durationSeconds": 101.78,
+      "note": "re-run after a transient RPC failure in the aggregate sweep"
+    },
+    {
+      "name": "battleship",
+      "passed": 12,
+      "skipped": 0,
+      "failed": 0,
+      "durationSeconds": 362.77,
+      "wallets": [
+        "ALICE",
+        "BOB"
+      ]
+    },
+    {
+      "name": "calculator",
+      "passed": 6,
+      "skipped": 0,
+      "failed": 0,
+      "durationSeconds": 177.9,
+      "wallets": [
+        "ALICE"
+      ]
+    },
+    {
+      "name": "election",
+      "passed": 19,
+      "skipped": 0,
+      "failed": 0,
+      "durationSeconds": 345.05,
+      "wallets": [
+        "ALICE"
+      ]
+    },
+    {
+      "name": "secret-message",
+      "passed": 16,
+      "skipped": 0,
+      "failed": 0,
+      "durationSeconds": 409.4,
+      "wallets": [
+        "ALICE"
+      ]
+    },
+    {
+      "name": "token-transfers",
+      "passed": 9,
+      "skipped": 1,
+      "failed": 0,
+      "durationSeconds": 270.87,
+      "wallets": [
+        "ALICE"
+      ],
+      "note": "same 1 skip as the local run; not preprod-specific"
+    },
+    {
+      "name": "silent-auction",
+      "passed": 11,
+      "skipped": 0,
+      "failed": 0,
+      "durationSeconds": 357.37,
+      "wallets": [
+        "ORGANIZER->ALICE",
+        "BIDDER_ONE->BOB",
+        "BIDDER_TWO->CHARLIE"
+      ]
+    },
+    {
+      "name": "private-party",
+      "passed": 17,
+      "skipped": 0,
+      "failed": 0,
+      "durationSeconds": 622.55,
+      "wallets": [
+        "ALICE",
+        "BOB",
+        "CHARLIE",
+        "DAVE"
+      ],
+      "note": "two files: party (11) + DUST sponsorship (6)"
+    }
+  ],
+  "versions": {
+    "language": {
+      "compactPragma": "0.23",
+      "compactLanguageVersion": "0.23.0"
+    },
+    "toolchain": {
+      "compactCompiler": "0.31.1",
+      "compactDevTool": "0.5.1",
+      "node": "22.22.1",
+      "yarn": "4.18.0",
+      "vitest": "4.1.11",
+      "compactCompilerLatestAvailable": "0.34.0"
+    },
+    "npmPackages": {
+      "@midnight-ntwrk/midnight-js-contracts": "4.1.1",
+      "@midnight-ntwrk/midnight-js-protocol": "4.1.1",
+      "@midnight-ntwrk/midnight-js-types": "4.1.1",
+      "@midnight-ntwrk/midnight-js-indexer-public-data-provider": "4.1.1",
+      "@midnight-ntwrk/midnight-js-http-client-proof-provider": "4.1.1",
+      "@midnight-ntwrk/midnight-js-level-private-state-provider": "4.1.1",
+      "@midnight-ntwrk/midnight-js-network-id": "4.1.1",
+      "@midnight-ntwrk/midnight-js-node-zk-config-provider": "4.1.1",
+      "@midnight-ntwrk/midnight-js-utils": "4.1.1",
+      "@midnight-ntwrk/testkit-js": "4.1.1",
+      "@midnight-ntwrk/wallet-sdk": "1.2.0",
+      "@midnight-ntwrk/wallet-sdk-abstractions": "2.1.0",
+      "@midnight-ntwrk/ledger-v8": "8.1.2",
+      "@midnight-ntwrk/onchain-runtime-v3": "3.1.1",
+      "@midnight-ntwrk/zkir-v2": "2.1.1"
+    },
+    "dockerImages": {
+      "$comment": "Only the proof server ran locally for this preprod run. The node and indexer were the remote preprod deployment, NOT these images - the compose.yml images below are for local devnet runs only and are listed to avoid them being mistaken for the versions under test.",
+      "proofServer_usedInThisRun": "midnightntwrk/proof-server:8.1.0",
+      "indexerStandalone_localDevnetOnly_notUsed": "midnightntwrk/indexer-standalone:4.3.3",
+      "midnightNode_localDevnetOnly_notUsed": "midnightntwrk/midnight-node:1.0.0"
+    },
+    "remoteServices": {
+      "midnightNode": "1.0.300-20bb37c9",
+      "midnightNodeRuntimeSpec": 1000300,
+      "indexer": "not exposed - no version endpoint on the preprod indexer; GraphQL API v4"
+    }
+  },
+  "environment": {
+    "networkId": "preprod",
+    "indexer": "https://indexer.preprod.midnight.network/api/v4/graphql",
+    "indexerWS": "wss://indexer.preprod.midnight.network/api/v4/graphql/ws",
+    "node": "https://rpc.preprod.midnight.network",
+    "nodeWS": "wss://rpc.preprod.midnight.network",
+    "proofServer": "http://127.0.0.1:6300 (local Docker)",
+    "faucet": "https://midnight-tmnight-preprod.nethermind.dev/",
+    "nodeVersion": "1.0.300-20bb37c9",
+    "indexerApiVersion": "v4"
+  },
+  "preseedBundle": {
+    "$comment": "Re-cut from genesis on 2026-09-24. The previously shipped bundle (height 2203416) was unusable, not merely stale.",
+    "network": "preprod",
+    "height": 2684544,
+    "cutMethod": "--from-genesis",
+    "cutDurationMinutes": 73,
+    "eventsApplied": {
+      "shielded": 1557318,
+      "dust": 1557519
+    },
+    "sizeBytes": {
+      "shieldedGz": 2013,
+      "unshieldedGz": 279,
+      "dustGz": 5759347,
+      "dustRaw": 12301445
+    },
+    "previousHeight": 2203416
+  },
+  "wallets": {
+    "$comment": "Four shared wallets in a repo-root .env.preprod (gitignored). Suite-specific role names alias onto these.",
+    "count": 4,
+    "birthday": 2684546,
+    "roles": {
+      "ALICE": {
+        "funded": "tNIGHT",
+        "dustRegistered": true,
+        "aliases": [
+          "ORGANIZER",
+          "bare MIDNIGHT_PREPROD_SEED"
+        ]
+      },
+      "BOB": {
+        "funded": "tNIGHT",
+        "dustRegistered": true,
+        "aliases": [
+          "BIDDER_ONE"
+        ]
+      },
+      "CHARLIE": {
+        "funded": "tNIGHT",
+        "dustRegistered": true,
+        "aliases": [
+          "BIDDER_TWO"
+        ]
+      },
+      "DAVE": {
+        "funded": "tNIGHT",
+        "dustRegistered": false,
+        "aliases": [],
+        "note": "deliberately DUST-less; the sponsorship suite asserts it"
+      }
+    }
+  },
+  "performance": {
+    "walletBringUpSeconds": {
+      "restore": 52,
+      "catchUp": 7,
+      "fundingGate": 19,
+      "total": 78
+    },
+    "coldSyncBaselineMinutes": 78,
+    "speedup": "~60x vs a genesis sync",
+    "firstSyncEmissionAppliedIndex": {
+      "shielded": 1557318,
+      "dust": 1557519,
+      "$comment": "starts at the reference cursor, not 0 - proof the pre-seed restore worked"
+    }
+  },
+  "issues": [
+    {
+      "severity": "resolved",
+      "title": "Shipped preprod pre-seed bundle was unusable",
+      "detail": "Restoring from the bundle at height 2203416 put the wallet in an infinite retry loop: 'values inserted non-linearly into zswap/dust commitment tree'. unshielded completed (no commitment tree) while shielded and dust never did. dedup.ts did not catch it because it filters by event id whereas these are commitment-tree positions.",
+      "resolution": "Added `preseed:cut --from-genesis`, which skips restore/dedup entirely, and re-cut the bundle at height 2684544."
+    },
+    {
+      "severity": "transient",
+      "title": "One RPC failure during the aggregate sweep",
+      "detail": "hello-world failed with 'FATAL: Unable to initialize the API: WebSocket is not connected' against wss://rpc.preprod.midnight.network, after ~37 transactions in ~15 minutes. Passed on re-run with identical code.",
+      "followUp": "Root `test:preprod` uses `yarn workspaces foreach`, which bails on first failure; this one flake blocked four suites that had never run. Consider per-example retry or --no-bail."
+    }
+  ],
+  "openFollowUps": [
+    "Per-wallet state cache: every run re-restores from the bundle. A per-wallet serializeState/restore round-trip needs no isSeedable guard and would sidestep bundle staleness.",
+    "Make the root test:preprod aggregate resilient to transient node-RPC failures."
+  ]
+}

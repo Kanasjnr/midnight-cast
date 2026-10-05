@@ -1,0 +1,68 @@
+{
+  "updated": "2026-10-05",
+  "reports": {
+    "1.0.300": {
+      "nodeVersion": "1.0.300",
+      "runtimeSpecVersion": 1000300,
+      "network": "preprod",
+      "date": "2026-09-24",
+      "suites": {
+        "total": 8,
+        "passed": 8,
+        "failed": 0
+      },
+      "tests": {
+        "passed": 92,
+        "failed": 0,
+        "skipped": 1
+      },
+      "knownIssues": [
+        {
+          "severity": "resolved",
+          "title": "Shipped preprod pre-seed bundle was unusable"
+        },
+        {
+          "severity": "transient",
+          "title": "One RPC failure during the aggregate sweep"
+        }
+      ],
+      "url": "https://github.com/midnightntwrk/midnight-examples/blob/main/reports/node-1.0.300-regression.json"
+    },
+    "1.0.400": {
+      "nodeVersion": "1.0.400",
+      "runtimeSpecVersion": 1000300,
+      "network": "preprod",
+      "date": "2026-09-30",
+      "suites": {
+        "total": 10,
+        "passed": 9,
+        "failed": 1
+      },
+      "tests": {
+        "passed": 202,
+        "failed": 1,
+        "skipped": 1
+      },
+      "verdict": "No Node 1.0.400 regression found. 9 of 10 suites pass. private-party passes 16/17 on re-run: its single remaining failure is a test assertion that a freshly funded sponsor's DUST balance goes down, which DUST accrual outpaces; the sponsored transaction itself succeeds and every other assertion in that test passes.",
+      "knownIssues": [
+        {
+          "severity": "test-assertion (not a node regression)",
+          "title": "private-party sponsorship: 'Alice pays the DUST' assertion fails with a freshly funded sponsor"
+        },
+        {
+          "severity": "transient",
+          "title": "One InvalidDustSpendProof (node error 170) on the first private-party deploy"
+        },
+        {
+          "severity": "resolved",
+          "title": "Shipped preprod pre-seed bundle was cut against the official indexer"
+        },
+        {
+          "severity": "environment",
+          "title": "Official preprod indexer returned 503"
+        }
+      ],
+      "url": "https://github.com/midnightntwrk/midnight-examples/blob/main/reports/node-1.0.400-regression.json"
+    }
+  }
+}

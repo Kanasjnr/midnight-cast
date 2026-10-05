@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/main/schemas/examples-verdict.schema.json",
+  "title": "Whether Midnight's examples pass on a node version",
+  "description": "From the regression reports in midnightntwrk/midnight-examples. status is passed when every test passed, failures when some failed (read verdict and knownIssues), and unverified when there is no usable report for the node version. source says where the report came from and how old it is.",
+  "type": "object",
+  "required": [
+    "nodeVersion",
+    "status",
+    "source"
+  ],
+  "properties": {
+    "nodeVersion": {
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "passed",
+        "failures",
+        "unverified"
+      ]
+    },
+    "reason": {
+      "type": "string"
+    },
+    "report": {
+      "type": "object",
+      "required": [
+        "nodeVersion",
+        "network",
+        "date",
+        "suites",
+        "tests",
+        "knownIssues",
+        "url"
+      ],
+      "properties": {
+        "nodeVersion": {
+          "type": "string"
+        },
+        "runtimeSpecVersion": {
+          "type": "integer"
+        },
+        "network": {
+          "type": "string"
+        },
+        "date": {
+          "type": "string"
+        },
+        "suites": {
+          "type": "object",
+          "required": [
+            "total",
+            "passed",
+            "failed"
+          ],
+          "properties": {
+            "total": {
+              "type": "integer"
+            },
+            "passed": {
+              "type": "integer"
+            },
+            "failed": {
+              "type": "integer"
+            }
+          }
+        },
+        "tests": {
+          "type": "object",
+          "required": [
+            "passed",
+            "failed",
+            "skipped"
+          ],
+          "properties": {
+            "passed": {
+              "type": "integer"
+            },
+            "failed": {
+              "type": "integer"
+            },
+            "skipped": {
+              "type": "integer"
+            }
+          }
+        },
+        "verdict": {
+          "type": "string"
+        },
+        "knownIssues": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "severity",
+              "title"
+            ],
+            "properties": {
+              "severity": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "url": {
+          "type": "string"
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "kind",
+        "updated"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "upstream",
+            "cache",
+            "bundled"
+          ]
+        },
+        "updated": {
+          "type": "string"
+        },
+        "ageMinutes": {
+          "type": "integer"
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

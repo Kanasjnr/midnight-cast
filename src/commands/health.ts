@@ -16,6 +16,7 @@ import type { EmitResult, GlobalOptions } from "../output.js";
 import { fail, failReaching } from "../output.js";
 import { EXPLAIN_VERSIONS, checkEndpoints, narrowDown } from "../lib/next-steps.js";
 import { NetworkError, type NetworkErrorKind } from "../lib/network-error.js";
+import { describeExamples, examplesVerdict, type ExamplesVerdict } from "../lib/examples-report.js";
 
 type ServiceRow = {
   service: string;
@@ -47,6 +48,8 @@ export interface HealthReport {
     allOk: boolean;
     checks: Array<{ label: string; ok: boolean; expected?: string; live?: string; note?: string }>;
   };
+  /** Whether Midnight's examples pass on the node this network runs. */
+  examples?: ExamplesVerdict;
 }
 
 /** What health reports when the RPC or indexer is down: which one, and why, but no sync or versions. */
@@ -118,6 +121,8 @@ function formatHealthHuman(report: HealthReport): string {
       `  ${check.label}: ${status} (expected ${check.expected ?? "?"}, live ${check.live ?? "?"})`,
     );
   }
+
+  if (report.examples) lines.push("", ...describeExamples(report.examples));
 
   return lines.join("\n");
 }
@@ -212,6 +217,7 @@ export async function healthCommand(
   const liveOutcome = await liveResult;
   if (!liveOutcome.ok) return failReaching(liveOutcome.error, endpoints.network, flags);
   const live = liveOutcome.value;
+  const examples = examplesVerdict(endpoints.network, live, { offline: flags.offline, refresh: flags.refreshMatrix });
 
   let liveProofServer: string | undefined;
   if (endpoints.proofServer) {
@@ -258,6 +264,7 @@ export async function healthCommand(
         ...(c.note ? { note: c.note } : {}),
       })),
     },
+    examples: await examples,
   };
 
   const exitCode = healthy ? 0 : 1;

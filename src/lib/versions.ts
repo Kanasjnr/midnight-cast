@@ -8,6 +8,7 @@ import { sanitizeForOutput } from "./sanitize.js";
 import { isBlockfrostUrl } from "./blockfrost.js";
 import { NEW_SCOPE, OLD_SCOPE, isMidnightPackage, loadMigratedPackages, packageBaseName } from "./npm-scope.js";
 import { describeMatrixSource, type MatrixSource } from "./upstream-matrix.js";
+import { describeExamples, type ExamplesVerdict } from "./examples-report.js";
 
 export interface MatrixNetwork {
   /** Recommended node release for running your own node. */
@@ -68,6 +69,8 @@ export interface VersionsReport {
   /** Where local packages were looked for, and whether a package.json was there. */
   localProject?: { dir: string; packageJson: boolean };
   scopeHints?: string[];
+  /** Whether Midnight's examples pass on the node this network runs. */
+  examples?: ExamplesVerdict;
   allOk: boolean;
 }
 
@@ -502,6 +505,8 @@ export function formatVersionsHuman(report: VersionsReport): string {
       `  ${check.label}: expected=${check.expected} live=${check.live} → ${mark}${note}`,
     );
   }
+
+  if (report.examples) lines.push("", ...describeExamples(report.examples));
 
   if (report.localPackageChecks?.length) {
     lines.push("", "Local package checks (Midnight packages vs matrix):");
