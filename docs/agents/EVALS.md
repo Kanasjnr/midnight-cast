@@ -17,5 +17,18 @@ These tasks check that a coding agent, given only the midnight-cast guidance (th
 | Agent | Version | Date | Task 1 | Task 2 | Task 3 | Task 4 |
 | --- | --- | --- | --- | --- | --- | --- |
 | Claude Code | not yet run | | | | | |
+| Claude Code plugin (`claude plugin eval`) | not yet run | | | | | |
 | OpenAI Codex CLI | not yet run | | | | | |
 | Gemini CLI | not yet run | | | | | |
+
+## Claude Code plugin evals
+
+The Claude Code plugin has the same four tasks as a [`claude plugin eval`](https://code.claude.com/docs/en/plugin-evals) suite in `plugins/midnight-cast/evals/`. The agent gets the plugin and nothing else, and the midnight-cast tools answer from mocks instead of a live network, so a run is repeatable and needs no Blockfrost project ID. The mocks are the real server's output for `decode` and for `health` on mainnet without a project ID; the `tip` result for the indexer-lag task was edited to show the indexer 420 blocks behind. `evals/mocks/midnight-cast/_tools.json` holds the server's real tool list, and a unit test checks it, and every mock and grader, against the current server.
+
+Each case checks that the agent called the right tool and that its answer names the cause; the missing-project-ID task also has a judge that fails any answer reporting an outage. Every run is a model call on your account, so start small:
+
+```bash
+claude plugin eval ./plugins/midnight-cast --runs 1 --ablation none
+```
+
+Leave out `--ablation none` to also run each task without the plugin and see what it adds, and leave out `--runs 1` for the default three runs per task.

@@ -71,6 +71,13 @@ claude mcp add --transport stdio --env BLOCKFROST_PROJECT_ID=<project id> midnig
 
 Add `--scope project` to share it through the project's `.mcp.json`, or `--scope user` for every project.
 
+Or install the midnight-cast plugin, which configures the same server and adds the midnight-cast skill and a `/midnight-cast:diagnose <network> [tx or error]` command. When the plugin is enabled, Claude Code asks for an optional Blockfrost project ID for mainnet and keeps it in secure storage instead of a settings file:
+
+```bash
+claude plugin marketplace add Kanasjnr/midnight-cast
+claude plugin install midnight-cast@midnight-cast
+```
+
 ### OpenAI Codex CLI
 
 ```bash
@@ -168,7 +175,7 @@ Most clients accept this `mcpServers` block:
 
 | Client | Version tested | Date | Result |
 | --- | --- | --- | --- |
-| MCP TypeScript SDK client (automated tests) | `@modelcontextprotocol/sdk` 1.32.0 | 4 October 2026 | Every tool and resource, against recorded preprod and mainnet responses |
+| MCP TypeScript SDK client (automated tests) | `@modelcontextprotocol/client` 2.3.0 | 4 October 2026 | Every tool and resource, against recorded preprod and mainnet responses |
 | Claude Code | not yet | | |
 | OpenAI Codex CLI | not yet | | |
 | Gemini CLI | not yet | | |
