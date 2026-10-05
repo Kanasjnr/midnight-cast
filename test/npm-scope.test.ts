@@ -255,9 +255,9 @@ describe("checkLocalPackages", () => {
     expect(checkLocalPackages(row, dir).localPackageChecks).toBeUndefined();
   });
 
-  it("reports nothing for a project without Midnight packages", () => {
+  it("reports only where it looked for a project without Midnight packages", () => {
     const dir = makeProject({ dependencies: { react: "19.0.0" } }, { packages: { "node_modules/react": { version: "19.0.0" } } });
-    expect(checkLocalPackages(row, dir)).toEqual({});
+    expect(checkLocalPackages(row, dir)).toEqual({ localProject: { dir, packageJson: true } });
   });
 });
 

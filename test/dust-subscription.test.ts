@@ -90,3 +90,62 @@ describe("dust subscription cleanup", () => {
     }
   });
 });
+
+// Serves DUST events from the requested id onwards, the way the indexer subscription does.
+async function indexerWithEvents(ids: number[]) {
+  const server = createServer();
+  const wss = new WebSocketServer({ server });
+  const maxId = Math.max(...ids);
+  wss.on("connection", (socket) => {
+    socket.on("message", (raw) => {
+      const message = JSON.parse(String(raw)) as { type: string; id?: string; payload?: { variables?: { id?: number } } };
+      if (message.type === "connection_init") socket.send(JSON.stringify({ type: "connection_ack" }));
+      if (message.type !== "subscribe") return;
+      const from = message.payload?.variables?.id ?? 0;
+      for (const id of ids.filter((i) => i >= from)) {
+        const event = { id, __typename: "DustInitialUtxo", protocolVersion: 22000, raw: "0x00", maxId };
+        socket.send(JSON.stringify({ type: "next", id: message.id, payload: { data: { dustLedgerEvents: event } } }));
+      }
+    });
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  return {
+    url: `ws://127.0.0.1:${(server.address() as AddressInfo).port}`,
+    stop: () => {
+      for (const client of wss.clients) client.terminate();
+      wss.close();
+      server.close();
+    },
+  };
+}
+
+describe("DUST defaults", () => {
+  it("lists the latest events when no starting id is given, across gaps in the ids", async () => {
+    const { dustEventsCommand } = await import("../src/commands/dust.js");
+    const indexer = await indexerWithEvents([1, 30, 31, 33, 34, 40]);
+    try {
+      const result = await dustEventsCommand("preprod", { indexerWs: indexer.url, limit: 3, timeoutMs: 5000 }, { json: true });
+      expect((result.data as { table: Array<{ id: number }> }).table.map((e) => e.id)).toEqual([33, 34, 40]);
+      const more = await dustEventsCommand("preprod", { indexerWs: indexer.url, limit: 8, timeoutMs: 5000 }, { json: true });
+      expect((more.data as { table: Array<{ id: number }> }).table.map((e) => e.id)).toEqual([30, 31, 33, 34, 40]);
+    } finally {
+      indexer.stop();
+    }
+  });
+
+  it("fails fast for an event id the network hasn't reached", async () => {
+    const { dustEventCommand } = await import("../src/commands/dust.js");
+    const indexer = await indexerWithEvents([1, 30, 31]);
+    try {
+      const started = Date.now();
+      const result = await dustEventCommand(500, "preprod", { indexerWs: indexer.url, timeoutMs: 15_000 }, { json: true });
+      expect(Date.now() - started).toBeLessThan(5000);
+      expect(result).toMatchObject({ ok: false, error: "DUST event 500 doesn't exist yet on preprod; the latest is 31" });
+      expect(result.next?.[0]?.command).toBe("midnight-cast dust-events preprod");
+      const found = await dustEventCommand(30, "preprod", { indexerWs: indexer.url, timeoutMs: 5000 }, { json: true });
+      expect((found.data as { id: number }).id).toBe(30);
+    } finally {
+      indexer.stop();
+    }
+  });
+});

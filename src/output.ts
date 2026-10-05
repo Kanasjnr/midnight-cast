@@ -1,14 +1,21 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { NetworkError } from "./lib/network-error.js";
 import type { ResolveFlags } from "./config.js";
-import { checkEndpoints } from "./lib/next-steps.js";
+import { checkEndpoints, toolCallFor } from "./lib/next-steps.js";
 import { sanitizeDeep, sanitizeForOutput } from "./lib/sanitize.js";
 
 export const SCHEMA_VERSION = 1;
 
+export interface ToolCall {
+  name: string;
+  arguments: Record<string, unknown>;
+}
+
 export interface NextStep {
   command: string;
   reason: string;
+  /** The same step as an MCP tool call, when one exists and needs nothing filled in. */
+  tool?: ToolCall;
 }
 
 export interface EmitResult<T = unknown> {
@@ -97,7 +104,10 @@ export function toEnvelope<T>(result: EmitResult<T>, command: string | undefined
     error: result.ok
       ? null
       : { message: result.error ?? "Command failed", kind: result.errorKind ?? null, hint: result.hint ?? null },
-    next: result.next ?? [],
+    next: (result.next ?? []).map((step) => {
+      const tool = step.tool ?? toolCallFor(step.command);
+      return tool ? { ...step, tool } : step;
+    }),
   };
 }
 

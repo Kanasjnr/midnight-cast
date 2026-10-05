@@ -3,8 +3,7 @@ import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { WebSocketServer } from "ws";
 import { allowedNetworks, createMcpServer } from "../src/mcp/server.js";
@@ -86,6 +85,8 @@ describe("MCP server", () => {
       version: "test",
       catalog: () => ({ cli: "midnight-cast" }) as never,
       networks: ["preprod", "mainnet"],
+      // The limit has its own test; here every tool needs to run.
+      callsPerMinute: 10_000,
     });
     const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
     client = new Client({ name: "test", version: "0" });
@@ -97,6 +98,11 @@ describe("MCP server", () => {
     indexer.stop();
     globalThis.fetch = realFetch;
     process.env = saved;
+  });
+
+  it("introduces itself and tells the model how to use the tools", () => {
+    expect(client.getServerVersion()).toMatchObject({ name: "midnight-cast", description: expect.stringContaining("Read-only") });
+    expect(client.getInstructions()).toMatch(/call decode with the whole message first/);
   });
 
   it("lists ten read-only tools with typed inputs and the envelope as output", async () => {
@@ -151,6 +157,21 @@ describe("MCP server", () => {
     }
   });
 
+  it("checks the project directory it is given and says what it found", async () => {
+    const { mkdtempSync, writeFileSync } = await import("node:fs");
+    const project = mkdtempSync(join(tmpdir(), "mc-project-"));
+    writeFileSync(join(project, "package.json"), JSON.stringify({ dependencies: { "@midnight-ntwrk/ledger-v8": "8.1.2" } }));
+    const found = await call("versions", { network: "preprod", projectDir: project });
+    expect(found.envelope.data).toMatchObject({
+      localProject: { dir: project, packageJson: true },
+      localPackages: { "@midnight-ntwrk/ledger-v8": "8.1.2" },
+    });
+    const empty = await call("versions", { network: "preprod", projectDir: tmpdir() });
+    expect(empty.envelope.data).toMatchObject({ localProject: { packageJson: false } });
+    const missing = await call("versions", { network: "preprod", projectDir: join(project, "nope") });
+    expect(missing.envelope.error?.message).toMatch(/No such directory/);
+  });
+
   it("never echoes the Blockfrost project ID", async () => {
     const { text, envelope } = await call("versions", { network: "mainnet", checkLocalPackages: false });
     expect(envelope.ok).toBe(true);
@@ -176,14 +197,56 @@ describe("MCP server", () => {
     }
   });
 
+  it("offers prompts for the common investigations, completing network names", async () => {
+    const { prompts } = await client.listPrompts();
+    expect(prompts.map((p) => p.name).sort()).toEqual(["check-network", "diagnose-error", "investigate-transaction"]);
+    const prompt = await client.getPrompt({
+      name: "diagnose-error",
+      arguments: { error: "1010: Invalid Transaction: Custom error: 170", network: "preprod" },
+    });
+    const text = (prompt.messages[0]!.content as { text: string }).text;
+    expect(text).toContain("Custom error: 170");
+    expect(text).toMatch(/Call decode with the whole message and network preprod/);
+    const completion = await client.complete({
+      ref: { type: "ref/prompt", name: "check-network" },
+      argument: { name: "network", value: "pre" },
+    });
+    expect(completion.completion.values).toEqual(["preprod"]);
+  });
+
   it("serves the support matrix and error codes as resources", async () => {
     process.env.MN_OFFLINE = "1";
     const { resources } = await client.listResources();
-    expect(resources.map((r) => r.uri).sort()).toEqual(["midnight-cast://error-codes", "midnight-cast://support-matrix"]);
+    expect(resources.map((r) => r.uri).sort()).toEqual([
+      "midnight-cast://catalog",
+      "midnight-cast://error-codes",
+      "midnight-cast://support-matrix",
+    ]);
     const matrix = await client.readResource({ uri: "midnight-cast://support-matrix" });
     expect(JSON.parse((matrix.contents[0] as { text: string }).text).networks.preprod).toBeDefined();
     const codes = await client.readResource({ uri: "midnight-cast://error-codes" });
     expect(JSON.parse((codes.contents[0] as { text: string }).text).ledger.codes["170"].name).toBe("InvalidDustSpendProof");
+  });
+});
+
+describe("MCP rate limit end to end", () => {
+  it("refuses network calls over budget but still decodes", async () => {
+    const server = createMcpServer({ version: "test", catalog: () => ({}) as never, networks: ["preprod"], callsPerMinute: 3 });
+    const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: "test", version: "0" });
+    await Promise.all([server.connect(serverSide), client.connect(clientSide)]);
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = replayFetch(fixture, BUILTIN_NETWORKS.preprod!.proofServer);
+    try {
+      expect((await client.callTool({ name: "tip", arguments: { network: "preprod" } })).isError).toBe(false);
+      const limited = await client.callTool({ name: "tip", arguments: { network: "preprod" } });
+      expect(limited.isError).toBe(true);
+      expect(limited.structuredContent).toMatchObject({ error: { kind: "rate_limited" } });
+      expect((await client.callTool({ name: "decode", arguments: { message: "170" } })).isError).toBe(false);
+    } finally {
+      globalThis.fetch = realFetch;
+      await client.close();
+    }
   });
 });
 

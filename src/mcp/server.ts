@@ -1,5 +1,4 @@
-import { readFileSync } from "node:fs";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer, completable } from "@modelcontextprotocol/server";
 import { z } from "zod";
 import { blockAtHeightCommand, blockLatestCommand } from "../commands/block.js";
 import { decodeCommand } from "../commands/decode.js";
@@ -16,12 +15,16 @@ import { resolveSupportMatrix } from "../lib/upstream-matrix.js";
 import { loadConfigFile } from "../config.js";
 import { NETWORK_NAMES } from "../networks.js";
 import { envelopeOf, fail, withOwnWarnings, type EmitResult } from "../output.js";
+import { RateLimiter, callsPerMinute } from "./rate-limit.js";
+import { runAsMcpCall } from "../lib/surface.js";
 
 export interface McpOptions {
   version: string;
   catalog: () => Catalog;
   /** Networks the model may query. Defaults to MIDNIGHT_CAST_NETWORKS, then every built-in network. */
   networks?: string[];
+  /** Calls a minute to the tools that reach a network. Defaults to MIDNIGHT_CAST_MAX_CALLS_PER_MINUTE, then 30. */
+  callsPerMinute?: number;
 }
 
 /** Built-in networks plus any defined in the config file, which the CLI accepts too. */
@@ -42,7 +45,7 @@ export function allowedNetworks(
   return requested;
 }
 
-const envelopeShape = {
+const envelopeSchema = z.object({
   schemaVersion: z.literal(1),
   ok: z.boolean(),
   command: z.string().nullable(),
@@ -50,8 +53,23 @@ const envelopeShape = {
   data: z.unknown(),
   warnings: z.array(z.string()),
   error: z.object({ message: z.string(), kind: z.string().nullable(), hint: z.string().nullable() }).nullable(),
-  next: z.array(z.object({ command: z.string(), reason: z.string() })),
-};
+  next: z.array(
+    z.object({
+      command: z.string(),
+      reason: z.string(),
+      tool: z.object({ name: z.string(), arguments: z.record(z.string(), z.unknown()) }).optional(),
+    }),
+  ),
+});
+
+// Sent to the client at connection and usually shown to the model: how to get good answers from these tools.
+export const INSTRUCTIONS = `midnight-cast reads the public Midnight networks and explains Midnight errors. Every tool only reads; nothing needs a wallet or keys.
+
+- When the user has an error message, call decode with the whole message first.
+- When a network might be the problem rather than the user's code, call health; ping and tip narrow it down.
+- To see what happened to a transaction, call tx with its hash.
+- Every result is an envelope: ok, data, error { message, kind, hint }, warnings and next. Follow next: when a step has a tool field, call that tool with exactly those arguments; otherwise the command is for a terminal.
+- Mainnet goes through Blockfrost and needs BLOCKFROST_PROJECT_ID in this server's environment. If a mainnet call says it is missing, ask the user to add it to this server's MCP configuration.`;
 
 // Tools only read. Those that reach a network say so; decode and explain work from bundled data.
 const LIVE = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true } as const;
@@ -59,16 +77,18 @@ const OFFLINE = { readOnlyHint: true, destructiveHint: false, idempotentHint: tr
 
 // Like the CLI's run(): an exception still becomes a redacted envelope, and each call keeps its own warnings.
 async function respond(command: string, work: () => Promise<EmitResult> | EmitResult) {
-  const { value: result, warnings } = await withOwnWarnings(async () => {
-    try {
-      return await work();
-    } catch (err) {
-      return fail(err);
-    }
-  });
+  const { value: result, warnings } = await withOwnWarnings(() =>
+    runAsMcpCall(async () => {
+      try {
+        return await work();
+      } catch (err) {
+        return fail(err);
+      }
+    }),
+  );
   const envelope = envelopeOf(result, command, warnings);
   return {
-    structuredContent: envelope as z.infer<z.ZodObject<typeof envelopeShape>>,
+    structuredContent: envelope as z.infer<typeof envelopeSchema>,
     content: [{ type: "text" as const, text: JSON.stringify(envelope) }],
     isError: !envelope.ok,
   };
@@ -85,7 +105,24 @@ export function createMcpServer(options: McpOptions): McpServer {
     .enum(networks as [string, ...string[]])
     .describe(`Midnight network to query: ${networks.join(", ")}`);
   const json = { json: true };
-  const server = new McpServer({ name: "midnight-cast", version: options.version });
+  // Network tools share one budget, so a looping agent can't exhaust public endpoints or a Blockfrost plan.
+  const limiter = new RateLimiter(options.callsPerMinute ?? callsPerMinute());
+  const rateLimited = (retryAfterMs: number): EmitResult => ({
+    ok: false,
+    error: `Rate limited: this server allows ${limiter.perMinute} network calls a minute. Try again in ${Math.ceil(retryAfterMs / 1000)} s.`,
+    errorKind: "rate_limited",
+    hint: "Wait before retrying. The limit is set with MIDNIGHT_CAST_MAX_CALLS_PER_MINUTE in this server's environment.",
+  });
+  const server = new McpServer(
+    {
+      name: "midnight-cast",
+      title: "midnight-cast",
+      version: options.version,
+      description: "Read-only access to the public Midnight networks: health, transactions, DUST events and error decoding",
+      websiteUrl: "https://github.com/Kanasjnr/midnight-cast",
+    },
+    { instructions: INSTRUCTIONS },
+  );
 
   const tool = <Shape extends z.ZodRawShape>(
     name: string,
@@ -97,10 +134,19 @@ export function createMcpServer(options: McpOptions): McpServer {
   ) =>
     server.registerTool(
       name,
-      { title: `midnight-cast ${command}`, description, inputSchema, outputSchema: envelopeShape, annotations },
+      {
+        title: `midnight-cast ${command}`,
+        description,
+        inputSchema: z.object(inputSchema),
+        outputSchema: envelopeSchema,
+        annotations,
+      },
       // The SDK validates input against inputSchema before calling this. Its callback type is
       // conditional on the schema, which TypeScript can't resolve while Shape is generic.
-      ((input: z.infer<z.ZodObject<Shape>>) => respond(command, () => run(input))) as never,
+      ((input: z.infer<z.ZodObject<Shape>>) => {
+        const allowed = annotations.openWorldHint ? limiter.take() : { ok: true as const };
+        return respond(command, () => (allowed.ok ? run(input) : rateLimited(allowed.retryAfterMs)));
+      }) as never,
     );
 
   tool(
@@ -130,13 +176,19 @@ export function createMcpServer(options: McpOptions): McpServer {
   tool(
     "versions",
     "versions",
-    "Compare the network's live node, runtime, indexer API and proof server with Midnight's support matrix, and the Midnight packages in package.json in the current directory with the matrix pins.",
+    "Compare the network's live node, runtime, indexer API and proof server with Midnight's support matrix, and a project's Midnight packages (package.json and package-lock.json) with the matrix pins. data.localProject says which directory was checked and whether it had a package.json.",
     LIVE,
     {
       network,
-      checkLocalPackages: z.boolean().optional().describe("Also check package.json in the server's working directory (default true)"),
+      projectDir: z
+        .string()
+        .min(1)
+        .optional()
+        .describe("Absolute path of the user's project; defaults to the server's working directory, which may not be the project"),
+      checkLocalPackages: z.boolean().optional().describe("Check the project's packages at all (default true)"),
     },
-    ({ network, checkLocalPackages }) => versionsCommand(network, { local: checkLocalPackages ?? true }, json),
+    ({ network, projectDir, checkLocalPackages }) =>
+      versionsCommand(network, { local: checkLocalPackages ?? true, projectDir }, json),
   );
   tool(
     "block",
@@ -172,11 +224,11 @@ export function createMcpServer(options: McpOptions): McpServer {
   tool(
     "dust_events",
     "dust-events",
-    "Read a run of DUST ledger events from the indexer subscription, starting at an id.",
+    "Read DUST ledger events from the indexer: the latest ones, or a run starting at an id.",
     LIVE,
     {
       network,
-      from: z.number().int().min(0).optional().describe("First event id (default: the oldest available)"),
+      from: z.number().int().min(0).optional().describe("First event id; omit for the latest events"),
       limit: z.number().int().min(1).max(50).optional().describe("How many events to read (default 10, at most 50)"),
     },
     ({ network, from, limit }) => dustEventsCommand(network, { from, limit: limit ?? 10 }, json),
@@ -195,10 +247,67 @@ export function createMcpServer(options: McpOptions): McpServer {
   tool(
     "explain",
     "explain",
-    `Background on a topic (${TOPICS.join(", ")}), or, with no topic, a catalog of every midnight-cast command, its options, exit codes and error kinds.`,
+    `Background on a Midnight topic: ${TOPICS.join(", ")}.`,
     OFFLINE,
-    { topic: z.enum(TOPICS).optional().describe("Topic; omit for the command catalog") },
+    { topic: z.enum(TOPICS).describe("Topic to explain") },
     ({ topic }) => explainCommand(topic, json, options.catalog),
+  );
+
+  // Prompts are user-invoked (slash commands in most clients): ready-made investigations over the tools.
+  const networkArg = (description: string) =>
+    completable(z.string().describe(description), (value) => networks.filter((n) => n.startsWith(value ?? "")));
+  const ask = (text: string) => ({ messages: [{ role: "user" as const, content: { type: "text" as const, text } }] });
+
+  server.registerPrompt(
+    "diagnose-error",
+    {
+      title: "Diagnose a Midnight error",
+      description: "Explain an error from a wallet, node, toolkit, indexer or Blockfrost, and how to fix it",
+      argsSchema: z.object({
+        error: z.string().describe("The full error message"),
+        network: networkArg("Network the error came from, if known").optional(),
+      }),
+    },
+    ({ error, network }) =>
+      ask(
+        `A Midnight developer hit this error${network ? ` on ${network}` : ""}:\n\n${error}\n\n` +
+          `Use the midnight-cast tools. Call decode with the whole message${network ? ` and network ${network}` : ""}, ` +
+          "then follow the next steps it returns, calling a step's tool with its arguments when it has one. " +
+          `If the error points at the network rather than the code, call health${network ? ` for ${network}` : ""}. ` +
+          "Finish with what the error means, the most likely cause here, and the fix.",
+      ),
+  );
+  server.registerPrompt(
+    "check-network",
+    {
+      title: "Check a Midnight network",
+      description: "Whether a network's RPC node, indexer and versions are healthy, and what to do if not",
+      argsSchema: z.object({ network: networkArg("Network to check") }),
+    },
+    ({ network }) =>
+      ask(
+        `Check whether the Midnight ${network} network is healthy with the midnight-cast tools. Call health for ${network}. ` +
+          "If anything fails, use ping or tip to narrow it down, and follow the next steps in the results. " +
+          "Report what works, what doesn't, whether it looks like an outage or a local configuration problem, and what to do.",
+      ),
+  );
+  server.registerPrompt(
+    "investigate-transaction",
+    {
+      title: "Investigate a Midnight transaction",
+      description: "What happened to a transaction: its status, failed segments, fees and DUST events",
+      argsSchema: z.object({
+        hash: z.string().describe("Transaction hash"),
+        network: networkArg("Network the transaction was sent to"),
+      }),
+    },
+    ({ hash, network }) =>
+      ask(
+        `Find out what happened to transaction ${hash} on Midnight ${network} with the midnight-cast tools. Call tx, ` +
+          "then follow its next steps, such as dust_event for the DUST events it produced. " +
+          "If a segment failed, explain that the indexer records only that it failed, and ask for the wallet or node error " +
+          "to decode. Summarise the outcome in plain language.",
+      ),
   );
 
   server.registerResource(
@@ -232,9 +341,16 @@ export function createMcpServer(options: McpOptions): McpServer {
     },
   );
 
-  return server;
-}
+  server.registerResource(
+    "catalog",
+    "midnight-cast://catalog",
+    {
+      title: "midnight-cast command catalog",
+      description: "Every midnight-cast CLI command with its options, exit codes and error kinds, for agents that also have a terminal",
+      mimeType: "application/json",
+    },
+    (uri) => ({ contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(options.catalog(), null, 2) }] }),
+  );
 
-export function packageVersion(packageJsonPath: string): string {
-  return (JSON.parse(readFileSync(packageJsonPath, "utf8")) as { version: string }).version;
+  return server;
 }

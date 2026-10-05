@@ -1,3 +1,5 @@
+import { statSync } from "node:fs";
+import { resolve } from "node:path";
 import {
   buildVersionChecks,
   buildNetworkMismatchWarning,
@@ -19,7 +21,13 @@ import { settle } from "../lib/settle.js";
 
 export async function versionsCommand(
   networkArg: string | undefined,
-  flags: ResolveFlags & { failOnMismatch?: boolean; local?: boolean; offline?: boolean; refreshMatrix?: boolean },
+  flags: ResolveFlags & {
+    failOnMismatch?: boolean;
+    local?: boolean;
+    projectDir?: string;
+    offline?: boolean;
+    refreshMatrix?: boolean;
+  },
   options: GlobalOptions,
 ): Promise<EmitResult> {
   let endpoints;
@@ -59,7 +67,11 @@ export async function versionsCommand(
   }
 
   const checks = buildVersionChecks(expected, live, liveProofServer);
-  const local = flags.local !== false ? checkLocalPackages(expected) : {};
+  const projectDir = resolve(flags.projectDir ?? process.cwd());
+  if (flags.local !== false && !statSync(projectDir, { throwIfNoEntry: false })?.isDirectory()) {
+    return fail(`No such directory: ${projectDir}`);
+  }
+  const local = flags.local !== false ? checkLocalPackages(expected, projectDir) : {};
   const { localPackageChecks } = local;
   const allOk =
     checks.every((c) => c.ok) &&

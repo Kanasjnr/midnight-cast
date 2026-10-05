@@ -36,8 +36,9 @@ const EXIT_CODES = {
   "2": "Usage error: unknown command or option, or a missing argument",
 };
 
-const ERROR_KINDS: Record<NetworkErrorKind | "usage", string> = {
+const ERROR_KINDS: Record<NetworkErrorKind | "usage" | "rate_limited", string> = {
   usage: "The command line was invalid",
+  rate_limited: "The MCP server's limit on network calls was reached; wait and retry",
   dns: "The host name doesn't resolve",
   refused: "Nothing is listening at the URL",
   timeout: "No answer in time, after retries",
