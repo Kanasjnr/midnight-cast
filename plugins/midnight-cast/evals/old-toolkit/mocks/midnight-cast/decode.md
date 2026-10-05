@@ -1,8 +1,3 @@
----
-expect:
-  message: /UnsupportedBlockVersion/
----
-
 {
   "schemaVersion": 1,
   "ok": true,

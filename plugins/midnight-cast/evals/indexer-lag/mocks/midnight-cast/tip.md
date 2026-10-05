@@ -1,8 +1,3 @@
----
-expect:
-  network: preprod
----
-
 {
   "schemaVersion": 1,
   "ok": true,
