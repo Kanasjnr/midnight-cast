@@ -13,8 +13,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { chainGetHeader, parseBlockNumber } from "../src/clients/rpc.js";
-import type { HealthReport } from "../src/commands/health.js";
-import type { ServiceResult } from "../src/commands/ping.js";
+import type { HealthReport, HealthUnreachable } from "../src/commands/health.js";
 import { resolveNetwork } from "../src/config.js";
 import { isBlockfrostUrl, takeProjectId } from "../src/lib/blockfrost.js";
 import {
@@ -86,10 +85,6 @@ export interface Envelope<T> {
   ok: boolean;
   data?: T | null;
   error?: { message: string } | null;
-}
-
-interface PingReport {
-  table: Array<Pick<ServiceResult, "service" | "status" | "latencyMs" | "detail" | "errorKind">>;
 }
 
 const COMPONENTS: Component[] = [
@@ -179,7 +174,7 @@ export function rowVersions(net: MatrixNetwork): ComponentVersions {
 export interface ClassifyInput {
   network: string;
   /** `midnight-cast health <net> --json`, or undefined if it produced nothing parseable. */
-  health?: Envelope<HealthReport>;
+  health?: Envelope<HealthReport | HealthUnreachable>;
   /** `midnight-cast versions <net> --json --no-local`. */
   versions?: Envelope<VersionsReport>;
   upstream?: UpstreamMatrix;
@@ -206,11 +201,14 @@ export function classify(input: ClassifyInput): CheckResult {
     for (const s of health.services ?? []) {
       if (!s.optional && s.status !== "OK") add("outage", s.service, `${s.service} is ${s.status}`);
     }
-    if (health.sync?.inSync === false) {
+    const sync = "sync" in health ? health.sync : undefined;
+    if (sync?.inSync === false) {
       add(
         "outage",
         "sync",
-        `indexer is ${health.sync.delta} blocks behind the node (threshold ${health.sync.threshold})`,
+        sync.delta >= 0
+          ? `indexer is ${sync.delta} blocks behind the node (threshold ${sync.threshold})`
+          : `RPC is ${-sync.delta} blocks behind the indexer (threshold ${sync.threshold})`,
       );
     }
   }
@@ -486,12 +484,15 @@ export async function probeHeads(rpc: string, samples = 10, intervalMs = 2_000):
   return heads;
 }
 
-/** `ping` keeps a row per service when one is down, where `health` returns no data at all. */
-function attemptOf(at: string, ping: Envelope<PingReport> | undefined, health: Envelope<HealthReport> | undefined): Attempt {
-  const sync = health?.data?.sync;
-  const services = ping?.data?.table;
-  if (!services) return { at, services: [], error: ping?.error?.message ?? "ping produced no usable output", ...(sync ? { sync } : {}) };
-  return { at, services, ...(sync ? { sync } : {}) };
+function attemptOf(at: string, health: Envelope<HealthReport | HealthUnreachable> | undefined): Attempt {
+  const data = health?.data;
+  const sync = data && "sync" in data ? data.sync : undefined;
+  return {
+    at,
+    services: data?.services ?? [],
+    ...(data ? {} : { error: health?.error?.message ?? "health check produced no usable output" }),
+    ...(sync ? { sync } : {}),
+  };
 }
 
 interface Options {
@@ -568,10 +569,9 @@ async function main(): Promise<number> {
   const attempts: Attempt[] = [];
   for (let attempt = 1; attempt <= opts.attempts; attempt++) {
     const at = new Date().toISOString();
-    const [health, versions, ping] = await Promise.all([
-      runCli<HealthReport>(["health", network, "--json", "--offline"]),
+    const [health, versions] = await Promise.all([
+      runCli<HealthReport | HealthUnreachable>(["health", network, "--json", "--offline"]),
       runCli<VersionsReport>(["versions", network, "--json", "--no-local", "--offline"]),
-      runCli<PingReport>(["ping", network, "--json", "--offline"]),
     ]);
     // The verdict must be about the matrix that ships. If the CLI judged a
     // different one, its checks don't apply: refuse rather than mislead.
@@ -583,7 +583,7 @@ async function main(): Promise<number> {
       console.error(`live-check: ${mismatch}`);
       return EXIT.error;
     }
-    attempts.push(attemptOf(at, ping, health));
+    attempts.push(attemptOf(at, health));
     last = { health, versions };
     result = classify({ network, ...last, upstream, upstreamError, bundled });
     if (result.status !== "outage" || attempt === opts.attempts) break;
@@ -618,6 +618,7 @@ async function main(): Promise<number> {
         }
       : {}),
     environment: `${type()} ${release()}${process.env.GITHUB_ACTIONS ? " (GitHub Actions runner)" : ""}`,
+    ...(process.env.GITHUB_ACTIONS ? { trigger: process.env.GITHUB_EVENT_NAME ?? "unknown" } : {}),
     ...(runUrl ? { runUrl } : {}),
   };
   const fp = fingerprint(result);

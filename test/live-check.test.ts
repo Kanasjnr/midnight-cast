@@ -289,6 +289,30 @@ describe("live-check classify", () => {
   });
 });
 
+describe("live-check sync direction", () => {
+  it("says the RPC is behind when its head trails the indexer", () => {
+    const base = input();
+    const health = base.health!.data! as { sync: { rpcHeight: number; indexerHeight: number; delta: number; threshold: number; inSync: boolean } };
+    health.sync = { rpcHeight: 100, indexerHeight: 500, delta: -400, threshold: 100, inSync: false };
+    const result = classify(base);
+    expect(result.findings).toContainEqual(expect.objectContaining({ kind: "outage", component: "sync", message: "RPC is 400 blocks behind the indexer (threshold 100)" }));
+  });
+
+  it("reads a health report that lists only the services, when one is down", () => {
+    const result = classify(
+      input({
+        health: {
+          ok: false,
+          error: { message: "Required services unreachable: rpc" },
+          data: { network: "preprod", healthy: false, services: [{ service: "rpc", status: "FAIL", latencyMs: 10, errorKind: "timeout" }, { service: "indexer", status: "OK", latencyMs: 10 }] },
+        },
+      }),
+    );
+    expect(result.status).toBe("outage");
+    expect(result.findings).toContainEqual(expect.objectContaining({ kind: "outage", component: "rpc" }));
+  });
+});
+
 describe("live-check degraded RPC", () => {
   const heads = (...numbers: number[]) => numbers.map((head, i) => ({ at: `2026-10-02T11:55:4${i}.000Z`, ms: 400, head }));
 
