@@ -103,6 +103,8 @@ export function formatContractHuman(network: string, contract: ContractSummary):
   ];
   if (contract.deployed && last.kind !== "deploy") {
     lines.push(`Deployed: block ${contract.deployed.blockHeight} at ${contract.deployed.time}`, `          tx ${contract.deployed.transactionHash}`);
+  } else if (last.kind === "update") {
+    lines.push("Deployed: not reported after an update (the indexer links the deploy only from calls)");
   }
   lines.push(
     `State:    ${contract.state.bytes} bytes, sha256 ${contract.state.sha256}`,

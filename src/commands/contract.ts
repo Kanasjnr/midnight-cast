@@ -1,5 +1,6 @@
 import { resolveNetwork, type ResolveFlags } from "../config.js";
 import { formatContractHuman, getContract, normalizeContractAddress } from "../lib/contract.js";
+import { targetArgs } from "../lib/next-steps.js";
 import type { EmitResult, GlobalOptions, NextStep } from "../output.js";
 import { fail } from "../output.js";
 
@@ -27,7 +28,7 @@ export async function contractCommand(
 
     const next: NextStep[] = [
       {
-        command: `midnight-cast tx ${contract.latestAction.transactionHash} ${endpoints.network}`,
+        command: `midnight-cast tx ${contract.latestAction.transactionHash} ${targetArgs(endpoints.network, flags)}`,
         reason: "See the transaction behind the latest action",
       },
     ];

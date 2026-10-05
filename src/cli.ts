@@ -403,9 +403,11 @@ program
 
 program
   .command("dust-status <addresses...>")
-  .description("DUST registration and generation for Cardano reward addresses (indexer); --network picks the network")
-  .action(async (addresses: string[], _opts, cmd) => {
-    await run(async () => dustStatusCommand(addresses, undefined, resolveFlags(cmd), globalOpts(cmd)), cmd);
+  .description("DUST registration and generation for Cardano reward addresses (indexer); a trailing network name picks the network")
+  .action(async (args: string[], _opts, cmd) => {
+    const network = args.length > 1 && isNetworkName(args.at(-1)) ? args.at(-1) : undefined;
+    const addresses = network ? args.slice(0, -1) : args;
+    await run(async () => dustStatusCommand(addresses, network, resolveFlags(cmd), globalOpts(cmd)), cmd);
   });
 
 program

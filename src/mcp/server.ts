@@ -238,7 +238,7 @@ export function createMcpServer(options: McpOptions): McpServer {
   tool(
     "contract",
     "contract",
-    "Look up a deployed contract by address: whether it exists, its latest action (deploy, call or update) and the circuit a call ran, the deploy transaction and block, unshielded balances, and the state's size and sha256.",
+    "Look up a deployed contract by address: whether it exists, its latest action (deploy, call or update) and the circuit a call ran, the deploy transaction and block (not reported after an update), unshielded balances, and the state's size and sha256.",
     LIVE,
     {
       network,

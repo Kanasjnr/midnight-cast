@@ -416,7 +416,7 @@ midnight-cast contract 0xa0885870… preprod --json
 |------|-------------|
 | `--state` | Include the full contract state hex |
 
-Contract state can be large (678 KB for one preprod contract), so by default the output gives its size in bytes and its sha256, enough to tell whether it changed. An address with no contract fails with "No contract at …". `next` points at `tx` for the latest action's transaction.
+Contract state can be large (678 KB for one preprod contract), so by default the output gives its size in bytes and its sha256, enough to tell whether it changed. When the latest action is an update, the indexer doesn't link the deploy, so `deployed` is absent. An address with no contract fails with "No contract at …". `next` points at `tx` for the latest action's transaction.
 
 ---
 
