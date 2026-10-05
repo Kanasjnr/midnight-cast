@@ -4,6 +4,8 @@
 
 
 ### New commands
+- `agents init` prints the guidance that teaches an AI coding agent to use midnight-cast, or with `--write` adds it to the project's `AGENTS.md`, `CLAUDE.md` or `GEMINI.md`. Only a marked section is ever changed, and an existing file is changed only after confirmation or `--yes`
+- A portable agent skill, `skills/midnight-cast/SKILL.md`, installs with `npx skills add Kanasjnr/midnight-cast --skill midnight-cast`. It and the three snippets in `docs/agents/` are generated from one source (`npm run agent-files`), and a test fails if they drift. `docs/agents/EVALS.md` has diagnosis tasks for running the guidance in Claude Code, Codex and Gemini CLI
 - `contract <address> [network]` looks up a deployed contract: whether it exists, its latest action (deploy, call or update) and the circuit a call ran, the deploy transaction and block, unshielded balances, and the state's size and sha256 (`--state` for the full hex). The MCP server has it as the `contract` tool
 - `dust-status <addresses...>` shows DUST generation for Cardano reward addresses: registration, NIGHT balance, generation rate, and current and maximum capacity. The MCP server has it as the `dust_status` tool
 - Both have JSON Schemas and recorded fixtures. The fixture recorder looks for a contract over at most 300 recent blocks, pausing between queries, so one run can't flood a public network

@@ -480,6 +480,26 @@ id=565902  typename=DustInitialUtxo  protocolVersion=22000  raw=0x6d69646e696768
 
 ---
 
+## `midnight-cast agents init`
+
+Prints the guidance that teaches an AI coding agent when to use midnight-cast, the debug ladder, and how to read the JSON envelope. With `--write` it puts it in the project.
+
+```bash
+midnight-cast agents init
+midnight-cast agents init --write
+midnight-cast agents init --write --file CLAUDE.md --yes
+```
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--file <name>` | `AGENTS.md` | `AGENTS.md`, `CLAUDE.md` or `GEMINI.md` |
+| `--write` | off | Write it into that file in the current directory |
+| `--yes` | off | Change an existing file without asking |
+
+The guidance sits between `<!-- midnight-cast:start -->` and `<!-- midnight-cast:end -->` markers. A new file is created. In an existing file, only that section is added to the end or updated in place, and nothing else in the file is touched. Changing an existing file asks first, or needs `--yes` when there is no terminal to ask in.
+
+---
+
 ## `midnight-cast mcp`
 
 Runs a read-only MCP server on stdio, for AI agents. It exposes `health`, `ping`, `tip`, `versions`, `block`, `tx`, `dust_event`, `dust_events`, `decode` and `explain` as tools that return the [JSON envelope](#json-output), prompts for diagnosing an error, checking a network and investigating a transaction, and the support matrix, error codes and command catalog as resources. `MIDNIGHT_CAST_NETWORKS` (for example `preview,preprod`) limits the networks the model may query, `BLOCKFROST_PROJECT_ID` supplies the mainnet project ID, which never appears in a response, and `MIDNIGHT_CAST_MAX_CALLS_PER_MINUTE` sets the rate limit on network tools (30 by default). Setup for each agent is in [MCP.md](./MCP.md).
