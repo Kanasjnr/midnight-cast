@@ -14,6 +14,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import { chainGetHeader, parseBlockNumber } from "../src/clients/rpc.js";
 import type { HealthReport } from "../src/commands/health.js";
+import type { ServiceResult } from "../src/commands/ping.js";
 import { resolveNetwork } from "../src/config.js";
 import { isBlockfrostUrl, takeProjectId } from "../src/lib/blockfrost.js";
 import {
@@ -30,7 +31,7 @@ import {
   type SupportMatrixFile,
   type VersionsReport,
 } from "../src/lib/versions.js";
-import { headRegression, serviceDeskSection, type Attempt, type HeadSample, type ReportInput } from "./service-desk.js";
+import { headRegression, serviceDeskSection, type Attempt, type Evidence, type HeadSample, type ReportInput } from "./service-desk.js";
 
 export { UPSTREAM_MATRIX_URL, parseUpstreamMatrix, versionFromTag } from "../src/lib/upstream-matrix.js";
 export type { Component, ComponentVersions, UpstreamMatrix } from "../src/lib/upstream-matrix.js";
@@ -76,12 +77,8 @@ export interface CheckResult {
   live: LiveSnapshot;
   bundled: ComponentVersions;
   upstream?: ComponentVersions;
-  /** What each attempt saw, kept for the service-desk report. */
-  attempts?: Attempt[];
-  heads?: HeadSample[];
-  endpoints?: ReportInput["endpoints"];
-  environment?: string;
-  runUrl?: string;
+  /** What the check saw, kept for the service-desk draft. */
+  evidence?: Evidence;
 }
 
 /** The fields of the `--json` envelope that live checks read. */
@@ -89,6 +86,10 @@ export interface Envelope<T> {
   ok: boolean;
   data?: T | null;
   error?: { message: string } | null;
+}
+
+interface PingReport {
+  table: Array<Pick<ServiceResult, "service" | "status" | "latencyMs" | "detail" | "errorKind">>;
 }
 
 const COMPONENTS: Component[] = [
@@ -383,30 +384,25 @@ export function fingerprint(result: CheckResult): string {
   return createHash("sha256").update(`${result.status}\n${key}`).digest("hex").slice(0, 16);
 }
 
-/** Remove anything that could be a credential before output leaves the runner. */
+/**
+ * Remove anything that could be a credential before output leaves the runner. A shell
+ * variable such as `$BLOCKFROST_PROJECT_ID` in a reproduction isn't one, so it stays.
+ */
 export function redact(text: string, secrets: Array<string | undefined> = []): string {
   let out = text;
   for (const s of secrets) if (s) out = out.split(s).join("***");
   return out
-    .replace(/(project_id=)[^&\s"'<>]+/gi, "$1***")
-    .replace(/(project_id["']?\s*[:=]\s*["']?)[^&\s"'<>,}]+/gi, "$1***");
+    .replace(/(project_id=)(?!\$)[^&\s"'<>]+/gi, "$1***")
+    .replace(/(project_id["']?\s*[:=]\s*["']?)(?!\$)[^&\s"'<>,}]+/gi, "$1***");
 }
 
 export function reportInput(result: CheckResult): ReportInput {
-  return {
-    network: result.network,
-    attempts: result.attempts ?? [],
-    heads: result.heads,
-    endpoints: result.endpoints,
-    nodeVersion: result.live.node,
-    environment: result.environment,
-    runUrl: result.runUrl,
-  };
+  return { network: result.network, nodeVersion: result.live.node, attempts: [], ...result.evidence };
 }
 
 export function renderMarkdown(
   result: CheckResult,
-  meta: { checkedAt?: string; runUrl?: string; firstSeen?: string } = {},
+  meta: { checkedAt?: string; runUrl?: string } = {},
 ): string {
   const icon = { clean: "✅", drift: "⚠️", degraded: "🟠", outage: "❌" }[result.status];
   const cell = (x: string | number | undefined) => (x === undefined ? "—" : `\`${x}\``);
@@ -434,7 +430,7 @@ export function renderMarkdown(
   lines.push("");
   if (meta.checkedAt) lines.push(`Checked at ${meta.checkedAt}.`);
   if (meta.runUrl) lines.push(`Run: ${meta.runUrl}`);
-  const serviceDesk = serviceDeskSection(reportInput(result), meta.firstSeen);
+  const serviceDesk = serviceDeskSection(reportInput(result));
   if (serviceDesk) lines.push("", serviceDesk);
   return lines.join("\n");
 }
@@ -469,7 +465,7 @@ async function fetchUpstream(network: string): Promise<UpstreamMatrix> {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** Asks the RPC for its head a few times in a row; a load-balanced RPC with a lagging node goes backwards. */
-export async function probeHeads(rpc: string, samples = 8, intervalMs = 2_000): Promise<HeadSample[]> {
+export async function probeHeads(rpc: string, samples = 10, intervalMs = 2_000): Promise<HeadSample[]> {
   const heads: HeadSample[] = [];
   for (let i = 0; i < samples; i++) {
     if (i) await sleep(intervalMs);
@@ -477,7 +473,12 @@ export async function probeHeads(rpc: string, samples = 8, intervalMs = 2_000): 
     const start = Date.now();
     try {
       const header = await chainGetHeader(rpc);
-      heads.push({ at, ms: Date.now() - start, head: parseBlockNumber(header.number) });
+      const head = parseBlockNumber(String(header.number));
+      heads.push(
+        Number.isFinite(head)
+          ? { at, ms: Date.now() - start, head }
+          : { at, ms: Date.now() - start, error: `unexpected block number ${JSON.stringify(header.number)}` },
+      );
     } catch (err) {
       heads.push({ at, ms: Date.now() - start, error: err instanceof Error ? err.message : String(err) });
     }
@@ -485,10 +486,12 @@ export async function probeHeads(rpc: string, samples = 8, intervalMs = 2_000): 
   return heads;
 }
 
-function attemptOf(at: string, health: Envelope<HealthReport> | undefined): Attempt {
-  const data = health?.data;
-  if (!data?.services) return { at, services: [], error: health?.error?.message ?? "health check produced no usable output" };
-  return { at, services: data.services, ...(data.sync ? { sync: data.sync } : {}) };
+/** `ping` keeps a row per service when one is down, where `health` returns no data at all. */
+function attemptOf(at: string, ping: Envelope<PingReport> | undefined, health: Envelope<HealthReport> | undefined): Attempt {
+  const sync = health?.data?.sync;
+  const services = ping?.data?.table;
+  if (!services) return { at, services: [], error: ping?.error?.message ?? "ping produced no usable output", ...(sync ? { sync } : {}) };
+  return { at, services, ...(sync ? { sync } : {}) };
 }
 
 interface Options {
@@ -553,19 +556,22 @@ async function main(): Promise<number> {
   let endpoints: ReturnType<typeof resolveNetwork> | undefined;
   try {
     endpoints = resolveNetwork(network);
-  } catch {
-    // Mainnet without a project ID: health reports it, and there's no RPC to probe.
+  } catch (err) {
+    console.error(
+      redact(`live-check: no endpoints for the head probe or the reproductions: ${err instanceof Error ? err.message : String(err)}`, secrets),
+    );
   }
 
   // Retry so one slow response isn't reported as an outage.
   let result: CheckResult | undefined;
+  let last: Pick<ClassifyInput, "health" | "versions"> = {};
   const attempts: Attempt[] = [];
-  let heads: HeadSample[] | undefined;
   for (let attempt = 1; attempt <= opts.attempts; attempt++) {
     const at = new Date().toISOString();
-    const [health, versions] = await Promise.all([
+    const [health, versions, ping] = await Promise.all([
       runCli<HealthReport>(["health", network, "--json", "--offline"]),
       runCli<VersionsReport>(["versions", network, "--json", "--no-local", "--offline"]),
+      runCli<PingReport>(["ping", network, "--json", "--offline"]),
     ]);
     // The verdict must be about the matrix that ships. If the CLI judged a
     // different one, its checks don't apply: refuse rather than mislead.
@@ -577,10 +583,9 @@ async function main(): Promise<number> {
       console.error(`live-check: ${mismatch}`);
       return EXIT.error;
     }
-    attempts.push(attemptOf(at, health));
-    const rpcUp = health?.data?.services?.some((s) => s.service === "rpc" && s.status === "OK");
-    if (rpcUp && endpoints && !heads) heads = await probeHeads(endpoints.rpc);
-    result = classify({ network, health, versions, upstream, upstreamError, bundled, heads });
+    attempts.push(attemptOf(at, ping, health));
+    last = { health, versions };
+    result = classify({ network, ...last, upstream, upstreamError, bundled });
     if (result.status !== "outage" || attempt === opts.attempts) break;
     console.error(
       `attempt ${attempt}/${opts.attempts}: outage, retrying in ${opts.delayMs / 1000}s`,
@@ -589,10 +594,18 @@ async function main(): Promise<number> {
   }
   if (!result) return EXIT.error;
 
+  // Once the retries settle, and only if the network is up: during an outage it adds nothing.
+  let heads: HeadSample[] | undefined;
+  const rpcUp = attempts.at(-1)?.services.some((s) => s.service === "rpc" && s.status === "OK");
+  if (result.status !== "outage" && rpcUp && endpoints) {
+    heads = await probeHeads(endpoints.rpc);
+    result = classify({ network, ...last, upstream, upstreamError, bundled, heads });
+  }
+
   const runUrl = process.env.GITHUB_RUN_ID
     ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
     : undefined;
-  Object.assign(result, {
+  result.evidence = {
     attempts,
     ...(heads ? { heads } : {}),
     ...(endpoints
@@ -606,7 +619,7 @@ async function main(): Promise<number> {
       : {}),
     environment: `${type()} ${release()}${process.env.GITHUB_ACTIONS ? " (GitHub Actions runner)" : ""}`,
     ...(runUrl ? { runUrl } : {}),
-  });
+  };
   const fp = fingerprint(result);
   const report = redact(
     `${renderMarkdown(result, { checkedAt: new Date().toISOString(), runUrl })}\n\n<!-- live-check fingerprint: ${fp} -->\n`,

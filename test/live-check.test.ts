@@ -311,7 +311,7 @@ describe("live-check degraded RPC", () => {
   it("adds the service-desk draft to the report", () => {
     const result = classify(input({ heads: heads(2804021, 2804011) }));
     const report = renderMarkdown(
-      { ...result, attempts: [{ at: "2026-10-02T11:55:30.000Z", services: [] }], heads: heads(2804021, 2804011) },
+      { ...result, evidence: { attempts: [{ at: "2026-10-02T11:55:30.000Z", services: [] }], heads: heads(2804021, 2804011) } },
       { checkedAt: "2026-10-02T11:56:00Z" },
     );
     expect(report).toContain("🟠 preprod: degraded");
@@ -458,6 +458,12 @@ describe("live-check exit code", () => {
 });
 
 describe("live-check redact and render", () => {
+  it("keeps a shell variable in a reproduction, so the command still works", () => {
+    const curl = '-H "project_id: $BLOCKFROST_PROJECT_ID" https://x.io?project_id=$BLOCKFROST_PROJECT_ID';
+    expect(redact(curl)).toBe(curl);
+    expect(redact('-H "project_id: nightmainnetABC123"')).toBe('-H "project_id: ***"');
+  });
+
   it("removes explicit secrets and any project_id value", () => {
     const text =
       "fetch https://rpc.midnight-mainnet.blockfrost.io?project_id=nightmainnetABC123&x=1 " +
