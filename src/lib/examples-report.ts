@@ -4,9 +4,8 @@
 // the version a network runs, a failing app is more likely the app's code or setup.
 
 import { join } from "node:path";
-import { cacheDir, readCache, writeCache, type CacheFile } from "./cache.js";
+import { cacheDir, cachedFetch, formatAge, isOffline } from "./cache.js";
 import { loadDataJson } from "./data-path.js";
-import { isOffline } from "./upstream-matrix.js";
 
 export const EXAMPLES_REPO = "midnightntwrk/midnight-examples";
 
@@ -85,25 +84,47 @@ export function coreVersion(version: string | undefined): string | undefined {
   return /(\d+\.\d+\.\d+)/.exec(version ?? "")?.[1];
 }
 
+/** Whether a value has the shape of a summary, for anything read back from disk. */
+function isReport(value: unknown): value is ExamplesReport {
+  const r = value as ExamplesReport;
+  return (
+    !!r &&
+    typeof r.nodeVersion === "string" &&
+    typeof r.network === "string" &&
+    typeof r.date === "string" &&
+    typeof r.url === "string" &&
+    Array.isArray(r.knownIssues) &&
+    [r.suites?.total, r.suites?.passed, r.suites?.failed, r.tests?.passed, r.tests?.failed, r.tests?.skipped].every(
+      (n) => typeof n === "number",
+    )
+  );
+}
+
 function judge(
-  nodeVersion: string,
-  runtimeSpecVersion: number | undefined,
+  checked: { network: string; nodeVersion: string; runtimeSpecVersion?: number },
   report: ExamplesReport | null | undefined,
   source: ExamplesVerdict["source"],
 ): ExamplesVerdict {
-  if (!report) {
-    return { nodeVersion, status: "unverified", reason: `no examples report for node ${nodeVersion} yet`, source };
+  const { network, nodeVersion, runtimeSpecVersion } = checked;
+  const unverified = (reason: string, withReport = true): ExamplesVerdict => ({
+    nodeVersion,
+    status: "unverified",
+    reason,
+    ...(report && withReport ? { report } : {}),
+    source,
+  });
+  if (!report) return unverified(`no examples report for node ${nodeVersion} yet`);
+  if (report.nodeVersion !== nodeVersion) {
+    return unverified(`the report found for node ${nodeVersion} is about node ${report.nodeVersion}`, false);
   }
   if (report.runtimeSpecVersion !== undefined && runtimeSpecVersion !== undefined && report.runtimeSpecVersion !== runtimeSpecVersion) {
-    return {
-      nodeVersion,
-      status: "unverified",
-      reason: `the examples ran node ${report.nodeVersion} on runtime ${report.runtimeSpecVersion}, but this network runs runtime ${runtimeSpecVersion}`,
-      report,
-      source,
-    };
+    return unverified(`the examples ran on runtime ${report.runtimeSpecVersion}, but this network runs runtime ${runtimeSpecVersion}`);
   }
-  return { nodeVersion, status: report.tests.failed === 0 ? "passed" : "failures", report, source };
+  // The runs cover one network; another network running the same node isn't covered by them.
+  if (report.network !== network) return unverified(`the examples ran on ${report.network}, not ${network}`);
+  if (report.tests.passed === 0) return unverified("the report has no passing tests");
+  const failed = report.suites.failed > 0 || report.tests.failed > 0;
+  return { nodeVersion, status: failed ? "failures" : "passed", report, source };
 }
 
 export interface ExamplesOptions {
@@ -115,89 +136,75 @@ export interface ExamplesOptions {
   bundled?: BundledReports;
 }
 
-const HOUR_MS = 60 * 60 * 1000;
-const CACHE_TTL_MS = 6 * HOUR_MS;
-const RETRY_AFTER_FAILURE_MS = HOUR_MS;
-const FALLBACK_MAX_AGE_MS = 7 * 24 * HOUR_MS;
-const FETCH_TIMEOUT_MS = 3_000;
-
 /**
  * Whether Midnight's examples pass on the node a network runs: a fresh cache of the report
  * for that version, then a fetch, then the summaries bundled with this release. A version
- * with no report is unverified, never matched to an older one.
+ * with no report is unverified, never matched to an older one. It never throws: the verdict
+ * is extra information, and mustn't fail the command that asked for it.
  */
 export async function examplesVerdict(
+  network: string,
   live: { nodeVersion?: string; runtimeSpecVersion?: number },
   options: ExamplesOptions = {},
 ): Promise<ExamplesVerdict> {
-  const bundled = options.bundled ?? loadDataJson<BundledReports>("examples-reports.json");
   const version = coreVersion(live.nodeVersion);
-  const fromBundled = (reason?: string) =>
-    judge(version ?? "unknown", live.runtimeSpecVersion, version ? bundled.reports[version] : undefined, {
-      kind: "bundled",
-      updated: bundled.updated,
-      ...(reason ? { reason } : {}),
-    });
-  if (!version) return { ...fromBundled(), status: "unverified", reason: "the network's node version is unknown" };
-  if (isOffline(options.offline)) return fromBundled("offline");
-
-  const now = options.now ?? Date.now();
-  const cachePath = join(options.cacheDir ?? cacheDir(), `examples-report-${version}.json`);
-  const cached = readCache<ExamplesReport | null>(cachePath);
-  const age = (at: string | undefined) => (at ? now - Date.parse(at) : Number.NaN);
-  const within = (at: string | undefined, limit: number) => age(at) >= 0 && age(at) < limit;
-  const fromCache = (cache: CacheFile<ExamplesReport | null>, kind: "upstream" | "cache", reason?: string) =>
-    // A newer release can bundle a report the cache didn't have yet.
-    !cache.body && bundled.reports[version]
-      ? fromBundled(reason)
-      : judge(version, live.runtimeSpecVersion, cache.body, {
-          kind,
-          updated: cache.fetchedAt,
-          ageMinutes: Math.max(0, Math.round(age(cache.fetchedAt) / 60_000)),
-          ...(reason ? { reason } : {}),
-        });
-  const usable = cached && within(cached.fetchedAt, FALLBACK_MAX_AGE_MS) ? cached : undefined;
-  const fallback = (reason: string) => (usable ? fromCache(usable, "cache", reason) : fromBundled(reason));
-
-  if (!options.refresh) {
-    if (usable && within(usable.fetchedAt, CACHE_TTL_MS)) return fromCache(usable, "cache");
-    if (cached?.failedAt && within(cached.failedAt, RETRY_AFTER_FAILURE_MS)) {
-      return fallback(`examples report unavailable (${cached.failure ?? "fetch failed"}; retrying after an hour)`);
-    }
-  }
-
+  let bundled: BundledReports = { updated: "", reports: {} };
   try {
-    const response = await (options.fetchImpl ?? fetch)(rawUrl(version), { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
-    if (!response.ok && response.status !== 404) throw new Error(`HTTP ${response.status}`);
-    const body = response.status === 404 ? null : summarizeReport(await response.json());
-    const fresh: CacheFile<ExamplesReport | null> = { fetchedAt: new Date(now).toISOString(), body };
-    writeCache(cachePath, fresh);
-    return fromCache(fresh, "upstream");
-  } catch (err) {
-    const failure = err instanceof Error ? err.message : String(err);
-    writeCache(cachePath, {
-      fetchedAt: cached?.fetchedAt ?? new Date(0).toISOString(),
-      body: cached?.body ?? null,
-      failedAt: new Date(now).toISOString(),
-      failure,
+    bundled = options.bundled ?? loadDataJson<BundledReports>("examples-reports.json");
+    const fromBundled = (reason?: string) =>
+      judge({ network, nodeVersion: version ?? "unknown", runtimeSpecVersion: live.runtimeSpecVersion }, version ? bundled.reports[version] : undefined, {
+        kind: "bundled",
+        updated: bundled.updated,
+        ...(reason ? { reason } : {}),
+      });
+    if (!version) return { ...fromBundled(), reason: "the network's node version is unknown" };
+    if (isOffline(options.offline)) return fromBundled("offline");
+
+    const fetched = await cachedFetch<ExamplesReport | null>({
+      path: join(options.cacheDir ?? cacheDir(), `examples-report-${version}.json`),
+      url: rawUrl(version),
+      label: "examples report",
+      read: async (response) => {
+        if (response.status === 404) return null;
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const report = summarizeReport(await response.json());
+        if (report.nodeVersion !== version) throw new Error(`${reportPath(version)} is about node ${report.nodeVersion}`);
+        return report;
+      },
+      valid: (body): body is ExamplesReport | null => body === null || isReport(body),
+      // A copy cached before this release's summaries were made is older than them.
+      bundledAt: Date.parse(bundled.updated) || undefined,
+      refresh: options.refresh,
+      now: options.now,
+      fetchImpl: options.fetchImpl,
     });
-    return fallback(`examples report unavailable (${failure})`);
+    if ("unavailable" in fetched) return fromBundled(fetched.unavailable);
+    return judge({ network, nodeVersion: version, runtimeSpecVersion: live.runtimeSpecVersion }, fetched.body, {
+      kind: fetched.kind,
+      updated: fetched.fetchedAt,
+      ageMinutes: fetched.ageMinutes,
+      ...(fetched.reason ? { reason: fetched.reason } : {}),
+    });
+  } catch (err) {
+    return {
+      nodeVersion: version ?? "unknown",
+      status: "unverified",
+      reason: `couldn't read the examples report: ${err instanceof Error ? err.message : String(err)}`,
+      source: { kind: "bundled", updated: bundled.updated },
+    };
   }
 }
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-/** "30 Sep 2026" from "2026-09-30", whatever the locale. */
+/** "30 Sep 2026" from "2026-09-30", whatever the locale; anything else as it is. */
 function formatDate(date: string): string {
   const [year, month, day] = date.split("-").map(Number);
-  return month && day ? `${day} ${MONTHS[month - 1]} ${year}` : date;
+  return year && month && day && month >= 1 && month <= 12 ? `${day} ${MONTHS[month - 1]} ${year}` : date;
 }
 
 function describeSource(source: ExamplesVerdict["source"]): string {
   if (source.kind === "upstream") return "";
-  if (source.kind === "cache") {
-    const age = source.ageMinutes ?? 0;
-    return ` (cached ${age < 60 ? `${age}m` : `${Math.round(age / 60)}h`} ago${source.reason ? `; ${source.reason}` : ""})`;
-  }
+  if (source.kind === "cache") return ` (cached ${formatAge(source.ageMinutes ?? 0)} ago${source.reason ? `; ${source.reason}` : ""})`;
   return ` (bundled ${source.updated}${source.reason ? `; ${source.reason}` : ""})`;
 }
 
@@ -205,18 +212,23 @@ function describeSource(source: ExamplesVerdict["source"]): string {
 export function describeExamples(verdict: ExamplesVerdict): string[] {
   const source = describeSource(verdict.source);
   const report = verdict.report;
-  if (verdict.status === "unverified" || !report) {
-    return [`Midnight's examples: not verified on node ${verdict.nodeVersion}: ${verdict.reason ?? "no report"}${source}.`];
+  const run = report
+    ? `node ${report.nodeVersion} (${report.network}, ${formatDate(report.date)}): ${report.tests.passed} tests passed, ${report.tests.failed} failed`
+    : "";
+  if (verdict.status === "unverified") {
+    return [
+      `Midnight's examples: not verified for this network: ${verdict.reason ?? "no report"}${source}.`,
+      ...(report ? [`  Their run: ${run}.`, `  Report: ${report.url}`] : []),
+    ];
   }
-  const where = `on node ${report.nodeVersion} (${report.network}, ${formatDate(report.date)})`;
-  const tests = report.tests;
+  const where = `on node ${report!.nodeVersion} (${report!.network}, ${formatDate(report!.date)})`;
   const first =
     verdict.status === "passed"
-      ? `Midnight's examples: all ${tests.passed} tests passed ${where}${source}.`
-      : `Midnight's examples: ${tests.passed} passed, ${tests.failed} failed ${where}${source}.`;
+      ? `Midnight's examples: all ${report!.tests.passed} tests passed ${where}${source}.`
+      : `Midnight's examples: ${report!.tests.passed} passed, ${report!.tests.failed} failed, ${report!.suites.failed} of ${report!.suites.total} suites failing ${where}${source}.`;
   return [
     first,
-    ...(verdict.status === "failures" && report.verdict ? [`  Their verdict: ${report.verdict.split(/(?<=\.)\s/)[0]}`] : []),
-    `  Report: ${report.url}`,
+    ...(verdict.status === "failures" && report!.verdict ? [`  Their verdict: ${report!.verdict.split(/(?<=\.)\s/)[0]}`] : []),
+    `  Report: ${report!.url}`,
   ];
 }
