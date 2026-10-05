@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/main/schemas/agents.schema.json",
+  "title": "agents init data",
+  "type": "object",
+  "required": [
+    "file",
+    "action"
+  ],
+  "properties": {
+    "file": {
+      "type": "string"
+    },
+    "action": {
+      "enum": [
+        "printed",
+        "created",
+        "updated",
+        "appended",
+        "unchanged"
+      ]
+    },
+    "snippet": {
+      "type": "string"
+    }
+  }
+}

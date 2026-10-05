@@ -171,6 +171,8 @@ Agents that speak MCP can use midnight-cast directly: `midnight-cast mcp` runs a
 claude mcp add --transport stdio midnight-cast -- npx -y midnight-cast mcp
 ```
 
+To teach a coding agent when and how to use midnight-cast, add the guidance to your project: `midnight-cast agents init --write` appends a marked section to `AGENTS.md` (read by Codex, Cursor, Copilot, Gemini CLI, Windsurf, Aider and others; use `--file CLAUDE.md` for Claude Code), or install the portable skill with `npx skills add Kanasjnr/midnight-cast --skill midnight-cast`. The snippets are in [docs/agents](docs/agents).
+
 [docs/MCP.md](docs/MCP.md) has the setup for Codex, Gemini CLI, Cursor, VS Code and others, the network allow-list, and how the Blockfrost project ID stays out of the model's sight.
 
 ## Community & support

@@ -17,6 +17,7 @@ import { TOPICS, explainCommand } from "./commands/explain.js";
 import { buildCatalog, isDefaultSubcommand } from "./lib/catalog.js";
 import { txCommand } from "./commands/tx.js";
 import { contractCommand } from "./commands/contract.js";
+import { agentsInitCommand } from "./commands/agents.js";
 import { dustStatusCommand } from "./commands/dust-status.js";
 import { versionsCommand } from "./commands/versions.js";
 import type { ResolveFlags } from "./config.js";
@@ -388,6 +389,18 @@ program
         ),
       cmd,
     );
+  });
+
+const agents = program.command("agents").description("Guidance files that teach AI coding agents to use midnight-cast");
+
+agents
+  .command("init")
+  .description("Print the AGENTS.md snippet, or write it into the project with --write")
+  .option("--file <name>", "AGENTS.md, CLAUDE.md or GEMINI.md", "AGENTS.md")
+  .option("--write", "Write the snippet into that file in the current directory")
+  .option("--yes", "Change an existing file without asking (only the midnight-cast section)")
+  .action(async (opts, cmd) => {
+    await run(async () => agentsInitCommand({ file: opts.file, write: opts.write, yes: opts.yes }, globalOpts(cmd)), cmd);
   });
 
 program
