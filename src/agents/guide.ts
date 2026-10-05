@@ -54,15 +54,33 @@ ${GUIDE}
 `;
 }
 
-/** Inserts or replaces the marked midnight-cast section, leaving the rest of the file alone. */
-export function withSnippet(existing: string | undefined, snippet: string): { text: string; change: "created" | "updated" | "appended" | "unchanged" } {
+export type SnippetChange = "created" | "updated" | "appended" | "unchanged";
+
+const lineOf = (marker: string) => new RegExp(`^${marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\r?$`, "gm");
+
+/**
+ * Inserts or replaces the marked midnight-cast section, leaving the rest of the file alone.
+ * Markers count only on their own line. Anything but one start line followed by one end line
+ * is refused, since guessing which part is ours could delete the user's text.
+ */
+export function withSnippet(
+  existing: string | undefined,
+  snippet: string,
+): { text: string; change: SnippetChange } | { error: string } {
   if (existing === undefined) return { text: snippet, change: "created" };
-  const start = existing.indexOf(START_MARKER);
-  const end = existing.indexOf(END_MARKER, start);
-  if (start !== -1 && end !== -1) {
-    const text = existing.slice(0, start) + snippet.trimEnd() + existing.slice(end + END_MARKER.length);
-    return { text, change: text === existing ? "unchanged" : "updated" };
+  const eol = existing.includes("\r\n") ? "\r\n" : "\n";
+  const ours = snippet.replace(/\n/g, eol);
+  const starts = [...existing.matchAll(lineOf(START_MARKER))];
+  const ends = [...existing.matchAll(lineOf(END_MARKER))];
+
+  if (starts.length === 0 && ends.length === 0) {
+    const separator = existing.length === 0 || existing.endsWith(eol + eol) ? "" : existing.endsWith(eol) ? eol : eol + eol;
+    return { text: existing + separator + ours, change: "appended" };
   }
-  const separator = existing.length === 0 || existing.endsWith("\n\n") ? "" : existing.endsWith("\n") ? "\n" : "\n\n";
-  return { text: existing + separator + snippet, change: "appended" };
+  if (starts.length !== 1 || ends.length !== 1 || ends[0]!.index! < starts[0]!.index!) {
+    return { error: `expected one "${START_MARKER}" line followed by one "${END_MARKER}" line` };
+  }
+  const endLine = ends[0]!;
+  const text = existing.slice(0, starts[0]!.index) + ours.trimEnd() + existing.slice(endLine.index! + endLine[0].replace(/\r$/, "").length);
+  return { text, change: text === existing ? "unchanged" : "updated" };
 }

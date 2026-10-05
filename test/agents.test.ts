@@ -39,15 +39,32 @@ describe("adding the snippet to a file", () => {
 
   it("creates, appends, updates in place and leaves the rest of the file alone", () => {
     expect(withSnippet(undefined, snippet)).toEqual({ text: snippet, change: "created" });
-    const appended = withSnippet("# My project\n", snippet);
+    const appended = withSnippet("# My project\n", snippet) as { text: string; change: string };
     expect(appended.change).toBe("appended");
     expect(appended.text.startsWith("# My project\n\n")).toBe(true);
     const old = `# My project\n\n${START_MARKER}\nold guidance\n${END_MARKER}\n\n## Build\nnpm test\n`;
-    const updated = withSnippet(old, snippet);
+    const updated = withSnippet(old, snippet) as { text: string; change: string };
     expect(updated.change).toBe("updated");
     expect(updated.text).toContain("## Build\nnpm test\n");
     expect(updated.text).not.toContain("old guidance");
-    expect(withSnippet(updated.text, snippet).change).toBe("unchanged");
+    expect(withSnippet((updated as { text: string }).text, snippet)).toMatchObject({ change: "unchanged" });
+  });
+
+  it("refuses broken markers instead of guessing, and ignores markers mentioned in prose", () => {
+    const missingEnd = `# Proj\n${START_MARKER}\nold\n\n## Build\nnpm test\n`;
+    expect(withSnippet(missingEnd, snippet)).toHaveProperty("error");
+    expect(withSnippet(`${END_MARKER}\nx\n${START_MARKER}\n`, snippet)).toHaveProperty("error");
+    const twice = `${START_MARKER}\na\n${END_MARKER}\n${START_MARKER}\nb\n${END_MARKER}\n`;
+    expect(withSnippet(twice, snippet)).toHaveProperty("error");
+    const prose = `Our section sits between \`${START_MARKER}\` and \`${END_MARKER}\`.\n`;
+    expect(withSnippet(prose, snippet)).toMatchObject({ change: "appended" });
+  });
+
+  it("keeps a CRLF file's line endings", () => {
+    const result = withSnippet("# P\r\n\r\n", snippet) as { text: string };
+    expect(result.text.startsWith(`# P\r\n\r\n${START_MARKER}`)).toBe(true);
+    expect(result.text.replace(/\r\n/g, "")).not.toContain("\n");
+    expect(withSnippet(result.text, snippet)).toMatchObject({ change: "unchanged" });
   });
 
   it("prints by default, writes a new file, and won't change an existing one without --yes", async () => {
@@ -62,6 +79,6 @@ describe("adding the snippet to a file", () => {
     expect(readFileSync(join(dir, "AGENTS.md"), "utf8")).toBe("# Mine\n");
     expect((await agentsInitCommand({ write: true, dir, yes: true }, { json: true })).data).toMatchObject({ action: "appended" });
     expect((await agentsInitCommand({ write: true, dir, yes: true }, { json: true })).data).toMatchObject({ action: "unchanged" });
-    expect((await agentsInitCommand({ file: "README.md" }, { json: true })).ok).toBe(false);
+    expect(await agentsInitCommand({ file: "README.md" }, { json: true })).toMatchObject({ ok: false, errorKind: "usage", exitCode: 2 });
   });
 });

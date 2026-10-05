@@ -19,7 +19,9 @@ export async function agentsInitCommand(
   options: GlobalOptions,
 ): Promise<EmitResult> {
   const file = (flags.file ?? "AGENTS.md") as AgentFile;
-  if (!AGENT_FILES.includes(file)) return fail(`--file must be one of ${AGENT_FILES.join(", ")}`, 2);
+  if (!AGENT_FILES.includes(file)) {
+    return { ok: false, error: `--file must be one of ${AGENT_FILES.join(", ")}`, errorKind: "usage", exitCode: 2 };
+  }
   const snippet = agentSnippet(file);
 
   if (!flags.write) {
@@ -28,7 +30,9 @@ export async function agentsInitCommand(
 
   const path = join(resolve(flags.dir ?? process.cwd()), file);
   const existing = existsSync(path) ? readFileSync(path, "utf8") : undefined;
-  const { text, change } = withSnippet(existing, snippet);
+  const result = withSnippet(existing, snippet);
+  if ("error" in result) return fail(`${path} has broken midnight-cast markers: ${result.error}. Fix or remove them, then run this again.`);
+  const { text, change } = result;
   if (change !== "unchanged" && existing !== undefined && !flags.yes) {
     const verb = change === "updated" ? "Update the midnight-cast section of" : "Add a midnight-cast section to the end of";
     // Never change a file someone wrote without their say-so; agents and CI pass --yes.
