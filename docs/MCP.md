@@ -53,6 +53,8 @@ The server reads three environment variables:
 
 An invalid value in any of them stops the server at startup with a message on stderr.
 
+The Claude Code plugin passes its Blockfrost option in `MIDNIGHT_CAST_PLUGIN_PROJECT_ID`, which takes precedence over `BLOCKFROST_PROJECT_ID` when it isn't empty. A project ID in the network's `config.toml` section takes precedence over both.
+
 The model chooses a network by name but can't pass endpoint URLs, so it can't point the server at other hosts. Endpoints come from the built-in networks and your `~/.config/midnight-cast/config.toml`, as they do for the CLI.
 
 ## Protocol
@@ -71,7 +73,7 @@ claude mcp add --transport stdio --env BLOCKFROST_PROJECT_ID=<project id> midnig
 
 Add `--scope project` to share it through the project's `.mcp.json`, or `--scope user` for every project.
 
-Or install the midnight-cast plugin, which configures the same server and adds the midnight-cast skill and a `/midnight-cast:diagnose <network> [tx or error]` command. When the plugin is enabled, Claude Code asks for an optional Blockfrost project ID for mainnet and keeps it in secure storage instead of a settings file:
+Or install the midnight-cast plugin, which configures the same server and adds the midnight-cast skill and a `/midnight-cast:diagnose <network> [tx or error]` command. When the plugin is enabled, Claude Code asks for an optional Blockfrost project ID for mainnet and keeps it in secure storage instead of a settings file. To change it later, run `/plugin`, open midnight-cast and choose Configure options. If the option is empty, a `BLOCKFROST_PROJECT_ID` exported before starting Claude Code is used. If you added the server with `claude mcp add` before, remove it with `claude mcp remove midnight-cast` so only the plugin's server runs:
 
 ```bash
 claude plugin marketplace add Kanasjnr/midnight-cast
