@@ -1,6 +1,7 @@
 // Keeps one GitHub issue per network in sync with the latest live check:
 // opens it on drift, a degraded network or an outage, edits it only when the
-// findings change, and closes it once the network is clean again. While it
+// findings change, and closes it once the network is clean again (for a
+// degraded network, once a day has passed without the problem). While it
 // carries a service-desk draft, the draft's last-seen time is refreshed every
 // run and its first-seen time is kept from the issue. Used by .github/workflows/live.yml.
 //
@@ -27,6 +28,7 @@ export interface IssueSummary {
   number: number;
   title: string;
   body: string | null;
+  labels?: Array<{ name: string }>;
 }
 
 export type IssueAction =
@@ -82,7 +84,7 @@ export function issueBody(network: string, report: string, status: Status): stri
   return [
     `<!-- live-check status: ${status} -->`,
     `The scheduled live check found that **${network}** no longer matches what midnight-cast expects.`,
-    "This issue is maintained by `.github/workflows/live.yml`: it's edited when the findings change and closed automatically once the network is clean.",
+    "This issue is maintained by `.github/workflows/live.yml`: it's edited when the findings change and closed automatically once the network is clean, or for a degraded network once a day has passed without the problem.",
     "",
     "Drift usually means the bundled support matrix (`src/data/support-matrix.json`) needs a refresh. An outage means the public endpoints failed after retries. Degraded means the network answers but misbehaves, such as an RPC whose head goes backwards. When the check confirms an outage or sees the RPC's head go backwards, the report ends with a draft for Midnight's service desk, to review and file by hand.",
     "",
@@ -124,7 +126,9 @@ class GitHub {
   }
 
   /** Adds or removes the degraded label without touching labels people added. */
-  async markDegraded(number: number, degraded: boolean): Promise<void> {
+  async markDegraded(issue: Pick<IssueSummary, "number" | "labels">, degraded: boolean): Promise<void> {
+    const number = issue.number;
+    if (issue.labels?.some((l) => l.name === DEGRADED_LABEL) === degraded) return;
     if (degraded) {
       await this.request("POST", `/issues/${number}/labels`, { labels: [DEGRADED_LABEL] });
       return;
@@ -186,8 +190,9 @@ async function main(): Promise<number> {
       break;
     }
     case "update":
+      // The label first: if the body update then fails, the publish gate still sees a mismatch and blocks.
+      await gh.markDegraded(existing!, degraded);
       await gh.request("PATCH", `/issues/${action.number}`, { body });
-      await gh.markDegraded(action.number, degraded);
       await gh.request("POST", `/issues/${action.number}/comments`, {
         body: `Findings changed (status: **${status}**). The issue description now shows the latest report from ${runUrl}.`,
       });
@@ -195,8 +200,8 @@ async function main(): Promise<number> {
       break;
     case "refresh":
       // Same findings, so no comment: only the draft's last-seen time and evidence change.
+      await gh.markDegraded(existing!, degraded);
       await gh.request("PATCH", `/issues/${action.number}`, { body });
-      await gh.markDegraded(action.number, degraded);
       console.log(`refreshed #${action.number}`);
       break;
     case "close":
