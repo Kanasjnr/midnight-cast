@@ -25,6 +25,7 @@ export interface HealthReport {
     latencyMs: number;
     optional?: boolean;
     detail?: string;
+    errorKind?: string;
   }>;
   sync: {
     rpcHeight: number;
@@ -190,6 +191,7 @@ export async function healthCommand(
       ...(r.service === "proof-server" ? { optional: true } : {}),
       ...(r.version ? { version: r.version } : {}),
       ...(r.detail ? { detail: r.detail } : {}),
+      ...(r.errorKind ? { errorKind: r.errorKind } : {}),
     })),
     sync: {
       rpcHeight,
