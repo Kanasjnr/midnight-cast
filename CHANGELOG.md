@@ -67,6 +67,9 @@
 - `npm run error-codes` checks the ledger error map against midnight-node at the release the support matrix names, and against a pinned Midnight Expert catalog. It runs with the live checks, so a runtime upgrade that changes the code table fails before a release. Midnight Expert's entries for seven codes still live on runtime 1.0.300 are marked retired upstream; that is reported as midnightntwrk/midnight-expert#272
 
 ### Fixes
+- `block <height>` for a height the chain hasn't reached returned the latest block as a success, with a null hash. It now fails, saying what the latest height is
+- `tx` checks the hash format (64 hex characters, optional `0x`) before asking the indexer, and an indexer that rejects a query is reported as "Indexer rejected the query" rather than "Indexer unreachable", with a hint to check the input first
+- `decode --raw` on a sentence it doesn't recognise says so and lists what it can decode, instead of reporting the whole sentence as an unknown ledger code
 - `dust-events` without `--from` lists the latest events instead of the network's first ones, and `dust-event` for an id the network hasn't reached fails at once, naming the latest id, instead of waiting out its 15 s timeout
 - decode's fix for Blockfrost's missing-token response explains sending the project ID from any app, not only midnight-cast
 - `tx --json` printed `"segments": null` for successful transactions, because the indexer returns null rather than an empty list, and that broke the published `tx` schema. `segments` is now left out when there are none. Found by the recorded preview responses
