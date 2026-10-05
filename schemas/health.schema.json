@@ -161,6 +161,9 @@
           "description": "Inconsistencies inside Midnight's published matrix for this network"
         }
       }
+    },
+    "examples": {
+      "$ref": "examples-verdict.schema.json"
     }
   },
   "description": "health's data. When the RPC or indexer is unreachable, healthy is false and only network, healthy and services are present: services says which one failed and why (detail, errorKind)."

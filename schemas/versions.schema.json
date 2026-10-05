@@ -194,6 +194,9 @@
         }
       },
       "description": "Where local packages were looked for, and whether a package.json was there"
+    },
+    "examples": {
+      "$ref": "examples-verdict.schema.json"
     }
   }
 }

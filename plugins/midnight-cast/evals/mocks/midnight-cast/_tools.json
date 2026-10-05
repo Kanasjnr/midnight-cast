@@ -3,7 +3,7 @@
     {
       "name": "health",
       "title": "midnight-cast health",
-      "description": "Full check of a Midnight network: RPC and indexer reachability, indexer sync against the node, and live versions against the support matrix. Start here when something might be wrong with the network rather than the user's code.",
+      "description": "Full check of a Midnight network: RPC and indexer reachability, indexer sync against the node, and live versions against the support matrix. data.examples says whether Midnight's own examples pass on the node the network runs. Start here when something might be wrong with the network rather than the user's code.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -450,7 +450,7 @@
     {
       "name": "versions",
       "title": "midnight-cast versions",
-      "description": "Compare the network's live node, runtime, indexer API and proof server with Midnight's support matrix, and a project's Midnight packages (package.json and package-lock.json) with the matrix pins. data.localProject says which directory was checked and whether it had a package.json.",
+      "description": "Compare the network's live node, runtime, indexer API and proof server with Midnight's support matrix, and a project's Midnight packages (package.json and package-lock.json) with the matrix pins. data.localProject says which directory was checked and whether it had a package.json, and data.examples whether Midnight's own examples pass on the node the network runs.",
       "inputSchema": {
         "type": "object",
         "properties": {

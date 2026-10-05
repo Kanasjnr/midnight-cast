@@ -68,7 +68,7 @@ const envelopeSchema = z.object({
 export const INSTRUCTIONS = `midnight-cast reads the public Midnight networks and explains Midnight errors. Every tool only reads; nothing needs a wallet or keys.
 
 - When the user has an error message, call decode with the whole message first.
-- When a network might be the problem rather than the user's code, call health; ping and tip narrow it down.
+- When a network might be the problem rather than the user's code, call health; ping and tip narrow it down. Its data.examples says whether Midnight's own examples pass on the node that network runs: if they pass and the network is healthy, look at the user's code or setup first.
 - To see what happened to a transaction, call tx with its hash.
 - Every result is an envelope: ok, data, error { message, kind, hint }, warnings and next. Follow next: when a step has a tool field, call that tool with exactly those arguments; otherwise the command is for a terminal.
 - Mainnet goes through Blockfrost and needs a project ID. If a mainnet call says it is missing, pass on the error's instructions to the user: they depend on how this server was installed.`;
@@ -154,7 +154,7 @@ export function createMcpServer(options: McpOptions): McpServer {
   tool(
     "health",
     "health",
-    "Full check of a Midnight network: RPC and indexer reachability, indexer sync against the node, and live versions against the support matrix. Start here when something might be wrong with the network rather than the user's code.",
+    "Full check of a Midnight network: RPC and indexer reachability, indexer sync against the node, and live versions against the support matrix. data.examples says whether Midnight's own examples pass on the node the network runs. Start here when something might be wrong with the network rather than the user's code.",
     LIVE,
     { network, threshold: z.number().int().min(0).optional().describe("Indexer lag, in blocks, that counts as out of sync (default 100)") },
     ({ network, threshold }) => healthCommand(network, { threshold }, json),
@@ -178,7 +178,7 @@ export function createMcpServer(options: McpOptions): McpServer {
   tool(
     "versions",
     "versions",
-    "Compare the network's live node, runtime, indexer API and proof server with Midnight's support matrix, and a project's Midnight packages (package.json and package-lock.json) with the matrix pins. data.localProject says which directory was checked and whether it had a package.json.",
+    "Compare the network's live node, runtime, indexer API and proof server with Midnight's support matrix, and a project's Midnight packages (package.json and package-lock.json) with the matrix pins. data.localProject says which directory was checked and whether it had a package.json, and data.examples whether Midnight's own examples pass on the node the network runs.",
     LIVE,
     {
       network,
