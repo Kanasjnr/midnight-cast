@@ -45,6 +45,10 @@ export async function txCommand(
     return fail(err);
   }
 
+  if (flags.by !== "identifier" && !/^(0x)?[0-9a-fA-F]{64}$/.test(hashOrId)) {
+    return fail(`Invalid transaction hash: ${hashOrId}. A hash is 64 hex characters, optionally prefixed with 0x`);
+  }
+
   const lookup =
     flags.by === "identifier"
       ? { identifier: hashOrId }
