@@ -10,7 +10,7 @@ midnight-cast answers questions about live Midnight networks, so its tests have 
 
 A release pull request from `next-release` into `main` runs everything above and then the live checks, which are required checks in `main`'s branch protection. The live smoke suite (in `live.yml`, alongside the drift check) runs against preview, preprod and mainnet. It asserts things that should hold whatever version a network runs: the RPC and indexer answer, the node's runtime `specVersion` matches the indexer's `protocolVersion`, the JSON output has the expected shape, and a known preprod transaction decodes. The live drift check (in `live.yml`, described below) runs for each network. It fails when the bundled support matrix disagrees with what a network is actually running, when node and indexer disagree, or during an outage. So a release can't ship a matrix that no longer matches the real networks, and it can't ship while a network is down and the release can't be verified. Midnight's published matrix is treated as the truth only for components the public endpoints don't reveal (indexer, on-chain runtime and compact runtime), so it blocks a release when it is ahead of the bundled matrix for those. For node and proof server, which we can observe, Midnight's matrix being ahead is only a warning: Midnight can publish a version before a network runs it, and blocking on that would leave no matrix that could pass. Because the published matrix can block, a release check that can't fetch it after retries fails as incomplete; re-run it.
 
-When an outage blocks a release, report it to Midnight's service desk (`midnightntwrk/servicedesk`, bug-report form), then re-run the checks once the network recovers. Repository admins can still override branch protection in an emergency.
+When an outage blocks a release, report it to Midnight's service desk (`midnightntwrk/servicedesk`, bug-report form), using the draft in the `Live check: <network>` issue (see [Service desk drafts](#service-desk-drafts)), then re-run the checks once the network recovers. Repository admins can still override branch protection in an emergency.
 
 `live.yml` starts on every pull request into `main`, with no path filter, because a required check whose workflow never starts would leave the release waiting forever.
 
@@ -27,9 +27,26 @@ Each finding is classified, and the classification decides what happens:
 | upstream-ahead | Midnight's matrix lists a different indexer, on-chain runtime or compact runtime than the bundled one (components the endpoints don't reveal) | Issue opened | Blocks |
 | upstream-differs | Midnight's matrix lists a different node or proof server than the bundled one. These are checked against the live network instead, and Midnight can list versions a network doesn't run yet, or that have no public release | Reported only | Reported only |
 | protocol-split | Node and indexer disagree on the protocol version | Issue opened | Blocks |
+| rpc-inconsistent | Consecutive `chain_getHeader` calls returned a head more than two blocks below one already seen, the sign of a lagging node behind a load-balanced RPC. The network is then **degraded** | Issue opened, job warns | Reported only |
 | upstream-lag | Midnight's own matrix is behind the live network | Reported only | Reported only |
 
-`scripts/live-issue.ts` keeps one issue per network, titled `Live check: <network>` and labelled `live-check`. The issue is edited only when the findings change, tracked by a fingerprint stored in the issue body. It is closed automatically once the network is clean again. The report and a JSON result are also attached to each run as an artifact and shown in the job summary. Pull request runs never touch issues. Scheduled runs fire only from the default branch, so the schedule takes effect once this workflow reaches `main`.
+Once the retries settle, and unless the network is in an outage, the check also asks the RPC for its head ten times, two seconds apart, to catch the degraded case above. That adds about 20 seconds to each network's check.
+
+`scripts/live-issue.ts` keeps one issue per network, titled `Live check: <network>` and labelled `live-check`. The issue is edited when the findings change, tracked by a fingerprint stored in the issue body, and a comment says so. While it carries a service desk draft, every run also refreshes the draft's evidence and last-seen time, without a comment. It is closed automatically once the network is clean again. A degraded network can come and go between runs, so its issue stays open until a day has passed without seeing the problem; otherwise each sighting would open a new issue. The report and a JSON result are also attached to each run as an artifact and shown in the job summary. Pull request runs never touch issues. Scheduled runs fire only from the default branch, so the schedule takes effect once this workflow reaches `main`. An issue for a degraded network also carries the `live-check: degraded` label. An issue with both that label and a degraded status in its body doesn't block `npm publish`, because the problem is Midnight's to fix and doesn't make a release wrong; drift and outages do.
+
+### Service desk drafts
+
+When the check confirms an outage, or sees the RPC's head go backwards (even alongside drift), its report ends with a draft for Midnight's service desk, in the bug-report form's layout, so a maintainer can review it and file it without rewriting it. It covers an unreachable RPC or indexer, an indexer behind the node or an RPC behind the indexer, and an RPC whose head goes backwards. Each draft has:
+
+- the suggested form fields and the labels the triage bot makes from them: `network:*`, `component:midnight-node` or `component:indexer`, and a priority. P1 is suggested only when both the RPC and the indexer are down, with a reminder to confirm the network is down from elsewhere and to page Midnight, as P1 requires. A single unreachable service is P2, and lag or a backwards head is P3;
+- expected and actual behaviour, with the numbers from the failing attempt;
+- `curl` commands that reproduce the failure with nothing else installed. On mainnet they send the project ID from `$BLOCKFROST_PROJECT_ID` rather than containing it;
+- every attempt's raw result from `health --json`, which lists each service even when one is down: the time, each service's status, latency, error kind and message, and the heights, or the head samples. The description counts only the attempts that had the problem;
+- when the problem was first and last seen. The first time is kept in the issue for each failing service, and for lag and a backwards head, so it dates from the first run that saw it, survives a change in which services fail, and isn't borrowed by a different problem. Each draft also says how the check was started: by the schedule, another GitHub Actions trigger, or by hand.
+
+On mainnet, a Blockfrost 401, 402, 403 or 429 means our project ID or our plan's limit, not Midnight. The report says so and leaves that service out of the drafts, while anything else that failed is still drafted. Redaction leaves `$BLOCKFROST_PROJECT_ID` in the reproductions alone, so they still run.
+
+Nothing is ever filed automatically. Midnight's [AI reporting guidelines](https://github.com/midnightntwrk/servicedesk/blob/main/ai-reports.md) need a person to re-run the commands, check the numbers and stand behind the report, and a P1 needs a page that a bot can't make. The draft's pre-submission checklist is left unticked for that reason.
 
 ## Error codes
 
@@ -61,4 +78,4 @@ npm run live-check -- preprod --out live-check
 INTEGRATION=1 npm run test:smoke
 ```
 
-`live-check` exits 0 when clean, 10 on drift and 20 on an outage. It exits 2 on a usage or internal error, or when the upstream matrix still can't be fetched after retries: a verdict without it would be incomplete, so the issue is left unchanged. To check mainnet locally, export `BLOCKFROST_PROJECT_ID`.
+`live-check` exits 0 when clean, 10 on drift, 20 on an outage and 30 when the network is degraded. It exits 2 on a usage or internal error, or when the upstream matrix still can't be fetched after retries: a verdict without it would be incomplete, so the issue is left unchanged. To check mainnet locally, export `BLOCKFROST_PROJECT_ID`.

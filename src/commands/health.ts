@@ -15,17 +15,22 @@ import { settle } from "../lib/settle.js";
 import type { EmitResult, GlobalOptions } from "../output.js";
 import { fail, failReaching } from "../output.js";
 import { EXPLAIN_VERSIONS, checkEndpoints, narrowDown } from "../lib/next-steps.js";
+import { NetworkError, type NetworkErrorKind } from "../lib/network-error.js";
+
+type ServiceRow = {
+  service: string;
+  status: string;
+  latencyMs: number;
+  optional?: boolean;
+  version?: string;
+  detail?: string;
+  errorKind?: string;
+};
 
 export interface HealthReport {
   network: string;
   healthy: boolean;
-  services: Array<{
-    service: string;
-    status: string;
-    latencyMs: number;
-    optional?: boolean;
-    detail?: string;
-  }>;
+  services: ServiceRow[];
   sync: {
     rpcHeight: number;
     indexerHeight: number;
@@ -42,6 +47,27 @@ export interface HealthReport {
     allOk: boolean;
     checks: Array<{ label: string; ok: boolean; expected?: string; live?: string; note?: string }>;
   };
+}
+
+/** What health reports when the RPC or indexer is down: which one, and why, but no sync or versions. */
+export interface HealthUnreachable {
+  network: string;
+  healthy: false;
+  services: ServiceRow[];
+}
+
+function formatUnreachableHuman(report: HealthUnreachable): string {
+  return [
+    `Network: ${report.network}`,
+    "Healthy: no",
+    "",
+    "Services:",
+    ...report.services.map((row) => {
+      const opt = row.optional ? " (optional)" : "";
+      const detail = row.detail ? ` — ${row.detail}` : "";
+      return `  ${row.service}: ${row.status} (${row.latencyMs}ms)${opt}${detail}`;
+    }),
+  ].join("\n");
 }
 
 function formatHealthHuman(report: HealthReport): string {
@@ -132,9 +158,35 @@ export async function healthCommand(
   const serviceResults = await runServiceChecks(endpoints, {
     proofServerExpected: expected.proofServer,
   });
-  const servicesOk = serviceResults
-    .filter((r) => r.service === "rpc" || r.service === "indexer")
-    .every((r) => r.status === "OK");
+  const services: ServiceRow[] = serviceResults.map((r) => ({
+    service: r.service,
+    status: r.status,
+    latencyMs: r.latencyMs,
+    ...(r.service === "proof-server" ? { optional: true } : {}),
+    ...(r.version ? { version: r.version } : {}),
+    ...(r.detail ? { detail: r.detail } : {}),
+    ...(r.errorKind ? { errorKind: r.errorKind } : {}),
+  }));
+  const down = serviceResults.filter((r) => (r.service === "rpc" || r.service === "indexer") && r.status !== "OK");
+  const servicesOk = down.length === 0;
+
+  // The service checks already retried, so say which service is down and why rather than
+  // failing on the next call to it with less detail.
+  if (!servicesOk) {
+    const first = down[0]!;
+    const error = new NetworkError(
+      `Required services unreachable: ${down.map((r) => r.service).join(", ")}`,
+      (first.errorKind ?? "network") as NetworkErrorKind,
+      first.service === "rpc" ? "RPC" : "Indexer",
+      Number(/\((\d{3})\)/.exec(first.detail ?? "")?.[1]) || undefined,
+    );
+    const report: HealthUnreachable = { network: endpoints.network, healthy: false, services };
+    return {
+      ...failReaching(error, endpoints.network, flags),
+      data: options.json ? report : formatUnreachableHuman(report),
+      exitCode: 1,
+    };
+  }
 
   let rpcHeight: number;
   let indexerHeight: number;
@@ -183,14 +235,7 @@ export async function healthCommand(
   const report: HealthReport = {
     network: endpoints.network,
     healthy,
-    services: serviceResults.map((r) => ({
-      service: r.service,
-      status: r.status,
-      latencyMs: r.latencyMs,
-      ...(r.service === "proof-server" ? { optional: true } : {}),
-      ...(r.version ? { version: r.version } : {}),
-      ...(r.detail ? { detail: r.detail } : {}),
-    })),
+    services,
     sync: {
       rpcHeight,
       indexerHeight,
