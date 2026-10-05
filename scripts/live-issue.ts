@@ -15,9 +15,13 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { redact, reportInput, type CheckResult, type Status } from "./live-check.js";
-import { START, firstSeenOf, replaceSection, serviceDeskSection } from "./service-desk.js";
+import { START, firstSeenOf, lastSeenOf, replaceSection, serviceDeskSection } from "./service-desk.js";
 
 export const LABEL = "live-check";
+/** Marks an issue for a degraded network, which doesn't block publishing. */
+export const DEGRADED_LABEL = "live-check: degraded";
+/** A degraded network can come and go between runs; keep its issue open until it's been clean this long. */
+export const DEGRADED_QUIET_MS = 24 * 60 * 60 * 1000;
 
 export interface IssueSummary {
   number: number;
@@ -50,12 +54,15 @@ export function planIssueAction(
   status: Status,
   fingerprint: string,
   existing: IssueSummary | undefined,
-  hasServiceDesk = false,
+  { hasServiceDesk = false, now = new Date() }: { hasServiceDesk?: boolean; now?: Date } = {},
 ): IssueAction {
   if (status === "clean") {
-    return existing
-      ? { type: "close", number: existing.number }
-      : { type: "none", reason: "clean and no open issue" };
+    if (!existing) return { type: "none", reason: "clean and no open issue" };
+    const lastSeen = lastSeenOf(existing.body);
+    if (statusOf(existing.body) === "degraded" && lastSeen && now.getTime() - Date.parse(lastSeen) < DEGRADED_QUIET_MS) {
+      return { type: "none", reason: `degraded at ${lastSeen}; closing after a day without it (#${existing.number})` };
+    }
+    return { type: "close", number: existing.number };
   }
   if (!existing) return { type: "create", title: issueTitle(network) };
   if (fingerprintOf(existing.body) === fingerprint) {
@@ -67,13 +74,17 @@ export function planIssueAction(
   return { type: "update", number: existing.number };
 }
 
+export function statusOf(body: string | null | undefined): string | undefined {
+  return /<!-- live-check status: (\w+) -->/.exec(body ?? "")?.[1];
+}
+
 export function issueBody(network: string, report: string, status: Status): string {
   return [
     `<!-- live-check status: ${status} -->`,
     `The scheduled live check found that **${network}** no longer matches what midnight-cast expects.`,
     "This issue is maintained by `.github/workflows/live.yml`: it's edited when the findings change and closed automatically once the network is clean.",
     "",
-    "Drift usually means the bundled support matrix (`src/data/support-matrix.json`) needs a refresh. An outage means the public endpoints failed after retries. Degraded means the network answers but misbehaves, such as an RPC whose head goes backwards. For an outage or a degraded network the report ends with a draft for Midnight's service desk, to review and file by hand.",
+    "Drift usually means the bundled support matrix (`src/data/support-matrix.json`) needs a refresh. An outage means the public endpoints failed after retries. Degraded means the network answers but misbehaves, such as an RPC whose head goes backwards. When the check confirms an outage or sees the RPC's head go backwards, the report ends with a draft for Midnight's service desk, to review and file by hand.",
     "",
     report.trim(),
   ].join("\n");
@@ -112,6 +123,19 @@ class GitHub {
     return (await res.json()) as T;
   }
 
+  /** Adds or removes the degraded label without touching labels people added. */
+  async markDegraded(number: number, degraded: boolean): Promise<void> {
+    if (degraded) {
+      await this.request("POST", `/issues/${number}/labels`, { labels: [DEGRADED_LABEL] });
+      return;
+    }
+    try {
+      await this.request("DELETE", `/issues/${number}/labels/${encodeURIComponent(DEGRADED_LABEL)}`);
+    } catch (err) {
+      if (!String(err).includes("HTTP 404")) throw err;
+    }
+  }
+
   async openLiveCheckIssues(): Promise<IssueSummary[]> {
     const items = await this.request<Array<IssueSummary & { pull_request?: unknown }>>(
       "GET",
@@ -141,7 +165,8 @@ async function main(): Promise<number> {
   if (existsSync(resultPath)) {
     report = withIssueHistory(report, JSON.parse(readFileSync(resultPath, "utf8")) as CheckResult, existing?.body);
   }
-  const action = planIssueAction(network, status as Status, fingerprint, existing, report.includes(START));
+  const action = planIssueAction(network, status as Status, fingerprint, existing, { hasServiceDesk: report.includes(START) });
+  const degraded = status === "degraded";
   const body = issueBody(network, report, status as Status);
   const runUrl = process.env.GITHUB_RUN_ID
     ? `${process.env.GITHUB_SERVER_URL}/${repo}/actions/runs/${process.env.GITHUB_RUN_ID}`
@@ -155,13 +180,14 @@ async function main(): Promise<number> {
       const created = await gh.request<{ number: number; html_url: string }>("POST", "/issues", {
         title: action.title,
         body,
-        labels: [LABEL],
+        labels: degraded ? [LABEL, DEGRADED_LABEL] : [LABEL],
       });
       console.log(`opened #${created.number} ${created.html_url}`);
       break;
     }
     case "update":
       await gh.request("PATCH", `/issues/${action.number}`, { body });
+      await gh.markDegraded(action.number, degraded);
       await gh.request("POST", `/issues/${action.number}/comments`, {
         body: `Findings changed (status: **${status}**). The issue description now shows the latest report from ${runUrl}.`,
       });
@@ -170,6 +196,7 @@ async function main(): Promise<number> {
     case "refresh":
       // Same findings, so no comment: only the draft's last-seen time and evidence change.
       await gh.request("PATCH", `/issues/${action.number}`, { body });
+      await gh.markDegraded(action.number, degraded);
       console.log(`refreshed #${action.number}`);
       break;
     case "close":

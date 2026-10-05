@@ -46,8 +46,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          open=$(gh issue list --repo "$GITHUB_REPOSITORY" --label live-check --state open --json title,body \
-            --jq 'map(select(.body | contains("<!-- live-check status: degraded -->") | not) | .title) | join(", ")')
+          open=$(gh issue list --repo "$GITHUB_REPOSITORY" --label live-check --state open --json title,labels \
+            --jq 'map(select(any(.labels[]; .name == "live-check: degraded") | not) | .title) | join(", ")')
           if [ -n "$open" ]; then
             echo "::error::Open live-check issues: $open. Resolve them before publishing."
             exit 1

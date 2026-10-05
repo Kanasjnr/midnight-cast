@@ -61,8 +61,18 @@ describe("live-issue", () => {
 
   it("refreshes the issue quietly while it carries a service-desk draft, even when findings are unchanged", () => {
     const existing = open("<!-- live-check fingerprint: abc -->");
-    expect(planIssueAction("preprod", "outage", "abc", existing, true)).toEqual({ type: "refresh", number: 42 });
-    expect(planIssueAction("preprod", "degraded", "abc", undefined, true)).toMatchObject({ type: "create" });
+    expect(planIssueAction("preprod", "outage", "abc", existing, { hasServiceDesk: true })).toEqual({ type: "refresh", number: 42 });
+    expect(planIssueAction("preprod", "degraded", "abc", undefined, { hasServiceDesk: true })).toMatchObject({ type: "create" });
+  });
+
+  it("keeps a degraded issue open until a day passes without it, so an intermittent problem doesn't flap", () => {
+    const degraded = open("<!-- live-check status: degraded -->\n<!-- service-desk last seen: 2026-10-05T06:00:00.000Z -->");
+    const sameDay = { now: new Date("2026-10-05T18:00:00Z") };
+    const nextDay = { now: new Date("2026-10-06T07:00:00Z") };
+    expect(planIssueAction("preprod", "clean", "x", degraded, sameDay)).toMatchObject({ type: "none" });
+    expect(planIssueAction("preprod", "clean", "x", degraded, nextDay)).toEqual({ type: "close", number: 42 });
+    const outage = open("<!-- live-check status: outage -->\n<!-- service-desk last seen: 2026-10-05T06:00:00.000Z -->");
+    expect(planIssueAction("preprod", "clean", "x", outage, sameDay)).toEqual({ type: "close", number: 42 });
   });
 
   it("dates the draft from when the issue first saw the problem", () => {
@@ -72,12 +82,13 @@ describe("live-issue", () => {
       findings: [],
       live: {},
       bundled: {},
-      attempts: [{ at: "2026-10-05T16:00:00.000Z", services: [{ service: "rpc", status: "FAIL", latencyMs: 10_000, errorKind: "timeout" }] }],
+      evidence: { attempts: [{ at: "2026-10-05T16:00:00.000Z", services: [{ service: "rpc", status: "FAIL", latencyMs: 10_000, errorKind: "timeout" }] }] },
     } as CheckResult;
-    const report = `table\n\n${serviceDeskSection({ network: "preprod", attempts: result.attempts! })}\n`;
-    const earlier = issueBody("preprod", serviceDeskSection({ network: "preprod", attempts: result.attempts! }, "2026-10-05T04:00:00.000Z"), "outage");
-    expect(firstSeenOf(withIssueHistory(report, result, earlier))).toBe("2026-10-05T04:00:00.000Z");
-    expect(firstSeenOf(withIssueHistory(report, result, null))).toBe("2026-10-05T16:00:00.000Z");
+    const attempts = result.evidence!.attempts;
+    const report = `table\n\n${serviceDeskSection({ network: "preprod", attempts })}\n`;
+    const earlier = issueBody("preprod", serviceDeskSection({ network: "preprod", attempts }, { "unreachable:rpc": "2026-10-05T04:00:00.000Z" }), "outage");
+    expect(firstSeenOf(withIssueHistory(report, result, earlier))).toEqual({ "unreachable:rpc": "2026-10-05T04:00:00.000Z" });
+    expect(firstSeenOf(withIssueHistory(report, result, null))).toEqual({ "unreachable:rpc": "2026-10-05T16:00:00.000Z" });
     expect(withIssueHistory("no draft", result, earlier)).toBe("no draft");
   });
 });
