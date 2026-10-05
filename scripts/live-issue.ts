@@ -1,16 +1,21 @@
 // Keeps one GitHub issue per network in sync with the latest live check:
-// opens it on drift/outage, edits it only when the findings change, and
-// closes it once the network is clean again. Used by .github/workflows/live.yml.
+// opens it on drift, a degraded network or an outage, edits it only when the
+// findings change, and closes it once the network is clean again. While it
+// carries a service-desk draft, the draft's last-seen time is refreshed every
+// run and its first-seen time is kept from the issue. Used by .github/workflows/live.yml.
 //
 //   tsx scripts/live-issue.ts <network> <status> <fingerprint> <report.md>
+//
+// result.json, written next to report.md by live-check, holds what the draft is built from.
 //
 // Needs GITHUB_TOKEN (issues: write) and GITHUB_REPOSITORY. GITHUB_SERVER_URL
 // and GITHUB_RUN_ID are used for the run link in comments.
 
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import type { Status } from "./live-check.js";
+import { redact, reportInput, type CheckResult, type Status } from "./live-check.js";
+import { START, firstSeenOf, replaceSection, serviceDeskSection } from "./service-desk.js";
 
 export const LABEL = "live-check";
 
@@ -24,6 +29,7 @@ export type IssueAction =
   | { type: "none"; reason: string }
   | { type: "create"; title: string }
   | { type: "update"; number: number }
+  | { type: "refresh"; number: number }
   | { type: "close"; number: number };
 
 export function issueTitle(network: string): string {
@@ -44,6 +50,7 @@ export function planIssueAction(
   status: Status,
   fingerprint: string,
   existing: IssueSummary | undefined,
+  hasServiceDesk = false,
 ): IssueAction {
   if (status === "clean") {
     return existing
@@ -52,20 +59,30 @@ export function planIssueAction(
   }
   if (!existing) return { type: "create", title: issueTitle(network) };
   if (fingerprintOf(existing.body) === fingerprint) {
-    return { type: "none", reason: `findings unchanged (#${existing.number})` };
+    // The findings are the same, but the service-desk draft's last-seen time moves on.
+    return hasServiceDesk
+      ? { type: "refresh", number: existing.number }
+      : { type: "none", reason: `findings unchanged (#${existing.number})` };
   }
   return { type: "update", number: existing.number };
 }
 
-export function issueBody(network: string, report: string): string {
+export function issueBody(network: string, report: string, status: Status): string {
   return [
+    `<!-- live-check status: ${status} -->`,
     `The scheduled live check found that **${network}** no longer matches what midnight-cast expects.`,
     "This issue is maintained by `.github/workflows/live.yml`: it's edited when the findings change and closed automatically once the network is clean.",
     "",
-    "Drift usually means the bundled support matrix (`src/data/support-matrix.json`) needs a refresh. An outage means the public endpoints failed after retries.",
+    "Drift usually means the bundled support matrix (`src/data/support-matrix.json`) needs a refresh. An outage means the public endpoints failed after retries. Degraded means the network answers but misbehaves, such as an RPC whose head goes backwards. For an outage or a degraded network the report ends with a draft for Midnight's service desk, to review and file by hand.",
     "",
     report.trim(),
   ].join("\n");
+}
+
+/** The report with its service-desk draft dated from when the issue first saw the problem. */
+export function withIssueHistory(report: string, result: CheckResult, existingBody: string | null | undefined): string {
+  if (!report.includes(START)) return report;
+  return replaceSection(report, redact(serviceDeskSection(reportInput(result), firstSeenOf(existingBody))));
 }
 
 // ---------------------------------------------------------------- GitHub ---
@@ -108,8 +125,8 @@ async function main(): Promise<number> {
   const [network, status, fingerprint, reportPath] = process.argv.slice(2);
   const token = process.env.GITHUB_TOKEN;
   const repo = process.env.GITHUB_REPOSITORY;
-  if (!network || !status || !fingerprint || !reportPath || !["clean", "drift", "outage"].includes(status)) {
-    console.error("usage: tsx scripts/live-issue.ts <network> <clean|drift|outage> <fingerprint> <report.md>");
+  if (!network || !status || !fingerprint || !reportPath || !["clean", "drift", "degraded", "outage"].includes(status)) {
+    console.error("usage: tsx scripts/live-issue.ts <network> <clean|drift|degraded|outage> <fingerprint> <report.md>");
     return 2;
   }
   if (!token || !repo) {
@@ -118,9 +135,14 @@ async function main(): Promise<number> {
   }
 
   const gh = new GitHub(token, repo);
-  const report = readFileSync(reportPath, "utf8");
   const existing = findIssue(await gh.openLiveCheckIssues(), network);
-  const action = planIssueAction(network, status as Status, fingerprint, existing);
+  const resultPath = join(dirname(reportPath), "result.json");
+  let report = readFileSync(reportPath, "utf8");
+  if (existsSync(resultPath)) {
+    report = withIssueHistory(report, JSON.parse(readFileSync(resultPath, "utf8")) as CheckResult, existing?.body);
+  }
+  const action = planIssueAction(network, status as Status, fingerprint, existing, report.includes(START));
+  const body = issueBody(network, report, status as Status);
   const runUrl = process.env.GITHUB_RUN_ID
     ? `${process.env.GITHUB_SERVER_URL}/${repo}/actions/runs/${process.env.GITHUB_RUN_ID}`
     : "this run";
@@ -132,18 +154,23 @@ async function main(): Promise<number> {
     case "create": {
       const created = await gh.request<{ number: number; html_url: string }>("POST", "/issues", {
         title: action.title,
-        body: issueBody(network, report),
+        body,
         labels: [LABEL],
       });
       console.log(`opened #${created.number} ${created.html_url}`);
       break;
     }
     case "update":
-      await gh.request("PATCH", `/issues/${action.number}`, { body: issueBody(network, report) });
+      await gh.request("PATCH", `/issues/${action.number}`, { body });
       await gh.request("POST", `/issues/${action.number}/comments`, {
         body: `Findings changed (status: **${status}**). The issue description now shows the latest report from ${runUrl}.`,
       });
       console.log(`updated #${action.number}`);
+      break;
+    case "refresh":
+      // Same findings, so no comment: only the draft's last-seen time and evidence change.
+      await gh.request("PATCH", `/issues/${action.number}`, { body });
+      console.log(`refreshed #${action.number}`);
       break;
     case "close":
       await gh.request("POST", `/issues/${action.number}/comments`, {

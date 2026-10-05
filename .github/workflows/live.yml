@@ -124,7 +124,8 @@ jobs:
                 exit 1
               fi
               echo "::warning title=${{ matrix.network }} drift::See the job summary for details." ;;
-            20) echo "::error title=${{ matrix.network }} outage::Public endpoints failed after retries."; exit 1 ;;
+            20) echo "::error title=${{ matrix.network }} outage::Public endpoints failed after retries. The live-check issue has a service desk draft to review."; exit 1 ;;
+            30) echo "::warning title=${{ matrix.network }} degraded::The network answers but misbehaves. The live-check issue has a service desk draft to review." ;;
             2) echo "::error title=${{ matrix.network }} incomplete::Check could not complete (upstream matrix unavailable or internal error); issue left unchanged."; exit 1 ;;
             *) echo "::error::live-check exited with $CODE"; exit 1 ;;
           esac

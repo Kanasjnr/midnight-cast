@@ -41,11 +41,13 @@ jobs:
           echo "Live check passed at $last"
 
       # Drift only warns in a scheduled run, but it keeps a live-check issue open until the network is clean.
+      # A degraded network is Midnight's to fix and doesn't make a release wrong, so it doesn't block.
       - name: Make sure no network has open drift or outage
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          open=$(gh issue list --repo "$GITHUB_REPOSITORY" --label live-check --state open --json title --jq 'map(.title) | join(", ")')
+          open=$(gh issue list --repo "$GITHUB_REPOSITORY" --label live-check --state open --json title,body \
+            --jq 'map(select(.body | contains("<!-- live-check status: degraded -->") | not) | .title) | join(", ")')
           if [ -n "$open" ]; then
             echo "::error::Open live-check issues: $open. Resolve them before publishing."
             exit 1

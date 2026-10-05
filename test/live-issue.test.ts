@@ -5,8 +5,11 @@ import {
   issueBody,
   issueTitle,
   planIssueAction,
+  withIssueHistory,
   type IssueSummary,
 } from "../scripts/live-issue.js";
+import type { CheckResult } from "../scripts/live-check.js";
+import { firstSeenOf, serviceDeskSection } from "../scripts/service-desk.js";
 
 const open = (body: string | null, number = 42, network = "preprod"): IssueSummary => ({
   number,
@@ -49,9 +52,32 @@ describe("live-issue", () => {
     expect(planIssueAction("preprod", "clean", "abc", undefined)).toMatchObject({ type: "none" });
   });
 
-  it("keeps the fingerprint marker in the generated body", () => {
-    const body = issueBody("preprod", "### report\n\n<!-- live-check fingerprint: abc -->\n");
+  it("keeps the fingerprint marker in the generated body, and marks its status", () => {
+    const body = issueBody("preprod", "### report\n\n<!-- live-check fingerprint: abc -->\n", "degraded");
     expect(body).toContain("**preprod**");
     expect(fingerprintOf(body)).toBe("abc");
+    expect(body).toContain("<!-- live-check status: degraded -->");
+  });
+
+  it("refreshes the issue quietly while it carries a service-desk draft, even when findings are unchanged", () => {
+    const existing = open("<!-- live-check fingerprint: abc -->");
+    expect(planIssueAction("preprod", "outage", "abc", existing, true)).toEqual({ type: "refresh", number: 42 });
+    expect(planIssueAction("preprod", "degraded", "abc", undefined, true)).toMatchObject({ type: "create" });
+  });
+
+  it("dates the draft from when the issue first saw the problem", () => {
+    const result = {
+      network: "preprod",
+      status: "outage",
+      findings: [],
+      live: {},
+      bundled: {},
+      attempts: [{ at: "2026-10-05T16:00:00.000Z", services: [{ service: "rpc", status: "FAIL", latencyMs: 10_000, errorKind: "timeout" }] }],
+    } as CheckResult;
+    const report = `table\n\n${serviceDeskSection({ network: "preprod", attempts: result.attempts! })}\n`;
+    const earlier = issueBody("preprod", serviceDeskSection({ network: "preprod", attempts: result.attempts! }, "2026-10-05T04:00:00.000Z"), "outage");
+    expect(firstSeenOf(withIssueHistory(report, result, earlier))).toBe("2026-10-05T04:00:00.000Z");
+    expect(firstSeenOf(withIssueHistory(report, result, null))).toBe("2026-10-05T16:00:00.000Z");
+    expect(withIssueHistory("no draft", result, earlier)).toBe("no draft");
   });
 });
