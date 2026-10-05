@@ -8,10 +8,14 @@
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { release, type } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
+import { chainGetHeader, parseBlockNumber } from "../src/clients/rpc.js";
 import type { HealthReport } from "../src/commands/health.js";
+import { resolveNetwork } from "../src/config.js";
+import { isBlockfrostUrl, takeProjectId } from "../src/lib/blockfrost.js";
 import {
   UNOBSERVABLE,
   UPSTREAM_MATRIX_URL,
@@ -26,6 +30,7 @@ import {
   type SupportMatrixFile,
   type VersionsReport,
 } from "../src/lib/versions.js";
+import { headRegression, serviceDeskSection, type Attempt, type HeadSample, type ReportInput } from "./service-desk.js";
 
 export { UPSTREAM_MATRIX_URL, parseUpstreamMatrix, versionFromTag } from "../src/lib/upstream-matrix.js";
 export type { Component, ComponentVersions, UpstreamMatrix } from "../src/lib/upstream-matrix.js";
@@ -33,7 +38,7 @@ export type { Component, ComponentVersions, UpstreamMatrix } from "../src/lib/up
 const execFileAsync = promisify(execFile);
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-export const EXIT = { clean: 0, drift: 10, outage: 20, error: 2 } as const;
+export const EXIT = { clean: 0, drift: 10, outage: 20, degraded: 30, error: 2 } as const;
 
 export type FindingKind =
   | "outage"
@@ -43,10 +48,11 @@ export type FindingKind =
   | "upstream-differs"
   | "upstream-lag"
   | "upstream-unavailable"
-  | "indexer-api-undetected";
+  | "indexer-api-undetected"
+  | "rpc-inconsistent";
 
-export type Severity = "outage" | "drift" | "info";
-export type Status = "clean" | "drift" | "outage";
+export type Severity = "outage" | "drift" | "degraded" | "info";
+export type Status = "clean" | "drift" | "degraded" | "outage";
 
 export interface Finding {
   kind: FindingKind;
@@ -70,6 +76,12 @@ export interface CheckResult {
   live: LiveSnapshot;
   bundled: ComponentVersions;
   upstream?: ComponentVersions;
+  /** What each attempt saw, kept for the service-desk report. */
+  attempts?: Attempt[];
+  heads?: HeadSample[];
+  endpoints?: ReportInput["endpoints"];
+  environment?: string;
+  runUrl?: string;
 }
 
 /** The fields of the `--json` envelope that live checks read. */
@@ -96,6 +108,7 @@ const SEVERITY: Record<FindingKind, Severity> = {
   "upstream-lag": "info",
   "upstream-unavailable": "info",
   "indexer-api-undetected": "info",
+  "rpc-inconsistent": "degraded",
 };
 
 const UPSTREAM_KINDS = new Set<FindingKind>([
@@ -171,6 +184,8 @@ export interface ClassifyInput {
   upstream?: UpstreamMatrix;
   upstreamError?: string;
   bundled: ComponentVersions;
+  /** Consecutive `chain_getHeader` results; a head that goes backwards means a lagging backend. */
+  heads?: HeadSample[];
 }
 
 export function classify(input: ClassifyInput): CheckResult {
@@ -197,6 +212,15 @@ export function classify(input: ClassifyInput): CheckResult {
         `indexer is ${health.sync.delta} blocks behind the node (threshold ${health.sync.threshold})`,
       );
     }
+  }
+
+  const regression = headRegression(input.heads);
+  if (regression) {
+    add(
+      "rpc-inconsistent",
+      "rpc",
+      `RPC head went back ${regression.drop} blocks between calls (${regression.from}, then ${regression.to})`,
+    );
   }
 
   const versions = input.versions?.data;
@@ -283,7 +307,9 @@ export function classify(input: ClassifyInput): CheckResult {
     ? "outage"
     : findings.some((f) => f.severity === "drift")
       ? "drift"
-      : "clean";
+      : findings.some((f) => f.severity === "degraded")
+        ? "degraded"
+        : "clean";
 
   return { network, status, findings, live, bundled, upstream: upstream?.versions };
 }
@@ -366,11 +392,23 @@ export function redact(text: string, secrets: Array<string | undefined> = []): s
     .replace(/(project_id["']?\s*[:=]\s*["']?)[^&\s"'<>,}]+/gi, "$1***");
 }
 
+export function reportInput(result: CheckResult): ReportInput {
+  return {
+    network: result.network,
+    attempts: result.attempts ?? [],
+    heads: result.heads,
+    endpoints: result.endpoints,
+    nodeVersion: result.live.node,
+    environment: result.environment,
+    runUrl: result.runUrl,
+  };
+}
+
 export function renderMarkdown(
   result: CheckResult,
-  meta: { checkedAt?: string; runUrl?: string } = {},
+  meta: { checkedAt?: string; runUrl?: string; firstSeen?: string } = {},
 ): string {
-  const icon = { clean: "✅", drift: "⚠️", outage: "❌" }[result.status];
+  const icon = { clean: "✅", drift: "⚠️", degraded: "🟠", outage: "❌" }[result.status];
   const cell = (x: string | number | undefined) => (x === undefined ? "—" : `\`${x}\``);
   const lines = [
     `### ${icon} ${result.network}: ${result.status}`,
@@ -396,6 +434,8 @@ export function renderMarkdown(
   lines.push("");
   if (meta.checkedAt) lines.push(`Checked at ${meta.checkedAt}.`);
   if (meta.runUrl) lines.push(`Run: ${meta.runUrl}`);
+  const serviceDesk = serviceDeskSection(reportInput(result), meta.firstSeen);
+  if (serviceDesk) lines.push("", serviceDesk);
   return lines.join("\n");
 }
 
@@ -427,6 +467,29 @@ async function fetchUpstream(network: string): Promise<UpstreamMatrix> {
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Asks the RPC for its head a few times in a row; a load-balanced RPC with a lagging node goes backwards. */
+export async function probeHeads(rpc: string, samples = 8, intervalMs = 2_000): Promise<HeadSample[]> {
+  const heads: HeadSample[] = [];
+  for (let i = 0; i < samples; i++) {
+    if (i) await sleep(intervalMs);
+    const at = new Date().toISOString();
+    const start = Date.now();
+    try {
+      const header = await chainGetHeader(rpc);
+      heads.push({ at, ms: Date.now() - start, head: parseBlockNumber(header.number) });
+    } catch (err) {
+      heads.push({ at, ms: Date.now() - start, error: err instanceof Error ? err.message : String(err) });
+    }
+  }
+  return heads;
+}
+
+function attemptOf(at: string, health: Envelope<HealthReport> | undefined): Attempt {
+  const data = health?.data;
+  if (!data?.services) return { at, services: [], error: health?.error?.message ?? "health check produced no usable output" };
+  return { at, services: data.services, ...(data.sync ? { sync: data.sync } : {}) };
+}
 
 interface Options {
   network?: string;
@@ -487,9 +550,19 @@ async function main(): Promise<number> {
     }
   }
 
+  let endpoints: ReturnType<typeof resolveNetwork> | undefined;
+  try {
+    endpoints = resolveNetwork(network);
+  } catch {
+    // Mainnet without a project ID: health reports it, and there's no RPC to probe.
+  }
+
   // Retry so one slow response isn't reported as an outage.
   let result: CheckResult | undefined;
+  const attempts: Attempt[] = [];
+  let heads: HeadSample[] | undefined;
   for (let attempt = 1; attempt <= opts.attempts; attempt++) {
+    const at = new Date().toISOString();
     const [health, versions] = await Promise.all([
       runCli<HealthReport>(["health", network, "--json", "--offline"]),
       runCli<VersionsReport>(["versions", network, "--json", "--no-local", "--offline"]),
@@ -504,7 +577,10 @@ async function main(): Promise<number> {
       console.error(`live-check: ${mismatch}`);
       return EXIT.error;
     }
-    result = classify({ network, health, versions, upstream, upstreamError, bundled });
+    attempts.push(attemptOf(at, health));
+    const rpcUp = health?.data?.services?.some((s) => s.service === "rpc" && s.status === "OK");
+    if (rpcUp && endpoints && !heads) heads = await probeHeads(endpoints.rpc);
+    result = classify({ network, health, versions, upstream, upstreamError, bundled, heads });
     if (result.status !== "outage" || attempt === opts.attempts) break;
     console.error(
       `attempt ${attempt}/${opts.attempts}: outage, retrying in ${opts.delayMs / 1000}s`,
@@ -516,6 +592,21 @@ async function main(): Promise<number> {
   const runUrl = process.env.GITHUB_RUN_ID
     ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
     : undefined;
+  Object.assign(result, {
+    attempts,
+    ...(heads ? { heads } : {}),
+    ...(endpoints
+      ? {
+          endpoints: {
+            rpc: takeProjectId(endpoints.rpc).url,
+            indexerHttp: takeProjectId(endpoints.indexerHttp).url,
+            blockfrost: isBlockfrostUrl(endpoints.rpc) || isBlockfrostUrl(endpoints.indexerHttp),
+          },
+        }
+      : {}),
+    environment: `${type()} ${release()}${process.env.GITHUB_ACTIONS ? " (GitHub Actions runner)" : ""}`,
+    ...(runUrl ? { runUrl } : {}),
+  });
   const fp = fingerprint(result);
   const report = redact(
     `${renderMarkdown(result, { checkedAt: new Date().toISOString(), runUrl })}\n\n<!-- live-check fingerprint: ${fp} -->\n`,

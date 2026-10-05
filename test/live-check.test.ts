@@ -289,6 +289,37 @@ describe("live-check classify", () => {
   });
 });
 
+describe("live-check degraded RPC", () => {
+  const heads = (...numbers: number[]) => numbers.map((head, i) => ({ at: `2026-10-02T11:55:4${i}.000Z`, ms: 400, head }));
+
+  it("reports a head that goes backwards as degraded, below drift", () => {
+    const degraded = classify(input({ heads: heads(2804021, 2804011, 2804027) }));
+    expect(degraded.status).toBe("degraded");
+    expect(degraded.findings).toContainEqual(expect.objectContaining({ kind: "rpc-inconsistent", severity: "degraded" }));
+    expect(exitCodeFor(degraded)).toBe(30);
+    expect(releaseBlockers(degraded)).toEqual([]);
+    expect(classify(nodeBehind({ heads: heads(2804021, 2804011) })).status).toBe("drift");
+    expect(classify(input({ heads: heads(100, 99, 101) })).status).toBe("clean");
+  });
+
+  it("keeps the fingerprint stable as the heads change", () => {
+    expect(fingerprint(classify(input({ heads: heads(2804021, 2804011) })))).toBe(
+      fingerprint(classify(input({ heads: heads(2805000, 2804990, 2805001) }))),
+    );
+  });
+
+  it("adds the service-desk draft to the report", () => {
+    const result = classify(input({ heads: heads(2804021, 2804011) }));
+    const report = renderMarkdown(
+      { ...result, attempts: [{ at: "2026-10-02T11:55:30.000Z", services: [] }], heads: heads(2804021, 2804011) },
+      { checkedAt: "2026-10-02T11:56:00Z" },
+    );
+    expect(report).toContain("🟠 preprod: degraded");
+    expect(report).toContain("<!-- service-desk:start -->");
+    expect(renderMarkdown(classify(input()))).not.toContain("service-desk");
+  });
+});
+
 describe("live-check fingerprint", () => {
   const drifted = () => classify(nodeBehind());
 
