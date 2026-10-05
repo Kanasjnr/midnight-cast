@@ -20,6 +20,8 @@ import { healthCommand } from "../src/commands/health.js";
 import { pingCommand } from "../src/commands/ping.js";
 import { tipCommand } from "../src/commands/tip.js";
 import { txCommand } from "../src/commands/tx.js";
+import { contractCommand } from "../src/commands/contract.js";
+import { dustStatusCommand } from "../src/commands/dust-status.js";
 import { versionsCommand } from "../src/commands/versions.js";
 import { resolveNetwork } from "../src/config.js";
 import { takeProjectId } from "../src/lib/blockfrost.js";
@@ -58,7 +60,58 @@ async function graphql<T>(endpoint: string, query: string, variables: Record<str
   }
 }
 
-async function discoverInputs(indexerHttp: string): Promise<FixtureFile["inputs"]> {
+// Same key, test and mainnet header bytes; registered or not, it gives the response shape.
+const REWARD_ADDRESSES: Record<string, string> = {
+  mainnet: "stake1uyfu74w3wh4gfzu8m6e7j987h4lq9r3t7ef5gaw497uu85qh2rxwr",
+  test: "stake_test1uqfu74w3wh4gfzu8m6e7j987h4lq9r3t7ef5gaw497uu85qsqfy27",
+};
+
+function rewardAddressFor(network: string): string {
+  return REWARD_ADDRESSES[network === "mainnet" ? "mainnet" : "test"]!;
+}
+
+// Public endpoints throttle bursts, so look back a bounded number of blocks, gently.
+const CONTRACT_SEARCH_BLOCKS = 300;
+const SEARCH_PAUSE_MS = 150;
+
+async function discoverContractAddress(indexerHttp: string): Promise<string | undefined> {
+  const { block } = await graphql<{ block: { height: number } }>(indexerHttp, "{ block { height } }");
+  for (let height = block.height; height > block.height - CONTRACT_SEARCH_BLOCKS; height--) {
+    await new Promise((resolve) => setTimeout(resolve, SEARCH_PAUSE_MS));
+    const data = await graphql<{ block: { transactions: Array<{ contractActions?: Array<{ address: string }> }> } }>(
+      indexerHttp,
+      "query($h: Int) { block(offset: { height: $h }) { transactions { contractActions { address } } } }",
+      { h: height },
+    );
+    const action = data.block.transactions.flatMap((t) => t.contractActions ?? [])[0];
+    if (action) return action.address;
+  }
+  console.log(`no contract action in the last ${CONTRACT_SEARCH_BLOCKS} blocks at ${takeProjectId(indexerHttp).url}; contract isn't recorded`);
+  return undefined;
+}
+
+async function discoverInputs(network: string, indexerHttp: string): Promise<FixtureFile["inputs"]> {
+  const contractAddress = await discoverContractAddress(indexerHttp);
+  return {
+    ...(await discoverTransaction(indexerHttp)),
+    ...(contractAddress ? { contractAddress } : {}),
+    rewardAddress: rewardAddressFor(network),
+  };
+}
+
+// Fixtures recorded before an input existed get just that input discovered.
+async function completeInputs(
+  network: string,
+  indexerHttp: string,
+  inputs: Partial<FixtureFile["inputs"]> & Pick<FixtureFile["inputs"], "txHash" | "blockHeight" | "dustEventId">,
+): Promise<FixtureFile["inputs"]> {
+  const contractAddress = inputs.contractAddress ?? (await discoverContractAddress(indexerHttp));
+  return { ...inputs, ...(contractAddress ? { contractAddress } : {}), rewardAddress: inputs.rewardAddress ?? rewardAddressFor(network) };
+}
+
+async function discoverTransaction(
+  indexerHttp: string,
+): Promise<Pick<FixtureFile["inputs"], "txHash" | "blockHeight" | "dustEventId">> {
   const { block } = await graphql<{ block: { height: number } }>(indexerHttp, "{ block { height } }");
   for (let height = block.height; height > block.height - 1000; height--) {
     const data = await graphql<{
@@ -98,6 +151,11 @@ async function recordExchanges(network: string, inputs: FixtureFile["inputs"]): 
     await requireOk("block latest", () => blockLatestCommand(network, {}, json));
     await requireOk("block", () => blockAtHeightCommand(String(inputs.blockHeight), network, {}, json));
     await requireOk("tx", () => txCommand(inputs.txHash, network, {}, json));
+    if (inputs.contractAddress) {
+      const address = inputs.contractAddress;
+      await requireOk("contract", () => contractCommand(address, network, {}, json));
+    }
+    await requireOk("dust-status", () => dustStatusCommand([inputs.rewardAddress], network, {}, json));
   } finally {
     globalThis.fetch = realFetch;
   }
@@ -212,13 +270,21 @@ async function main(): Promise<number> {
     }
     const committed = readFixture(network);
     const indexerHttp = resolveNetwork(network, {}).indexerHttp;
-    const inputs = !discover && committed ? committed.inputs : await discoverInputs(indexerHttp);
+    const inputs =
+      !discover && committed
+        ? check
+          ? committed.inputs
+          : await completeInputs(network, indexerHttp, committed.inputs)
+        : await discoverInputs(network, indexerHttp);
     // Shapes are compared by request kind, so after a network reset any recent transaction will do.
     const { fixture, schema } = await record(network, inputs).catch(async (err: unknown) => {
       if (!check) throw err;
       const reason = sanitizeForOutput(err instanceof Error ? err.message : String(err));
       console.log(`${network}: recorded inputs didn't resolve (${reason}); using fresh ones`);
-      return record(network, await discoverInputs(indexerHttp));
+      const fresh = await discoverInputs(network, indexerHttp);
+      // Compare like with like: don't add a lookup the committed fixture never recorded.
+      if (!committed?.inputs.contractAddress) delete fresh.contractAddress;
+      return record(network, fresh);
     });
     const dir = fixtureDir(network);
 

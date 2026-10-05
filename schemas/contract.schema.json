@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/main/schemas/contract.schema.json",
+  "title": "contract data",
+  "type": "object",
+  "required": [
+    "network",
+    "address",
+    "latestAction",
+    "unshieldedBalances",
+    "state"
+  ],
+  "properties": {
+    "network": {
+      "type": "string"
+    },
+    "address": {
+      "type": "string"
+    },
+    "latestAction": {
+      "type": "object",
+      "required": [
+        "kind",
+        "transactionHash",
+        "blockHeight",
+        "time"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "deploy",
+            "call",
+            "update"
+          ]
+        },
+        "entryPoint": {
+          "type": "string"
+        },
+        "transactionHash": {
+          "type": "string"
+        },
+        "blockHeight": {
+          "type": "integer"
+        },
+        "time": {
+          "type": "string"
+        }
+      }
+    },
+    "deployed": {
+      "type": "object",
+      "required": [
+        "transactionHash",
+        "blockHeight",
+        "time"
+      ],
+      "properties": {
+        "transactionHash": {
+          "type": "string"
+        },
+        "blockHeight": {
+          "type": "integer"
+        },
+        "time": {
+          "type": "string"
+        }
+      }
+    },
+    "unshieldedBalances": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "tokenType",
+          "amount"
+        ],
+        "properties": {
+          "tokenType": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "state": {
+      "type": "object",
+      "required": [
+        "bytes",
+        "sha256"
+      ],
+      "properties": {
+        "bytes": {
+          "type": "integer"
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "hex": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

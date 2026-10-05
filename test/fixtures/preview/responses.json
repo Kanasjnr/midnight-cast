@@ -1,23 +1,30 @@
 {
   "network": "preview",
-  "recordedAt": "2026-10-03T19:53:40.946Z",
+  "recordedAt": "2026-10-05T08:36:42.499Z",
   "inputs": {
     "txHash": "9166c5fff516e5ad1ad210cc791861385b97fc73b69622ab12f066b3a0540329",
     "blockHeight": 1139648,
-    "dustEventId": 259927
+    "dustEventId": 259927,
+    "rewardAddress": "stake_test1uqfu74w3wh4gfzu8m6e7j987h4lq9r3t7ef5gaw497uu85qsqfy27"
   },
   "exchanges": [
     {
       "key": "indexer query { block { height } } {}",
       "status": 200,
       "contentType": "application/graphql-response+json",
-      "body": "{\"data\":{\"block\":{\"height\":1139699}}}"
+      "body": "{\"data\":{\"block\":{\"height\":1161725}}}"
     },
     {
       "key": "indexer query { block { protocolVersion } } {}",
       "status": 200,
       "contentType": "application/graphql-response+json",
       "body": "{\"data\":{\"block\":{\"protocolVersion\":1000300}}}"
+    },
+    {
+      "key": "indexer query DustStatus($addresses: [CardanoRewardAddress!]!) { dustGenerationStatus(cardanoRewardAddresses: $addresses) { cardanoRewardAddress dustAddress registered nightBalance generationRate currentCapacity maxCapacity utxoTxHash utxoOutputIndex } } {\"addresses\":[\"stake_test1uqfu74w3wh4gfzu8m6e7j987h4lq9r3t7ef5gaw497uu85qsqfy27\"]}",
+      "status": 200,
+      "contentType": "application/graphql-response+json",
+      "body": "{\"data\":{\"dustGenerationStatus\":[{\"cardanoRewardAddress\":\"stake_test1uqfu74w3wh4gfzu8m6e7j987h4lq9r3t7ef5gaw497uu85qsqfy27\",\"dustAddress\":null,\"registered\":false,\"nightBalance\":\"0\",\"generationRate\":\"0\",\"currentCapacity\":\"0\",\"maxCapacity\":\"0\",\"utxoTxHash\":null,\"utxoOutputIndex\":null}]}}"
     },
     {
       "key": "indexer query TransactionLookup($offset: TransactionOffset!) { transactions(offset: $offset) { __typename id hash protocolVersion ... on RegularTransaction { transactionResult { status segments { id success } } fees { paidFees estimatedFees } identifiers startIndex endIndex } block { height hash } dustLedgerEvents { id __typename } zswapLedgerEvents { id __typename } contractActions { __typename } } } {\"offset\":{\"hash\":\"0x9166c5fff516e5ad1ad210cc791861385b97fc73b69622ab12f066b3a0540329\"}}",
@@ -29,7 +36,7 @@
       "key": "proof-server GET /",
       "status": 200,
       "contentType": "application/json",
-      "body": "{\"status\":\"ok\",\"timestamp\":\"2026-10-03 19:53:15.847604993 +00:00:00\"}"
+      "body": "{\"status\":\"ok\",\"timestamp\":\"2026-10-05 08:36:39.028216494 +00:00:00\"}"
     },
     {
       "key": "proof-server GET /version",
@@ -47,7 +54,7 @@
       "key": "rpc chain_getBlockHash []",
       "status": 200,
       "contentType": "application/json; charset=utf-8",
-      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":\"0x30c9102e20e01e265280df3c34fbbd09853f8e330c6d3278566e37312d016342\"}"
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":\"0x11321c9343f842d1b2748c570421c2254b38b2022f9880edab333599c3f7efea\"}"
     },
     {
       "key": "rpc chain_getHeader [\"0x74edb3e1af7039956a4d8babe6cfa33e0012750dda7b492bfdbc79e34604235c\"]",
@@ -59,7 +66,7 @@
       "key": "rpc chain_getHeader []",
       "status": 200,
       "contentType": "application/json; charset=utf-8",
-      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"parentHash\":\"0x30c9102e20e01e265280df3c34fbbd09853f8e330c6d3278566e37312d016342\",\"number\":\"0x1163f6\",\"stateRoot\":\"0xbe4b3006830e1172aecb731ac98fe4d779387826d511fb83cb32d573d25a6e14\",\"extrinsicsRoot\":\"0xaaefa28c5516ffa11eca8b323ea4b74e505cfa8a137b13ac13780382412e3a2d\",\"digest\":{\"logs\":[\"0x066175726120dde4ca1100000000\",\"0x066d6373688072deb9ee163589939114db4931caf9b0a8170f1c541b5437dc4641bd0f3020b2\",\"0x044d4e5356106c430f00\",\"0x044245454684034a00bd7e943d08ab94e784a55b9a8f1ec593c34f5fa9724f12779974ed1db580\",\"0x05617572610101b2da182f78955109e0dd7de0bbf7c3ad8f3af9cf53d0675f009ff9241d866227fd7d6b25fa0ca275db0fa14edcc31156085ecc6037cdc7736b8413bf64a52286\"]}}}"
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"parentHash\":\"0xc9ee281e7a841a70b9b5333d4d9e91a6a7c1becb19ce2c718c79f96364b3bf64\",\"number\":\"0x11b9ff\",\"stateRoot\":\"0x23091d18f89c0d49aa1da01cc90c8ae0044185f6e91498f8e7e3b61514f78608\",\"extrinsicsRoot\":\"0xbcee48110511c3102db02a731227b471177fbe7b3ec63259d4ea9f64ffcc5953\",\"digest\":{\"logs\":[\"0x066175726120ee3acb1100000000\",\"0x066d63736880188e2c3ecbcf8c3acfd8fc53f49cc1e483300c6b3b825c2da73ac671aeeb96d9\",\"0x044d4e5356106c430f00\",\"0x0442454546840341dd048ab19ffa2f449d99290e2ac503efe88a674011ee747b31a8432b07eef0\",\"0x056175726101010ac6854b499719c2aa5593efbefa9355627013a49c6073acfd29cd09a2a90639f1a07a8a7156b565a70a6493d1093bc59e5b1b5c230753df723b153eea97548c\"]}}}"
     },
     {
       "key": "rpc chain_getRuntimeVersion []",
@@ -71,7 +78,7 @@
       "key": "rpc system_health []",
       "status": 200,
       "contentType": "application/json; charset=utf-8",
-      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"peers\":8,\"isSyncing\":false,\"shouldHavePeers\":true}}"
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"peers\":14,\"isSyncing\":false,\"shouldHavePeers\":true}}"
     },
     {
       "key": "rpc system_version []",
@@ -92,7 +99,150 @@
             "id": 259927,
             "protocolVersion": 1000300,
             "raw": "6d69646e696768743a6576656e745b76395d3a0400f5019166c5fff516e5ad1ad210cc791861385b97fc73b69622ab12f066b3a054032900000200077303a09b72a74d9a9396e0ffa0392dec85fde759fcc978399db4ab1c4093fc7433eeea0700735f3c741e36eb8b0bc3d790e2686e787349f01e46c9d9d5c92fc2843b3aee4b470f01c06e31d9100103d25bc16a03ea5bc16a",
-            "maxId": 259927
+            "maxId": 260998
+          }
+        }
+      },
+      {
+        "data": {
+          "dustLedgerEvents": {
+            "__typename": "DustSpendProcessed",
+            "id": 259928,
+            "protocolVersion": 1000300,
+            "raw": "6d69646e696768743a6576656e745b76395d3a0400dd01333c1a45509d8fd391aae82963f850fedc4cb639807faf278ab7c51af4862fee0000010007736373b4eb27a12857152b0f04a21e5bb98cfa9bd882f36d3bfac43c97a93fde2df2ea070073899bfbee418eb32fcebd4f1a3f24baeead43797511179b97788d37e3bce77f66a50f03a65dc16a03be5dc16a",
+            "maxId": 260998
+          }
+        }
+      },
+      {
+        "data": {
+          "dustLedgerEvents": {
+            "__typename": "DustGenerationDtimeUpdate",
+            "id": 259930,
+            "protocolVersion": 1000300,
+            "raw": "6d69646e696768743a6576656e745b76395d3a0400dd13333c1a45509d8fd391aae82963f850fedc4cb639807faf278ab7c51af4862fee00002f37067aadce1faa08fa281c46592edf4fc1216fd7590b68989281626d590d2cbe7c000700f2052a0173af24023d8e9175aa4f13d6635e1807e6c0192d3db09cf50be5bcef834b92ef5d66b58b82a08842c05d77305713f904a9e24a629d1ac04c398459951fd0bcce9903be5dc16a8001732f762192fbeab9bd76df3612510d0363ca1e4339fab0a2b1dedea5ccaa8bc717010173427eca46be4aaf8e215d88b67d4fabb750e761230acc489ca13e6ff437754913010173aea9512e648ff980c3412c12be800d60b1157336601b8f31758073672f707724010173ce15fb7bc187fb36c865e835e937ae1c536cc520fd14b620fb07e21b6ce4a613000173ec1b2fbbb1fdaad11618aed7a302952c5cf00cf001a2469021f62e78b66854310101733a7118bb8152fff3f2517feac07da34a516a9f3f25338cd1f914428bb1514a39000173b63954d441e1e8dcf07693a36e4ef749bdabf7b85d7f208bcaf60fd9a883ce17000173e23f692ef457a239a5d3c5bcc2b7c8578744f751947a3c4dd823e2de3365b90a000173e46fc985107ef77bdb2369d7da5433a6b402dcc6d729783cd7b6cb851404265e000173468b555cf0e55efc1c79d993abb3533460b0ab6a3794c4bcad03ecf67016c8090101736e4cff658b20b92f566e4916f7094b8b032c7d94a6b2c41c4310c62a3873ec60010173236660c61e092472c2972d4847eee2a5ca233c39024f12ecffc60309f1f0610a0001732d0020904425eb245f3e1acecef9007f35122307ffaa114b55b431c0622e310b0001730c4ece0f696322c98b747435d8ad7bc522ad9ef36052fc2660e7204f7d36bb250001738543c363d084a03b713d845d1046508d95f7ef3f0e5a8f4b3b252718f88360130101731b72cc907b795ce868c68e360b7d9d949e5c20d559b27c49d4fda61c17832131010173b10f37467cb24a9fbbba29f6fcef026072fb4bb28f41d71fa4992dee12c0ad1e01017313625c1caa04909a3312575a33cd40f045ba298147e88346428f3cec330ff62a01017315ab1db1a6f008015e48f186225164ccc881e8924cddf544436cdda09528a664010173b00245eee036bf222053332ef2d5e9a5e9b0efdf485c0add574092dde7b34157010173f66f08a5d23fbbd054051b058b6f7deee6e84408654b463ea867c01823ed8b15010173b288550b2171d6752723e9355a6e37f8a9609a036dd4b909315422034780111a0101733f8e3569abb2a496ea4f948a102676ba5e1f8e0d9f59601fe78939cae1d6af5b0101735620aaffec9b6cada44c7b66ccdcd0e1f606a36a70efd85a59220f3a8659c8580101737fa03008798da7c6ad8183152790196b3bdb3722419fa5db8ff07dd97cc52e6101017311f976a0bdecc0d07cdec9c5854daff8252e8fd2a4337fda516aaad680727811010173002a6c424751159606885ba630e1e5cb76d31fd307c252ca7360c58da8a53326010173fc6757321a37b36149391e931add755de7202be1dade7ced1da0538a5c48ac1c010173e7d43a6a84b88bdcb805cf9923961f9dedb2dcbfaddef7010b571fdf6a8daf29010173fb3fbd463591a2ae757fdd961855cc1a3b224eaf9f19d0fe58bab666312bc80d010173cee61e2cc5e82ceabc3b3bf2a623a1c867e6a777854f73f5deb39ee6a61e2324010173ff12ec1aaeb8ffd515f85612199ccfb919606e419d3055eb1ba37ca1599626250103be5dc16a",
+            "maxId": 260998
+          }
+        }
+      },
+      {
+        "data": {
+          "dustLedgerEvents": {
+            "__typename": "DustInitialUtxo",
+            "id": 259931,
+            "protocolVersion": 1000300,
+            "raw": "6d69646e696768743a6576656e745b76395d3a0400a103333c1a45509d8fd391aae82963f850fedc4cb639807faf278ab7c51af4862fee00002f37050073af24023d8e9175aa4f13d6635e1807e6c0192d3db09cf50be5bcef834b92ef5d73c2cf97b3dfe368b3685ebc0ef7fd09ce4b39c1fb81080d74e6a134d882bce4700003be5dc16a4f3e0bc20b7425fbfaa84b8b0e1f334f55bc36505818a8285d88ad8f608865e2f6ea07000300f9029573af24023d8e9175aa4f13d6635e1807e6c0192d3db09cf50be5bcef834b92ef5d4f3e0bc20b7425fbfaa84b8b0e1f334f55bc36505818a8285d88ad8f608865e213ffffffffffffffff05e803be5dc16a",
+            "maxId": 260998
+          }
+        }
+      },
+      {
+        "data": {
+          "dustLedgerEvents": {
+            "__typename": "DustSpendProcessed",
+            "id": 259932,
+            "protocolVersion": 1000300,
+            "raw": "6d69646e696768743a6576656e745b76395d3a0400dd015def9c5689e27accf6f9adc4e2423fac8086df9026a6e65a9bbecbb5b2e6abf8000001000773260748f26777b5014284f0eb6f85ff2bc256a59746253770bf3a0dffc2ef0843faea070073056b3a95ef2521322d6f64bbeaad6ac73a34cfa6e9562e2f3e00e1c2c0f2072ca50f03cc5ec16a03e45ec16a",
+            "maxId": 260998
+          }
+        }
+      },
+      {
+        "data": {
+          "dustLedgerEvents": {
+            "__typename": "DustSpendProcessed",
+            "id": 259934,
+            "protocolVersion": 1000300,
+            "raw": "6d69646e696768743a6576656e745b76395d3a0400dd01b68cf799cb6b0362ad4511d716e85b2a3cb7a09d79eed9c9d70a2669d68a75fb000001000773ae238eb0726949f9aaa748049ac8d0901253e5f95750a8eace01b9791b2aac4ffeea07007305ad8420685e96457a9f4d3525dc5ee46ade69d16f12289716a7505a9e6c3d06a50f03b65fc16a03ce5fc16a",
+            "maxId": 260998
+          }
+        }
+      },
+      {
+        "data": {
+          "dustLedgerEvents": {
+            "__typename": "DustSpendProcessed",
+            "id": 259935,
+            "protocolVersion": 1000300,
+            "raw": "6d69646e696768743a6576656e745b76395d3a0400dd0122d8545ec1378814f947ef91f5084a7da31e322ee1ff763528e328860548dbd00000010007733014953c3a157bb1f1f397a3063efaf69da62091b98126d239148f665182cd1102eb0700737ba743a7000603c9a4815b3ff610a1ce48c33fc2d1ef46a2e8349ac7b32cd63ea50f030460c16a031c60c16a",
+            "maxId": 260998
+          }
+        }
+      },
+      {
+        "data": {
+          "dustLedgerEvents": {
+            "__typename": "DustSpendProcessed",
+            "id": 259937,
+            "protocolVersion": 1000300,
+            "raw": "6d69646e696768743a6576656e745b76395d3a0400dd011e67e0cfbb75db8096e163728e1c55cfe8ccac5a5c83525b9abe397706be098d0000010007734b2341a6ffcc2370b836e7d80f0bf46effb17f61359d896b577f7df59878dc5306eb0700735db4bd71187f006ba8ee84d4ab4624e8b95271b6347c08c347026897e17a205fa50f037060c16a038860c16a",
+            "maxId": 260998
+          }
+        }
+      },
+      {
+        "data": {
+          "dustLedgerEvents": {
+            "__typename": "DustSpendProcessed",
+            "id": 259938,
+            "protocolVersion": 1000300,
+            "raw": "6d69646e696768743a6576656e745b76395d3a0400dd01a1e69a846f8f1e3d1427f2bef370bd9c797ea9c3eb8976dd84768bf6c91a1326000001000773b0a4379024f905ab4001ddc1f3b41533e837c47921714c05fd8a650fbd15a5040aeb0700730199870195c3208a49c9d76dd03eb085a5030e0089fca96a0e0a09539781741fa50f03d660c16a03ee60c16a",
+            "maxId": 260998
+          }
+        }
+      },
+      {
+        "data": {
+          "dustLedgerEvents": {
+            "__typename": "DustSpendProcessed",
+            "id": 259940,
+            "protocolVersion": 1000300,
+            "raw": "6d69646e696768743a6576656e745b76395d3a0400dd01783a89ada2ac93543251ee304e9c91c470ec6a3d0b48162cdb634b7c06e509cf0000010007731f83fe23b74842f976d8d67dbbf13a4b5ec0f6d93c39a3ce162bac0cf1b32f040eeb070073cffa52c1f4b2d09feddb054ec82017534b6528e4a54040d49f408dfb2c6edd58a50f036661c16a037e61c16a",
+            "maxId": 260998
+          }
+        }
+      },
+      {
+        "data": {
+          "dustLedgerEvents": {
+            "__typename": "DustSpendProcessed",
+            "id": 259941,
+            "protocolVersion": 1000300,
+            "raw": "6d69646e696768743a6576656e745b76395d3a0400dd01edb3064ee70beee6d8ea4440f62c5b67b14ba3e15763f425eeefe0d9c9d38748000001000773ee6f8c4eccc2b27cbc5eab079ac94f2459c23521ac31b77936860b3bebfb061c12eb0700735627db1c2f4fc458b9a8c43ac3f2e1a763309a502cadb7f39056e24245637e47a50f03bc62c16a03e062c16a",
+            "maxId": 260998
+          }
+        }
+      },
+      {
+        "data": {
+          "dustLedgerEvents": {
+            "__typename": "DustSpendProcessed",
+            "id": 259946,
+            "protocolVersion": 1000300,
+            "raw": "6d69646e696768743a6576656e745b76395d3a0400dd01c8d53d885e0fb76b9e40637056d997f27baa542b086e5ee5dd10b6b485ce3e80000001000773fbe621c1bc2002532f4746618b53fe9e3299b3fa81625bf671908d146af19e6716eb070073b71d23ba889fa199df636c23c9cf48c237f0b116bcf25ae52b761a937aac2d0ba50f031063c16a032e63c16a",
+            "maxId": 260998
+          }
+        }
+      },
+      {
+        "data": {
+          "dustLedgerEvents": {
+            "__typename": "DustSpendProcessed",
+            "id": 259951,
+            "protocolVersion": 1000300,
+            "raw": "6d69646e696768743a6576656e745b76395d3a0400dd013f668a34acb5ad5aeb862d9752185faea8668119161ada9a019cb6dc70f3e4e3000001000773ff2527712c3912bf3ff0f326e5d9948b44164c2324beecc533f9ba39b4e1bc651aeb070073a65697aba7b53671a03490786528ecb89add2f9f34602bf70c5b36e1a4adff21a50f035263c16a037663c16a",
+            "maxId": 260998
+          }
+        }
+      },
+      {
+        "data": {
+          "dustLedgerEvents": {
+            "__typename": "DustSpendProcessed",
+            "id": 259956,
+            "protocolVersion": 1000300,
+            "raw": "6d69646e696768743a6576656e745b76395d3a0400dd019d1354a2074a3c397fde4c4d3a163f322248358d742258494f902ea013843ec8000001000773ce218a378b66ca9fd36898bef29aac3577e5a5b6855488b81249e715df45b01c1eeb07007366fe7263fb18204690007ebf5037bb4b6643b7e657e56108cab6b1231f488108a50f03a063c16a03be63c16a",
+            "maxId": 260998
           }
         }
       }
