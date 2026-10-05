@@ -42,6 +42,15 @@ describe("inputs that don't exist or don't parse", () => {
     expect(result.errorKind).toBeUndefined();
   });
 
+  it("accepts every hash form the indexer lookup accepts", async () => {
+    globalThis.fetch = (async () => new Response(JSON.stringify({ data: { transactions: [] } }))) as unknown as typeof fetch;
+    const hash = "ab".repeat(32);
+    for (const form of [hash, `0x${hash}`, `0X${hash.toUpperCase()}`, ` ${hash}\n`]) {
+      const result = await txCommand(form, "preprod", {}, json);
+      expect(result.error, JSON.stringify(form)).toMatch(/^Transaction not found/);
+    }
+  });
+
   it("says nothing was recognised in a sentence instead of blaming a ledger code", () => {
     const result = decodeCommand([], { json: true, raw: "something went wrong" });
     expect(result.ok).toBe(false);
