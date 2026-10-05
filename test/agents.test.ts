@@ -5,12 +5,12 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { END_MARKER, START_MARKER, agentSnippet, skillFile, withSnippet } from "../src/agents/guide.js";
 import { agentsInitCommand } from "../src/commands/agents.js";
-import { agentFiles } from "../scripts/agent-files.js";
+import { agentFiles, sameText } from "../scripts/agent-files.js";
 
 describe("agent guidance", () => {
   it("is committed exactly as the source renders it", () => {
     for (const { path, content } of agentFiles()) {
-      expect(readFileSync(join(process.cwd(), path), "utf8"), `${path}: run npm run agent-files`).toBe(content);
+      expect(sameText(readFileSync(join(process.cwd(), path), "utf8"), content), `${path}: run npm run agent-files`).toBe(true);
     }
   });
 
