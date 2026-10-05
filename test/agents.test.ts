@@ -2,17 +2,15 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
 import { describe, expect, it } from "vitest";
 import { END_MARKER, START_MARKER, agentSnippet, skillFile, withSnippet } from "../src/agents/guide.js";
 import { agentsInitCommand } from "../src/commands/agents.js";
-import { createMcpServer } from "../src/mcp/server.js";
 import { agentFiles, sameText } from "../scripts/agent-files.js";
 import { schemaErrors } from "./schema.js";
 
 describe("agent guidance", () => {
-  it("is committed exactly as the source renders it", () => {
-    for (const { path, content } of agentFiles()) {
+  it("is committed exactly as the source renders it", async () => {
+    for (const { path, content } of await agentFiles()) {
       expect(sameText(readFileSync(join(process.cwd(), path), "utf8"), content), `${path}: run npm run agent-files`).toBe(true);
     }
   });
@@ -26,14 +24,14 @@ describe("agent guidance", () => {
     for (const command of commands) expect(names.has(command), command).toBe(true);
   });
 
-  it("follows the Agent Skills naming rules", () => {
+  it("follows the Agent Skills naming rules", async () => {
     const [, frontmatter] = skillFile().split("---\n");
     const name = /^name: (.+)$/m.exec(frontmatter!)![1]!;
     const description = /^description: (.+)$/m.exec(frontmatter!)![1]!;
     expect(name).toMatch(/^[a-z0-9]+(-[a-z0-9]+)*$/);
     expect(name.length).toBeLessThanOrEqual(64);
     expect(description.length).toBeLessThanOrEqual(1024);
-    expect(agentFiles().find((f) => f.path.endsWith("SKILL.md"))!.path).toContain(`skills/${name}/`);
+    for (const { path } of (await agentFiles()).filter((f) => f.path.endsWith("SKILL.md"))) expect(path).toContain(`skills/${name}/`);
   });
 });
 
@@ -58,25 +56,17 @@ describe("the Claude Code plugin", () => {
     for (const key of referenced) expect(manifest.userConfig, key).toHaveProperty(key);
   });
 
-  it("evaluates against mocks that match the real tools and envelopes", async () => {
-    const server = createMcpServer({ version: "test", catalog: () => ({}) as never });
-    const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
-    const client = new Client({ name: "test", version: "0" });
-    await Promise.all([server.connect(serverSide), client.connect(clientSide)]);
-    const tools = new Set((await client.listTools()).tools.map((t) => t.name));
-    await client.close();
-
-    const saved = json(join(evals, "mocks", "midnight-cast", "_tools.json")).tools.map((t: { name: string }) => t.name);
-    expect(new Set(saved), "update evals/mocks/midnight-cast/_tools.json").toEqual(tools);
-
+  it("evaluates against mocks of real tools that return valid envelopes", () => {
+    // _tools.json is generated from the server, so the drift test keeps it current.
+    const tools = new Set(json(join(evals, "mocks", "midnight-cast", "_tools.json")).tools.map((t: { name: string }) => t.name));
     const cases = readdirSync(evals).filter((name) => existsSync(join(evals, name, "prompt.md")));
     expect(cases.length).toBe(4);
     for (const name of cases) {
       const mocks = join(evals, name, "mocks", "midnight-cast");
-      for (const file of readdirSync(mocks)) {
+      for (const file of readdirSync(mocks).filter((f) => f.endsWith(".md") && !f.startsWith("_"))) {
         expect(tools.has(file.replace(/\.md$/, "")), `${name}/${file}`).toBe(true);
-        const [, , body] = readFileSync(join(mocks, file), "utf8").split(/^---$/m);
-        expect(schemaErrors(JSON.parse(body!)), `${name}/${file}`).toEqual([]);
+        const body = readFileSync(join(mocks, file), "utf8").replace(/^---\n[\s\S]*?\n---\n/, "");
+        expect(schemaErrors(JSON.parse(body)), `${name}/${file}`).toEqual([]);
       }
       for (const file of readdirSync(join(evals, name, "graders"))) {
         const tool = /^tool: mcp__plugin_midnight-cast_midnight-cast__(\w+)$/m.exec(readFileSync(join(evals, name, "graders", file), "utf8"));

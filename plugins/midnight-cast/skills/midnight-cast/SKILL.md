@@ -20,3 +20,5 @@ midnight-cast is a read-only CLI for the Midnight networks (preview, preprod, ma
 5. Background on a topic: `midnight-cast explain dust|1010|versions|transcript`. `midnight-cast explain --json` lists every command, option, exit code and error kind.
 
 Mainnet goes through Blockfrost: set `BLOCKFROST_PROJECT_ID` to a Midnight Mainnet project ID. midnight-cast never prints it.
+
+**In this plugin.** The plugin runs the midnight-cast MCP server, so call its tools instead of the shell. Each command above is a tool of the same name, with `dust_event`, `dust_events` and `dust_status` for the hyphenated ones; they take the same arguments and return the same envelope. For mainnet the user enters a Blockfrost project ID in the plugin's options (`/plugin`, then midnight-cast, then Configure options), or exports `BLOCKFROST_PROJECT_ID` before starting Claude Code.

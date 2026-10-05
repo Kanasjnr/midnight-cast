@@ -7,7 +7,7 @@ Diagnose a Midnight problem. The network, and any transaction hash or error mess
 
 If no network is named, ask which one: preview, preprod, mainnet or local.
 
-Use the midnight-cast MCP tools if they're available, otherwise run `npx -y midnight-cast@latest <command> --json` in the shell. Follow the midnight-cast skill's debug ladder:
+Use this plugin's midnight-cast MCP tools, following the midnight-cast skill's debug ladder:
 
 1. If an error message was given, decode it first with `decode` (pass the whole message and the network).
 2. Check the network with `health`. If anything fails, narrow it down with `ping` or `tip`.
