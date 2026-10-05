@@ -217,7 +217,7 @@ export async function healthCommand(
   const liveOutcome = await liveResult;
   if (!liveOutcome.ok) return failReaching(liveOutcome.error, endpoints.network, flags);
   const live = liveOutcome.value;
-  const examples = examplesVerdict(live, { offline: flags.offline, refresh: flags.refreshMatrix });
+  const examples = examplesVerdict(endpoints.network, live, { offline: flags.offline, refresh: flags.refreshMatrix });
 
   let liveProofServer: string | undefined;
   if (endpoints.proofServer) {

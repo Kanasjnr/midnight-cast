@@ -38,6 +38,11 @@ export async function versionsCommand(
     return fail(err);
   }
 
+  // A wrong directory is a usage mistake: say so before reaching any network.
+  const projectDir = resolve(flags.projectDir ?? process.cwd());
+  if (flags.local !== false && !statSync(projectDir, { throwIfNoEntry: false })?.isDirectory()) {
+    return fail(`No such directory: ${projectDir}`);
+  }
   const liveResult = settle(fetchLiveVersions(endpoints.rpc, endpoints.indexerHttp));
   const { matrix, source: matrixSource, notes } = await resolveSupportMatrix({
     offline: flags.offline,
@@ -55,7 +60,7 @@ export async function versionsCommand(
   const liveOutcome = await liveResult;
   if (!liveOutcome.ok) return failReaching(liveOutcome.error, endpoints.network, flags);
   const live = liveOutcome.value;
-  const examples = examplesVerdict(live, { offline: flags.offline, refresh: flags.refreshMatrix });
+  const examples = examplesVerdict(endpoints.network, live, { offline: flags.offline, refresh: flags.refreshMatrix });
 
   let liveProofServer: string | undefined;
   if (endpoints.proofServer) {
@@ -69,10 +74,6 @@ export async function versionsCommand(
   }
 
   const checks = buildVersionChecks(expected, live, liveProofServer);
-  const projectDir = resolve(flags.projectDir ?? process.cwd());
-  if (flags.local !== false && !statSync(projectDir, { throwIfNoEntry: false })?.isDirectory()) {
-    return fail(`No such directory: ${projectDir}`);
-  }
   const local = flags.local !== false ? checkLocalPackages(expected, projectDir) : {};
   const { localPackageChecks } = local;
   const allOk =

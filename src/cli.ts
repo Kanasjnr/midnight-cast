@@ -41,7 +41,7 @@ program
   .option("--indexer-http <url>", "Override indexer HTTP URL")
   .option("--indexer-ws <url>", "Override indexer WebSocket URL")
   .option("--proof-server <url>", "Override proof server URL")
-  .option("--offline", "Use the bundled support matrix; don't fetch Midnight's (or set MN_OFFLINE=1)")
+  .option("--offline", "Use the bundled support matrix and examples reports; fetch nothing from GitHub (or set MN_OFFLINE=1)")
   .option(
     "--project-id <id>",
     "Blockfrost project ID for mainnet (or set BLOCKFROST_PROJECT_ID)",
@@ -268,7 +268,7 @@ program
   .option("--threshold <n>", "Lag threshold in blocks", "100")
   .option("--fail-on-lag", "Treat indexer lag as unhealthy (CI)")
   .option("--fail-on-mismatch", "Treat version mismatches as unhealthy (CI)")
-  .option("--refresh-matrix", "Fetch Midnight's support matrix even if a cached copy is fresh")
+  .option("--refresh-matrix", "Fetch Midnight's support matrix and examples report even if cached copies are fresh")
   .action(async (network: string | undefined, opts, cmd) => {
     await run(
       async () =>
@@ -347,7 +347,7 @@ function registerVersions(alias: string, description: string): void {
     .option("--fail-on-mismatch", "Exit 1 when live node/api checks fail (CI)")
     .option("--no-local", "Skip reading package.json in current directory")
     .option("--project-dir <dir>", "Check the Midnight packages of the project in this directory (default: current directory)")
-    .option("--refresh-matrix", "Fetch Midnight's support matrix even if a cached copy is fresh")
+    .option("--refresh-matrix", "Fetch Midnight's support matrix and examples report even if cached copies are fresh")
     .action(async (network: string | undefined, opts, cmd) => {
       await run(
         async () =>
