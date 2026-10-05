@@ -441,7 +441,8 @@ function decodeRaw(raw: string, options: DecodeOptions): EmitResult {
     appendDecodeResult(parts, sections, decodeKnownMessage(message, options), options.json);
   }
 
-  if (parts.length === 0) {
+  // Only a single token can be a bare code or ledger name; a sentence isn't one.
+  if (parts.length === 0 && /^\S+$/.test(raw.trim())) {
     const fallbackLedger = decodeLedger(raw.trim(), options);
     if (fallbackLedger.ok) {
       appendDecodeResult(parts, sections, fallbackLedger, options.json);
@@ -454,8 +455,8 @@ function decodeRaw(raw: string, options: DecodeOptions): EmitResult {
     return fail(
       otherErrorRouterHint(raw) ??
         failures[0] ??
-        "Could not extract a known error from message. " +
-          "Paste 1010/Custom(N)/pallet/RPC text, or run: midnight-cast decode ledger <N>",
+        "No Midnight error recognised in this message. decode reads 1010 rejections, Custom(N) ledger codes, " +
+          "pallet errors (DispatchError::Module), JSON-RPC codes and known tooling messages, or a bare code such as 170",
     );
   }
 

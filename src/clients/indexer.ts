@@ -44,7 +44,7 @@ export async function gqlPost<T>(
   const body = await readJson<GqlResponse<T>>(response, "Indexer");
   if (body.errors?.length) {
     throw new NetworkError(
-      `Indexer unreachable: ${body.errors.map((e) => e.message).join("; ")}`,
+      `Indexer rejected the query: ${body.errors.map((e) => e.message).join("; ")}`,
       "graphql_error",
       "Indexer",
     );
