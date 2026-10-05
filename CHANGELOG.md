@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+
+### New commands
+- `contract <address> [network]` looks up a deployed contract: whether it exists, its latest action (deploy, call or update) and the circuit a call ran, the deploy transaction and block, unshielded balances, and the state's size and sha256 (`--state` for the full hex). The MCP server has it as the `contract` tool
+- `dust-status <addresses...>` shows DUST generation for Cardano reward addresses: registration, NIGHT balance, generation rate, and current and maximum capacity. The MCP server has it as the `dust_status` tool
+- Both have JSON Schemas and recorded fixtures. The fixture recorder looks for a contract over at most 300 recent blocks, pausing between queries, so one run can't flood a public network
 ### Breaking changes
 - `--json` output is a versioned envelope: `{ schemaVersion, ok, command, network, data, warnings, error, next }`. `error` is now an object, `{ message, kind, hint }`, instead of a string, and the top-level `errorKind` and `hint` moved inside it as `kind` and `hint`. Read `error.message` where you read `error` before. Any later breaking change to the JSON bumps `schemaVersion`
 - Usage errors (an unknown command or option, a missing argument or subcommand) exit `2` instead of `1`

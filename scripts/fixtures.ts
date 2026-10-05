@@ -17,7 +17,15 @@ export interface FixtureFile {
   network: string;
   recordedAt: string;
   /** Inputs the replayed commands use, found on the live network when recording. */
-  inputs: { txHash: string; blockHeight: number; dustEventId: number };
+  inputs: {
+    txHash: string;
+    blockHeight: number;
+    dustEventId: number;
+    /** Absent when no recent block had a contract action to record. */
+    contractAddress?: string;
+    /** A well-formed reward address; whether it's registered doesn't matter, only the response shape. */
+    rewardAddress: string;
+  };
   exchanges: Exchange[];
   dust: DustRecording;
 }
@@ -147,7 +155,10 @@ function compatible(recorded: unknown, live: unknown, path: string, unverified: 
 
 // Heights and hashes differ between recordings; the request kind doesn't.
 function requestKind(key: string): string {
-  return key.replace(/"0x[0-9a-f]+"/gi, '"0x"').replace(/\b\d+\b/g, "#");
+  return key
+    .replace(/"(0x)?[0-9a-f]{16,}"/gi, '"0x"')
+    .replace(/"0x[0-9a-f]+"/gi, '"0x"')
+    .replace(/\b\d+\b/g, "#");
 }
 
 export function compareShapes(recorded: Exchange[], live: Exchange[]): ShapeComparison {

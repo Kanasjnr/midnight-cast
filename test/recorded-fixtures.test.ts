@@ -13,6 +13,8 @@ import { healthCommand } from "../src/commands/health.js";
 import { pingCommand } from "../src/commands/ping.js";
 import { tipCommand } from "../src/commands/tip.js";
 import { txCommand } from "../src/commands/tx.js";
+import { contractCommand } from "../src/commands/contract.js";
+import { dustStatusCommand } from "../src/commands/dust-status.js";
 import { versionsCommand } from "../src/commands/versions.js";
 import { BUILTIN_NETWORKS } from "../src/networks.js";
 import { toEnvelope, type EmitResult } from "../src/output.js";
@@ -95,6 +97,15 @@ for (const network of FIXTURE_NETWORKS) {
       expectValid("block", await blockAtHeightCommand(String(inputs.blockHeight), network, {}, json));
     });
 
+    it("read the recorded contract and DUST status", async () => {
+      if (inputs.contractAddress) {
+        const contract = await contractCommand(inputs.contractAddress, network, {}, json);
+        expectValid("contract", contract);
+        expect((contract.data as { address: string }).address).toBe(inputs.contractAddress);
+      }
+      expectValid("dust-status", await dustStatusCommand([inputs.rewardAddress], network, {}, json));
+    });
+
     it("decode the recorded transaction and its DUST events", async () => {
       const tx = await txCommand(inputs.txHash, network, {}, json);
       expectValid("tx", tx);
@@ -161,6 +172,12 @@ describe("fixture shapes", () => {
     expect(filled.drift).toEqual([]);
     expect(filled.unverified).toEqual(["indexer q {}: .data.segments (recorded null)"]);
     expect(compareShapes(before, [exchange("indexer q {}", { data: { id: 2 } })]).drift[0]?.change).toBe("shape");
+  });
+
+  it("treat the same lookup for a different address as the same request", () => {
+    const before = [exchange('indexer query C {} {"address":"a0885870e2650aa2213a44e348371b00"}', { data: {} })];
+    const after = [exchange('indexer query C {} {"address":"c5f1ad3c0e2650aa2213a44e348371ff"}', { data: {} })];
+    expect(compareShapes(before, after).drift).toEqual([]);
   });
 
   it("report requests that are no longer made, new ones, and outages separately", () => {

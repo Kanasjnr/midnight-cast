@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/main/schemas/dust-status.schema.json",
+  "title": "dust-status data",
+  "type": "object",
+  "required": [
+    "network",
+    "addresses"
+  ],
+  "properties": {
+    "network": {
+      "type": "string"
+    },
+    "addresses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "cardanoRewardAddress",
+          "registered",
+          "nightBalance",
+          "generationRate",
+          "currentCapacity",
+          "maxCapacity"
+        ],
+        "properties": {
+          "cardanoRewardAddress": {
+            "type": "string"
+          },
+          "registered": {
+            "type": "boolean"
+          },
+          "dustAddress": {
+            "type": "string"
+          },
+          "nightBalance": {
+            "type": "string"
+          },
+          "generationRate": {
+            "type": "string"
+          },
+          "currentCapacity": {
+            "type": "string"
+          },
+          "maxCapacity": {
+            "type": "string"
+          },
+          "utxo": {
+            "type": "object",
+            "required": [
+              "transactionHash",
+              "outputIndex"
+            ],
+            "properties": {
+              "transactionHash": {
+                "type": "string"
+              },
+              "outputIndex": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
