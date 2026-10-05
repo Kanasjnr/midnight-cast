@@ -1,7 +1,7 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { configPath } from "../config.js";
+import { cacheDir, readCache, writeCache, type CacheFile } from "./cache.js";
 import { loadDataJson } from "./data-path.js";
 import { parseMatrixUpdated, type MatrixNetwork, type SupportMatrixFile } from "./versions.js";
 
@@ -136,37 +136,9 @@ const RETRY_AFTER_FAILURE_MS = HOUR_MS;
 const FALLBACK_MAX_AGE_MS = 7 * 24 * HOUR_MS;
 const FETCH_TIMEOUT_MS = 3_000;
 
-interface CacheFile {
-  fetchedAt: string;
-  body: unknown;
-  failedAt?: string;
-  failure?: string;
-}
-
-export function matrixCacheDir(): string {
-  return join(process.env.XDG_CACHE_HOME ?? join(homedir(), ".cache"), "midnight-cast");
-}
 
 export function isOffline(flag: boolean | undefined): boolean {
   return flag ?? process.env.MN_OFFLINE === "1";
-}
-
-function readCache(path: string): CacheFile | undefined {
-  try {
-    const cache = JSON.parse(readFileSync(path, "utf8")) as CacheFile;
-    return Number.isNaN(Date.parse(cache.fetchedAt)) ? undefined : cache;
-  } catch {
-    return undefined;
-  }
-}
-
-function writeCache(path: string, cache: CacheFile): void {
-  try {
-    mkdirSync(dirname(path), { recursive: true });
-    writeFileSync(path, JSON.stringify(cache));
-  } catch {
-    // A read-only home directory only costs a fetch next time.
-  }
 }
 
 function fromUpstream(
@@ -213,7 +185,7 @@ export async function resolveSupportMatrix(options: ResolveOptions = {}): Promis
   if (isOffline(options.offline)) return fromBundled("offline");
 
   const now = options.now ?? Date.now();
-  const cachePath = join(options.cacheDir ?? matrixCacheDir(), "published-support-matrix.json");
+  const cachePath = join(options.cacheDir ?? cacheDir(), "published-support-matrix.json");
   const cached = readCache(cachePath);
   const age = (at: string | undefined) => (at ? now - Date.parse(at) : Number.NaN);
   // A timestamp in the future (clock skew, a copied cache) counts as expired.
