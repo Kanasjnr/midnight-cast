@@ -81,8 +81,8 @@ function hintFor(kind: NetworkErrorKind, service: Service, status: number | unde
       return "The node rejected the call. Check the method name and parameters.";
     case "graphql_error":
       return inMcpCall()
-        ? "The indexer rejected the query, so its API version may differ. The versions tool compares it with the support matrix."
-        : "The indexer rejected the query, so its API version may differ. Run: midnight-cast versions <network>";
+        ? "The indexer rejected the query. Check the input; if it looks right, the indexer's API version may differ, which the versions tool checks."
+        : "The indexer rejected the query. Check the input; if it looks right, the indexer's API version may differ: run midnight-cast versions <network>";
     case "invalid_response":
       return `The response wasn't valid JSON. The URL may not be a Midnight ${name}.`;
   }
