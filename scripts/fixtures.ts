@@ -17,7 +17,15 @@ export interface FixtureFile {
   network: string;
   recordedAt: string;
   /** Inputs the replayed commands use, found on the live network when recording. */
-  inputs: { txHash: string; blockHeight: number; dustEventId: number };
+  inputs: {
+    txHash: string;
+    blockHeight: number;
+    dustEventId: number;
+    /** Absent when no recent block had a contract action to record. */
+    contractAddress?: string;
+    /** A well-formed reward address; whether it's registered doesn't matter, only the response shape. */
+    rewardAddress: string;
+  };
   exchanges: Exchange[];
   dust: DustRecording;
 }

@@ -13,6 +13,8 @@ import { healthCommand } from "../src/commands/health.js";
 import { pingCommand } from "../src/commands/ping.js";
 import { tipCommand } from "../src/commands/tip.js";
 import { txCommand } from "../src/commands/tx.js";
+import { contractCommand } from "../src/commands/contract.js";
+import { dustStatusCommand } from "../src/commands/dust-status.js";
 import { versionsCommand } from "../src/commands/versions.js";
 import { BUILTIN_NETWORKS } from "../src/networks.js";
 import { toEnvelope, type EmitResult } from "../src/output.js";
@@ -93,6 +95,15 @@ for (const network of FIXTURE_NETWORKS) {
       expectValid("versions", await versionsCommand(network, { local: false }, json));
       expectValid("block", await blockLatestCommand(network, {}, json));
       expectValid("block", await blockAtHeightCommand(String(inputs.blockHeight), network, {}, json));
+    });
+
+    it("read the recorded contract and DUST status", async () => {
+      if (inputs.contractAddress) {
+        const contract = await contractCommand(inputs.contractAddress, network, {}, json);
+        expectValid("contract", contract);
+        expect((contract.data as { address: string }).address).toBe(inputs.contractAddress);
+      }
+      expectValid("dust-status", await dustStatusCommand([inputs.rewardAddress], network, {}, json));
     });
 
     it("decode the recorded transaction and its DUST events", async () => {
