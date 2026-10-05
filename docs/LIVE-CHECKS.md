@@ -56,6 +56,10 @@ It also compares Midnight Expert's status-codes catalog, pinned to a commit in t
 
 Fetches are retried. If the sources still can't be read, or the node file no longer contains the table the parser expects, the check exits 2 and says it is incomplete rather than reporting drift; re-run it, or update the parser if the table has moved. A scheduled run that finds drift shows as a failed run rather than opening an issue.
 
+## Midnight's examples
+
+`versions` and `health` show whether Midnight's own examples pass on the node a network runs, from the regression reports in [midnight-examples](https://github.com/midnightntwrk/midnight-examples/tree/main/reports). They fetch the report at run time, but fall back to summaries bundled in `src/data/examples-reports.json`. `live.yml` runs `npm run examples-reports -- --check` on the same triggers as the other live checks. It lists the reports, summarises each one, and fails when a report was added, changed or removed since the bundled summaries were written, or when a report no longer has the fields midnight-cast quotes. `npm run examples-reports` rewrites the summaries; review the diff before committing it. If the reports can't be read at all, the check exits 2 and says it is incomplete.
+
 ## Recorded responses
 
 `test/fixtures/<network>/` holds what preview, preprod and mainnet returned for every request midnight-cast makes: RPC calls, indexer GraphQL queries, the proof server, and a DUST subscription. It also holds each indexer's GraphQL schema from introspection. The unit tests replay them through the real commands, with `fetch` answered from the fixtures and a local WebSocket server standing in for the indexer. They check that every output matches the published JSON Schemas and that every query midnight-cast sends is valid against the recorded indexer schema. A request with no recorded response fails the test, so a new query can't ship unrecorded.

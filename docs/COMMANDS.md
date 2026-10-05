@@ -108,7 +108,7 @@ midnight-cast health preprod --fail-on-lag --fail-on-mismatch   # CI
 | `--fail-on-lag` | off | Treat indexer lag as unhealthy |
 | `--fail-on-mismatch` | off | Treat live version mismatches as unhealthy |
 
-**Output sections:** service reachability, RPC vs indexer height delta, and live version checks vs support matrix.
+**Output sections:** service reachability, RPC vs indexer height delta, live version checks vs support matrix, and whether Midnight's own examples pass on the node the network runs (see [Midnight's examples](#midnights-examples) under `versions`).
 
 Example output:
 
@@ -134,6 +134,10 @@ Versions:
   indexer-api: OK (expected v4, live v4)
   protocolVersion: OK (expected 1000300, live 1000300)
   proof-server: OK (expected 8.1.0, live 8.1.0)
+
+Midnight's examples: 202 passed, 1 failed on node 1.0.400 (preprod, 30 Sep 2026).
+  Their verdict: No Node 1.0.400 regression found.
+  Report: https://github.com/midnightntwrk/midnight-examples/blob/main/reports/node-1.0.400-regression.json
 ```
 
 **Exit code:** `0` when RPC and indexer are up and optional CI flags pass. Version mismatches are **warnings** unless `--fail-on-mismatch` is set. Proof server failure does not fail health by itself.
@@ -207,6 +211,13 @@ midnight-cast versions preprod --project-dir ~/code/my-dapp
 The published matrix updates only what the endpoints can't reveal: the indexer, on-chain runtime and Compact runtime versions, including the `compact-runtime` package pin. Node and proof server stay as bundled, because they are checked against the live network and the published file can list versions no network runs yet. The minimum node version, runtime `spec_version`, ledger and indexer API also come from the bundled matrix, since the published file doesn't carry them. Disagreements inside the published file, such as a `tag` and `containerTag` that differ, are shown as notes (`matrixNotes` in JSON).
 
 **Staleness:** when the bundled matrix (or your override) is older than 45 days, a warning says mismatches may be false. It applies even with the published matrix, since node, runtime spec and ledger still come from the bundled copy.
+
+<a id="midnights-examples"></a>**Midnight's examples:** for each node release, the maintainers of [midnight-examples](https://github.com/midnightntwrk/midnight-examples) run every example's test suite against public preprod and commit the result as `reports/node-<version>-regression.json`. `versions` and `health` show that report for the node version the network runs (`examples` in JSON): how many tests passed and failed, on which network and when, the report's own verdict when some failed, its known issues, and a link. It answers "is it the network or my code?": if the examples pass on this node and the network is healthy, look at your code or setup first.
+
+- `status` is `passed` when every test passed and `failures` when some failed; read the verdict and known issues, since a failure can be a test problem rather than a node one.
+- A node version with no report is `unverified`, never matched to an older report. So is a report from a different runtime `spec_version` than the network runs.
+- The report is fetched for that exact version with a 3-second timeout and cached like the published matrix: six hours, a week as a fallback, and no retry for an hour after a failure. Offline, or when nothing can be fetched, the summaries bundled with this release are used. `source` says which, and how old it is.
+- The reports test preprod, so the network and date are always shown. Another network running the same node version is covered only as far as that run goes.
 
 Example output:
 
