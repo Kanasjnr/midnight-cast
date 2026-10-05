@@ -16,10 +16,42 @@ export function sameText(a: string | undefined, b: string): boolean {
   return a !== undefined && a.replace(/\r\n/g, "\n") === b;
 }
 
+// The Claude Code plugin ships the same skill, and its manifest follows the package version.
+function pluginManifest(): string {
+  const { version, license } = JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as {
+    version: string;
+    license: string;
+  };
+  const manifest = {
+    name: "midnight-cast",
+    displayName: "midnight-cast",
+    version,
+    description:
+      "Diagnose Midnight networks, transactions, contracts, DUST and errors with the read-only midnight-cast CLI and MCP server",
+    author: { name: "Kanasjnr", url: "https://github.com/Kanasjnr" },
+    homepage: "https://github.com/Kanasjnr/midnight-cast",
+    repository: "https://github.com/Kanasjnr/midnight-cast",
+    license,
+    keywords: ["midnight", "blockchain", "indexer", "dust", "errors", "mcp"],
+    userConfig: {
+      blockfrost_project_id: {
+        type: "string",
+        title: "Blockfrost project ID (mainnet)",
+        description: "A Midnight Mainnet project ID from blockfrost.io, needed only for mainnet. Leave empty for preview and preprod.",
+        sensitive: true,
+        default: "",
+      },
+    },
+  };
+  return `${JSON.stringify(manifest, null, 2)}\n`;
+}
+
 export function agentFiles(): Array<{ path: string; content: string }> {
   return [
     ...AGENT_FILES.map((file) => ({ path: posix.join("docs", "agents", file), content: agentSnippet(file) })),
     { path: posix.join("skills", SKILL_NAME, "SKILL.md"), content: skillFile() },
+    { path: posix.join("plugins", "midnight-cast", "skills", SKILL_NAME, "SKILL.md"), content: skillFile() },
+    { path: posix.join("plugins", "midnight-cast", ".claude-plugin", "plugin.json"), content: pluginManifest() },
   ];
 }
 
