@@ -55,7 +55,9 @@ export function checkEndpoints(network: string, flags: ResolveFlags): NextStep[]
   ];
 }
 
-const NETWORK_TOOLS = new Set(["health", "ping", "tip", "versions"]);
+// versions is left out: without the project directory, which a command line doesn't carry, the
+// tool would check the packages of wherever the MCP server was started.
+const NETWORK_TOOLS = new Set(["health", "ping", "tip"]);
 
 /**
  * The MCP tool call for a suggested command, so agents without a shell can follow it.
