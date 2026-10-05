@@ -19,6 +19,11 @@ async function blockHeaderAtHeight(
   extrinsicsRoot: string;
 }> {
   const hash = await chainGetBlockHash(rpcUrl, height);
+  // The node answers null for a height it hasn't reached, and chain_getHeader(null) is the latest header.
+  if (!hash) {
+    const latest = parseBlockNumber((await chainGetHeader(rpcUrl)).number);
+    throw new Error(`Block ${height} doesn't exist yet; the latest is ${latest}`);
+  }
   const header = await chainGetHeader(rpcUrl, hash);
   return {
     height: parseBlockNumber(header.number),

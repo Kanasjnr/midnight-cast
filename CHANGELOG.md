@@ -67,6 +67,8 @@
 - `npm run error-codes` checks the ledger error map against midnight-node at the release the support matrix names, and against a pinned Midnight Expert catalog. It runs with the live checks, so a runtime upgrade that changes the code table fails before a release. Midnight Expert's entries for seven codes still live on runtime 1.0.300 are marked retired upstream; that is reported as midnightntwrk/midnight-expert#272
 
 ### Fixes
+- `dust-events` without `--from` widens its window until it holds the requested number of events or reaches the first id, so gaps in the ids don't shorten the list
+- Over MCP, `tip` reports a lagging indexer in its data instead of failing, and `versions` next steps don't map to a tool call, since the call would check the packages of wherever the server was started
 - `dust-events` without `--from` lists the latest events instead of the network's first ones, and `dust-event` for an id the network hasn't reached fails at once, naming the latest id, instead of waiting out its 15 s timeout
 - decode's fix for Blockfrost's missing-token response explains sending the project ID from any app, not only midnight-cast
 - `tx --json` printed `"segments": null` for successful transactions, because the indexer returns null rather than an empty list, and that broke the published `tx` schema. `segments` is now left out when there are none. Found by the recorded preview responses
