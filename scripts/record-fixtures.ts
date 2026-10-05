@@ -271,13 +271,20 @@ async function main(): Promise<number> {
     const committed = readFixture(network);
     const indexerHttp = resolveNetwork(network, {}).indexerHttp;
     const inputs =
-      !discover && committed ? await completeInputs(network, indexerHttp, committed.inputs) : await discoverInputs(network, indexerHttp);
+      !discover && committed
+        ? check
+          ? committed.inputs
+          : await completeInputs(network, indexerHttp, committed.inputs)
+        : await discoverInputs(network, indexerHttp);
     // Shapes are compared by request kind, so after a network reset any recent transaction will do.
     const { fixture, schema } = await record(network, inputs).catch(async (err: unknown) => {
       if (!check) throw err;
       const reason = sanitizeForOutput(err instanceof Error ? err.message : String(err));
       console.log(`${network}: recorded inputs didn't resolve (${reason}); using fresh ones`);
-      return record(network, await discoverInputs(network, indexerHttp));
+      const fresh = await discoverInputs(network, indexerHttp);
+      // Compare like with like: don't add a lookup the committed fixture never recorded.
+      if (!committed?.inputs.contractAddress) delete fresh.contractAddress;
+      return record(network, fresh);
     });
     const dir = fixtureDir(network);
 

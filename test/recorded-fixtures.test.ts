@@ -174,6 +174,12 @@ describe("fixture shapes", () => {
     expect(compareShapes(before, [exchange("indexer q {}", { data: { id: 2 } })]).drift[0]?.change).toBe("shape");
   });
 
+  it("treat the same lookup for a different address as the same request", () => {
+    const before = [exchange('indexer query C {} {"address":"a0885870e2650aa2213a44e348371b00"}', { data: {} })];
+    const after = [exchange('indexer query C {} {"address":"c5f1ad3c0e2650aa2213a44e348371ff"}', { data: {} })];
+    expect(compareShapes(before, after).drift).toEqual([]);
+  });
+
   it("report requests that are no longer made, new ones, and outages separately", () => {
     const { drift } = compareShapes([exchange("rpc a []", {})], [exchange("rpc b []", {})]);
     expect(drift.map((d) => d.change)).toEqual(["missing", "new"]);

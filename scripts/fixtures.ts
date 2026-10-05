@@ -155,7 +155,10 @@ function compatible(recorded: unknown, live: unknown, path: string, unverified: 
 
 // Heights and hashes differ between recordings; the request kind doesn't.
 function requestKind(key: string): string {
-  return key.replace(/"0x[0-9a-f]+"/gi, '"0x"').replace(/\b\d+\b/g, "#");
+  return key
+    .replace(/"(0x)?[0-9a-f]{16,}"/gi, '"0x"')
+    .replace(/"0x[0-9a-f]+"/gi, '"0x"')
+    .replace(/\b\d+\b/g, "#");
 }
 
 export function compareShapes(recorded: Exchange[], live: Exchange[]): ShapeComparison {
