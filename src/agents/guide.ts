@@ -40,7 +40,10 @@ ${END_MARKER}
 
 export const SKILL_NAME = "midnight-cast";
 
-export function skillFile(): string {
+// The Claude Code plugin's copy of the skill, whose tools are already connected.
+const IN_PLUGIN = `**In this plugin.** The plugin runs the midnight-cast MCP server, so call its tools instead of the shell. Each command above is a tool of the same name, with \`dust_event\`, \`dust_events\` and \`dust_status\` for the hyphenated ones; they take the same arguments and return the same envelope. For mainnet the user enters a Blockfrost project ID in the plugin's options (\`/plugin\`, then midnight-cast, then Configure options), or exports \`BLOCKFROST_PROJECT_ID\` before starting Claude Code.`;
+
+export function skillFile(forPlugin = false): string {
   return `---
 name: ${SKILL_NAME}
 description: Diagnose Midnight blockchain problems with the read-only midnight-cast CLI. Decodes Midnight errors (1010 rejections, Custom(N) ledger codes, pallet and JSON-RPC errors, toolkit and Blockfrost messages), checks network health and versions on preview, preprod and mainnet, and looks up transactions, contracts, DUST registration and DUST events. Use when a Midnight error, transaction, contract or network is involved.
@@ -51,7 +54,7 @@ compatibility: Needs Node.js 20 or later and network access; mainnet needs a Blo
 # midnight-cast
 
 ${GUIDE}
-`;
+${forPlugin ? `\n${IN_PLUGIN}\n` : ""}`;
 }
 
 export type SnippetChange = "created" | "updated" | "appended" | "unchanged";

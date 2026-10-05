@@ -11,6 +11,17 @@ describe("messages for MCP calls", () => {
     expect(mcp).not.toContain("--project-id");
   });
 
+  it("send Claude Code plugin users to the plugin's option", () => {
+    process.env.MIDNIGHT_CAST_PLUGIN_PROJECT_ID = "";
+    try {
+      const plugin = runAsMcpCall(() => missingProjectIdError("mainnet"));
+      expect(plugin).toContain("Configure options");
+      expect(plugin).toContain("export BLOCKFROST_PROJECT_ID");
+    } finally {
+      delete process.env.MIDNIGHT_CAST_PLUGIN_PROJECT_ID;
+    }
+  });
+
   it("drop flag advice from network hints", () => {
     const cli = new NetworkError("RPC unreachable", "timeout", "RPC").hint!;
     const mcp = runAsMcpCall(() => new NetworkError("RPC unreachable", "timeout", "RPC").hint!);

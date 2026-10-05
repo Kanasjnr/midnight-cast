@@ -90,6 +90,18 @@ describe("resolving mainnet", () => {
     expect(fromEnv.rpc).toContain("project_id=nightmainnetFROMENV123456");
   });
 
+  it("takes the Claude Code plugin's option, or BLOCKFROST_PROJECT_ID when the option is empty", () => {
+    process.env.BLOCKFROST_PROJECT_ID = "nightmainnetFROMENV123456";
+    try {
+      process.env.MIDNIGHT_CAST_PLUGIN_PROJECT_ID = "";
+      expect(resolveNetwork("mainnet").rpc).toContain("project_id=nightmainnetFROMENV123456");
+      process.env.MIDNIGHT_CAST_PLUGIN_PROJECT_ID = "nightmainnetFROMPLUGIN1234";
+      expect(resolveNetwork("mainnet").rpc).toContain("project_id=nightmainnetFROMPLUGIN1234");
+    } finally {
+      delete process.env.MIDNIGHT_CAST_PLUGIN_PROJECT_ID;
+    }
+  });
+
   it("prefers the network's own config ID over the global env var, and --project-id over both", () => {
     process.env.BLOCKFROST_PROJECT_ID = "nightmainnetFROMENV123456";
     writeConfig(`[networks.mainnet]\nblockfrost_project_id = "nightmainnetFROMCONFIG1234"\n`);

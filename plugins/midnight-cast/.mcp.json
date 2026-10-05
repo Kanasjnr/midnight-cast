@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "midnight-cast": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "midnight-cast@0.1.6",
+        "mcp"
+      ],
+      "env": {
+        "MIDNIGHT_CAST_PLUGIN_PROJECT_ID": "${user_config.blockfrost_project_id}"
+      }
+    }
+  }
+}
