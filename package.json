@@ -19,6 +19,7 @@
   "files": [
     "dist",
     "schemas",
+    "skills",
     "README.md",
     "LICENSE",
     "NOTICE",
@@ -39,7 +40,8 @@
     "live-check": "tsx scripts/live-check.ts",
     "error-codes": "tsx scripts/error-code-parity.ts",
     "fixtures": "tsx scripts/record-fixtures.ts",
-    "smoke:tarball": "tsx scripts/smoke-tarball.ts"
+    "smoke:tarball": "tsx scripts/smoke-tarball.ts",
+    "agent-files": "tsx scripts/agent-files.ts"
   },
   "keywords": [
     "midnight",

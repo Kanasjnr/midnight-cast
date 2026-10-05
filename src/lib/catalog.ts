@@ -52,7 +52,7 @@ const ERROR_KINDS: Record<NetworkErrorKind | "usage" | "rate_limited", string> =
 };
 
 const SCHEMA_BASE = "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/main/schemas/";
-const WRITES_FILES = new Set(["config init"]);
+const WRITES_FILES = new Set(["config init", "agents init"]);
 const NO_ENVELOPE = new Set(["mcp"]);
 
 export function outputSchemaFor(command: string): string {
