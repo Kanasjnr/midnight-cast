@@ -16,6 +16,8 @@ import { dustEventCommand, dustEventsCommand } from "./commands/dust.js";
 import { TOPICS, explainCommand } from "./commands/explain.js";
 import { buildCatalog, isDefaultSubcommand } from "./lib/catalog.js";
 import { txCommand } from "./commands/tx.js";
+import { contractCommand } from "./commands/contract.js";
+import { dustStatusCommand } from "./commands/dust-status.js";
 import { versionsCommand } from "./commands/versions.js";
 import type { ResolveFlags } from "./config.js";
 import { normalizeArgv } from "./lib/argv.js";
@@ -386,6 +388,24 @@ program
         ),
       cmd,
     );
+  });
+
+program
+  .command("contract <address> [network]")
+  .description("Look up a deployed contract: latest action, circuit, deploy block, balances (indexer)")
+  .option("--state", "Include the full contract state hex")
+  .action(async (address: string, network: string | undefined, opts, cmd) => {
+    await run(
+      async () => contractCommand(address, network, { ...resolveFlags(cmd), state: opts.state }, globalOpts(cmd)),
+      cmd,
+    );
+  });
+
+program
+  .command("dust-status <addresses...>")
+  .description("DUST registration and generation for Cardano reward addresses (indexer); --network picks the network")
+  .action(async (addresses: string[], _opts, cmd) => {
+    await run(async () => dustStatusCommand(addresses, undefined, resolveFlags(cmd), globalOpts(cmd)), cmd);
   });
 
 program
