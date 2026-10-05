@@ -403,6 +403,36 @@ midnight-cast decode jsonrpc -32602
 
 ---
 
+## `midnight-cast contract <address> [network]`
+
+Look up a deployed contract on the indexer: whether a contract exists at the address, its latest action (deploy, call or update) and, for a call, the circuit it ran, the transaction and block of that action, when the contract was deployed, and its unshielded token balances.
+
+```bash
+midnight-cast contract a0885870e2650aa2213a44e348371b0050b134fe87c80f31b990430bca412b13 preprod
+midnight-cast contract 0xa0885870… preprod --json
+```
+
+| Flag | Description |
+|------|-------------|
+| `--state` | Include the full contract state hex |
+
+Contract state can be large (678 KB for one preprod contract), so by default the output gives its size in bytes and its sha256, enough to tell whether it changed. An address with no contract fails with "No contract at …". `next` points at `tx` for the latest action's transaction.
+
+---
+
+## `midnight-cast dust-status <addresses...>`
+
+DUST generation for one or more Cardano reward addresses: whether each is registered for DUST generation, its NIGHT balance, the generation rate, and current and maximum DUST capacity. Use it when a wallet has no DUST. Pick the network with `--network`.
+
+```bash
+midnight-cast dust-status stake_test1uq… --network preprod
+midnight-cast dust-status stake1u… stake1u… --network mainnet --json
+```
+
+Values are passed through as the indexer reports them. An address that isn't a valid reward address is rejected by the indexer with its reason. When an address isn't registered, `next` points at `explain dust`.
+
+---
+
 ## `midnight-cast dust-event <id>`
 
 Fetch one DUST ledger event by id over **indexer WebSocket** (v4 has no HTTP query for dust events).

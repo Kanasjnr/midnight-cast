@@ -16,6 +16,8 @@ The server ships with midnight-cast 0.2.0. Until that is on npm, build from sour
 | `versions` | yes | Live node, runtime and indexer API against the support matrix, and a project's Midnight packages against the matrix pins. Pass `projectDir` with the absolute path of the user's project: the server's working directory is wherever the client started it. `data.localProject` says which directory was checked and whether it had a `package.json` |
 | `block` | yes | A block header, latest or at a height |
 | `tx` | yes | A transaction's status, segments, fees, contract actions and the DUST and Zswap events it produced |
+| `contract` | yes | A deployed contract: its latest action and circuit, deploy transaction, unshielded balances, and the state's size and sha256 (`includeState` for the full hex) |
+| `dust_status` | yes | DUST registration, NIGHT balance, generation rate and capacity for up to 20 Cardano reward addresses |
 | `dust_event` | yes | One DUST ledger event by id. An id the network hasn't reached fails at once, naming the latest |
 | `dust_events` | yes | The latest DUST ledger events, or up to 50 from an id |
 | `decode` | no | Explains a pasted error: 1010 rejections, `Custom(N)` ledger codes, pallet errors, JSON-RPC codes and known tooling messages |
