@@ -11,9 +11,9 @@ const SERVICE_DESK = "https://github.com/midnightntwrk/servicedesk";
 
 export interface Attempt {
   at: string;
-  /** `ping --json`'s table: every service, with the error kind when it failed. */
+  /** `health --json`'s services: every service, with the error kind when it failed. */
   services: Array<{ service: string; status: string; latencyMs: number; detail?: string; errorKind?: string }>;
-  /** From `health --json`, which only has it when both RPC and indexer answered. */
+  /** Only there when both RPC and indexer answered. */
   sync?: { rpcHeight: number; indexerHeight: number; delta: number; threshold: number; inSync: boolean };
   error?: string;
 }
@@ -31,6 +31,8 @@ export interface Evidence {
   heads?: HeadSample[];
   endpoints?: { rpc: string; indexerHttp: string; blockfrost: boolean };
   environment?: string;
+  /** The GitHub Actions event that started the check, such as `schedule`; absent for a run by hand. */
+  trigger?: string;
   runUrl?: string;
 }
 
@@ -64,49 +66,56 @@ export function headRegression(heads: HeadSample[] = []): { from: number; to: nu
   return worst;
 }
 
+/** Each problem keeps a first-seen time per key, so a change in which services fail keeps the history. */
 type Problem =
-  | { key: string; kind: "unreachable"; services: string[] }
-  | { key: string; kind: "lag"; behind: "indexer" | "rpc" }
-  | { key: string; kind: "heads"; from: number; to: number; drop: number };
+  | { keys: string[]; kind: "unreachable"; services: string[] }
+  | { keys: string[]; kind: "lag"; behind: "indexer" | "rpc" }
+  | { keys: string[]; kind: "heads"; from: number; to: number; drop: number };
 
+type Service = Attempt["services"][number];
 const REQUIRED = new Set(["rpc", "indexer"]);
 const failed = (a: Attempt) => a.services.filter((s) => REQUIRED.has(s.service) && s.status !== "OK");
-const rejected = (s: Attempt["services"][number]) =>
-  s.errorKind === "http_4xx" && /\((401|403)\)|rejected by Blockfrost/.test(s.detail ?? "");
 
-/** Blockfrost refusing the project ID is a problem with our secret, not with the network. */
-export function rejectedCredentials(input: ReportInput): boolean {
+/**
+ * Blockfrost refusing our project ID, or our plan's limit, is our problem, not Midnight's.
+ * Elsewhere a 4xx comes from Midnight's own endpoint and is drafted like any failure.
+ */
+function ours(s: Service, input: ReportInput): boolean {
+  return !!input.endpoints?.blockfrost && s.errorKind === "http_4xx" && /\((401|402|403|429)\)/.test(s.detail ?? "");
+}
+
+/** The services that are down for reasons that are Midnight's, and those down for reasons that are ours. */
+function split(input: ReportInput): { theirs: Service[]; mine: Service[] } {
   const last = input.attempts.at(-1);
   const down = last ? failed(last) : [];
-  return !!input.endpoints?.blockfrost && down.length > 0 && down.every(rejected);
+  return { theirs: down.filter((s) => !ours(s, input)), mine: down.filter((s) => ours(s, input)) };
 }
 
 export function problems(input: ReportInput): Problem[] {
   const found: Problem[] = [];
   const last = input.attempts.at(-1);
-  if (last && !rejectedCredentials(input)) {
-    const down = failed(last).map((s) => s.service);
-    if (down.length) found.push({ key: `unreachable:${down.join("+")}`, kind: "unreachable", services: down });
-    else if (last.sync && !last.sync.inSync) {
-      const behind = last.sync.delta > 0 ? "indexer" : "rpc";
-      found.push({ key: `lag:${behind}`, kind: "lag", behind });
-    }
+  const { theirs, mine } = split(input);
+  if (theirs.length) {
+    const services = theirs.map((s) => s.service);
+    found.push({ keys: services.map((s) => `unreachable:${s}`), kind: "unreachable", services });
+  } else if (!mine.length && last?.sync && !last.sync.inSync) {
+    const behind = last.sync.delta > 0 ? "indexer" : "rpc";
+    found.push({ keys: [`lag:${behind}`], kind: "lag", behind });
   }
   const regression = headRegression(input.heads);
-  if (regression) found.push({ key: "heads", kind: "heads", ...regression });
+  if (regression) found.push({ keys: ["heads"], kind: "heads", ...regression });
   return found;
 }
 
-/** When a problem showed: the attempts, or the head samples, that had it. */
-function sightings(problem: Problem, input: ReportInput): string[] {
-  if (problem.kind === "heads") {
-    return stepsBack(input.heads).filter((s) => s.drop !== undefined).map((s) => s.sample.at);
-  }
+/** When one key of a problem showed: the attempts, or the head samples, that had it. */
+function sightings(key: string, input: ReportInput): string[] {
+  if (key === "heads") return stepsBack(input.heads).filter((s) => s.drop !== undefined).map((s) => s.sample.at);
+  const [kind, which] = key.split(":");
   return input.attempts
     .filter((a) =>
-      problem.kind === "unreachable"
-        ? problem.services.every((service) => failed(a).some((s) => s.service === service))
-        : !!a.sync && !a.sync.inSync && a.sync.delta > 0 === (problem.behind === "indexer"),
+      kind === "unreachable"
+        ? failed(a).some((s) => s.service === which && !ours(s, input))
+        : !!a.sync && !a.sync.inSync && a.sync.delta > 0 === (which === "indexer"),
     )
     .map((a) => a.at);
 }
@@ -169,8 +178,12 @@ function headLoop(rpc: string, blockfrost: boolean): string {
 }
 
 const time = (iso: string) => iso.replace(/\.\d+Z$/, "Z");
-const checker = (input: ReportInput) =>
-  input.environment?.includes("GitHub Actions") ? "a scheduled check running in GitHub Actions" : "a check";
+/** Who ran the check, in words a report can stand behind. */
+function checker(input: ReportInput): { who: string; cadence: string } {
+  if (input.trigger === "schedule") return { who: "a scheduled check running in GitHub Actions", cadence: "a check that runs every six hours" };
+  if (input.trigger) return { who: `a check running in GitHub Actions (started by ${input.trigger})`, cadence: "a check in GitHub Actions" };
+  return { who: "a check run by hand", cadence: "a check run by hand" };
+}
 const clock = (iso: string) => iso.slice(11, 19);
 
 function attemptLines(input: ReportInput): string[] {
@@ -215,6 +228,8 @@ interface Draft {
   logs: string[];
 }
 
+const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+
 function draft(problem: Problem, input: ReportInput, seen: string[]): Draft {
   const net = NETWORK[input.network] ?? input.network;
   const rpc = input.endpoints?.rpc ?? "<rpc url>";
@@ -227,6 +242,7 @@ function draft(problem: Problem, input: ReportInput, seen: string[]): Draft {
     const names = problem.services.map((s) => SERVICE_NAME[s] ?? s).join(" and ");
     const last = attempts.at(-1)!;
     const failures = failed(last)
+      .filter((s) => problem.services.includes(s.service))
       .map((s) => `${SERVICE_NAME[s.service] ?? s.service}: ${s.detail ?? "failed"} (${ERROR_WORDS[s.errorKind ?? ""] ?? s.errorKind ?? "unknown error"})`)
       .join("; ");
     return {
@@ -239,7 +255,7 @@ function draft(problem: Problem, input: ReportInput, seen: string[]): Draft {
               "P1 only if the network is down for everyone. Confirm it from another location with the commands below first, and page Midnight as their P1 process requires: a GitHub issue alone isn't enough. If it isn't down everywhere, file it as P2.",
           }
         : {}),
-      description: `The public ${net} ${names} ${both ? "were" : "was"} unreachable from ${checker(input)}, in ${attemptsPhrase(seen, attempts.length)}.`,
+      description: `The public ${net} ${names} ${both ? "were" : "was"} unreachable from ${checker(input).who}, in ${attemptsPhrase(seen, attempts.length)}.`,
       expected: [
         ...(problem.services.includes("rpc") ? ["`system_health` on the public RPC answers with HTTP 200 and a JSON-RPC result."] : []),
         ...(problem.services.includes("indexer") ? ["The indexer's GraphQL endpoint answers `{ block { height } }` with HTTP 200 and data."] : []),
@@ -268,7 +284,7 @@ function draft(problem: Problem, input: ReportInput, seen: string[]): Draft {
         title: `[Bug]: ${net} indexer ${gap} blocks behind the node`,
         component: "indexer",
         severity: "P3",
-        description: `The public ${net} indexer is behind the node it indexes, in ${attemptsPhrase(seen, attempts.length)} of ${checker(input)}. Reads from the indexer (wallet sync, DApp queries) return stale state.`,
+        description: `The public ${net} indexer is behind the node it indexes. ${capitalize(checker(input).who)} saw it behind in ${attemptsPhrase(seen, attempts.length)}. Reads from the indexer (wallet sync, DApp queries) return stale state.`,
         expected: `The indexer stays within ${sync.threshold} blocks of the node.`,
         actual: `At ${time(last.at)} the node was at block ${sync.rpcHeight} and the indexer at ${sync.indexerHeight}: ${gap} blocks behind.`,
         ...compare,
@@ -278,7 +294,7 @@ function draft(problem: Problem, input: ReportInput, seen: string[]): Draft {
       title: `[Bug]: ${net} public RPC ${gap} blocks behind the indexer`,
       component: "node",
       severity: "P3",
-      description: `The public ${net} RPC reports a head behind the indexer's latest block, in ${attemptsPhrase(seen, attempts.length)} of ${checker(input)}. The node answering RPC calls isn't keeping up; on a load-balanced RPC that is usually one lagging backend, though we can't see which backend served each response.`,
+      description: `The public ${net} RPC reports a head behind the indexer's latest block. ${capitalize(checker(input).who)} saw it in ${attemptsPhrase(seen, attempts.length)}. The node answering RPC calls isn't keeping up; on a load-balanced RPC that is usually one lagging backend, though we can't see which backend served each response.`,
       expected: "The RPC's head is at or ahead of the indexer's latest block.",
       actual: `At ${time(last.at)} the RPC's head was block ${sync.rpcHeight} and the indexer's latest block ${sync.indexerHeight}: the RPC was ${gap} blocks behind.`,
       ...compare,
@@ -353,7 +369,7 @@ function render(d: Draft, input: ReportInput, window: { firstSeen: string; lastS
     ...(input.nodeVersion ? ["### Node Version (if applicable)", "", `midnight-node ${input.nodeVersion} (reported by the network)`, ""] : []),
     "### Additional Context",
     "",
-    `First seen ${time(window.firstSeen)}, last seen ${time(window.lastSeen)} (UTC), by ${input.environment?.includes("GitHub Actions") ? "a check that runs every six hours" : "a check run by hand"}.${input.runUrl ? ` Latest run: ${input.runUrl}` : ""}`,
+    `First seen ${time(window.firstSeen)}, last seen ${time(window.lastSeen)} (UTC), by ${checker(input).cadence}.${input.runUrl ? ` Latest run: ${input.runUrl}` : ""}`,
     ...(input.endpoints?.blockfrost
       ? ["", "Mainnet's public RPC and indexer are run by Blockfrost, so Blockfrost may need to hear about this too."]
       : []),
@@ -389,29 +405,33 @@ function render(d: Draft, input: ReportInput, window: { firstSeen: string; lastS
  * `history` maps each problem to when the live-check issue first saw it.
  */
 export function serviceDeskSection(input: ReportInput, history: Record<string, string> = {}): string {
-  if (rejectedCredentials(input)) {
-    return [
-      START,
-      "### Service desk",
-      "",
-      "Blockfrost rejected the project ID, so this is a problem with the `BLOCKFROST_MAINNET_PROJECT_ID` secret, not a Midnight outage. Don't file it with the service desk.",
-      END,
-    ].join("\n");
-  }
+  const { mine } = split(input);
+  const ourNote = mine.length
+    ? `Blockfrost refused ${mine.map((s) => SERVICE_NAME[s.service] ?? s.service).join(" and ")} because of our project ID or our plan's limit (${mine.map((s) => s.detail).join("; ")}). That's a problem with the \`BLOCKFROST_MAINNET_PROJECT_ID\` secret or the Blockfrost plan, not Midnight's, so it isn't drafted.`
+    : "";
   const found = problems(input);
-  if (!found.length) return "";
+  if (!found.length) return ourNote ? [START, "### Service desk", "", ourNote, END].join("\n") : "";
+
+  const firstSeenOfKey = new Map<string, string>();
   const drafts = found.map((problem) => {
-    const seen = sightings(problem, input);
-    const firstSeen = [history[problem.key], seen[0]!].filter((t): t is string => !!t).sort()[0]!;
+    for (const key of problem.keys) {
+      const first = [history[key], sightings(key, input)[0]].filter((t): t is string => !!t).sort()[0];
+      if (first) firstSeenOfKey.set(key, first);
+    }
+    // The attempts in which every part of the problem showed, e.g. both services down.
+    const [firstKey, ...otherKeys] = problem.keys.map((key) => sightings(key, input));
+    const seen = firstKey!.filter((at) => otherKeys.every((times) => times.includes(at)));
+    const firstSeen = [...problem.keys.map((key) => firstSeenOfKey.get(key)), seen[0]].filter((t): t is string => !!t).sort()[0]!;
     return { problem, seen, window: { firstSeen, lastSeen: seen.at(-1)! } };
   });
   const lastSeen = drafts.map((d) => d.window.lastSeen).sort().at(-1)!;
   return [
     START,
-    ...drafts.map((d) => `<!-- service-desk first seen: ${d.problem.key} ${d.window.firstSeen} -->`),
+    ...[...firstSeenOfKey].map(([key, at]) => `<!-- service-desk first seen: ${key} ${at} -->`),
     `<!-- service-desk last seen: ${lastSeen} -->`,
     "### Service desk",
     "",
+    ...(ourNote ? [ourNote, ""] : []),
     `This is a draft for [Midnight's service desk](${SERVICE_DESK}/issues/new?template=bug-report.yml). Nothing is filed automatically: Midnight's [AI reporting guidelines](${SERVICE_DESK}/blob/main/ai-reports.md) need a person to re-run the commands, check every number against the output and submit the report. After review, file it in the form or with \`gh issue create --repo midnightntwrk/servicedesk --title "<title>" --body-file <report>\`.`,
     "",
     ...drafts.map((d) => render(draft(d.problem, input, d.seen), input, d.window)),

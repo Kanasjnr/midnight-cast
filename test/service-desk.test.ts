@@ -142,8 +142,29 @@ describe("service-desk drafts", () => {
     expect(rejectedId).toContain("BLOCKFROST_MAINNET_PROJECT_ID");
     expect(rejectedId).not.toContain("### Component");
     const rateLimited = mainnetReport([down("rpc", "RPC rate-limited by Blockfrost (429)", "http_4xx"), down("indexer", "Indexer unreachable (503)", "http_5xx")]);
-    expect(rateLimited).toContain("### Component");
-    expect(rateLimited).not.toContain("rejected the project ID");
+    expect(rateLimited).toContain("Mainnet public indexer unreachable");
+    expect(rateLimited).toContain("`priority:p2-high`");
+    expect(rateLimited).not.toContain("p1-critical");
+    expect(rateLimited).toContain("Blockfrost refused RPC because of our project ID or our plan's limit");
+    expect(rateLimited).not.toMatch(/RPC: RPC rate-limited/);
+  });
+
+  it("keeps each service's first sighting when the set of failing services changes", () => {
+    const both = [{ at: "2026-10-05T06:00:00.000Z", services: [down("rpc", "RPC unreachable", "timeout"), down("indexer", "Indexer unreachable", "timeout")] }];
+    const section = serviceDeskSection(report(both), { "unreachable:rpc": "2026-10-05T00:00:00.000Z" });
+    expect(firstSeenOf(section)).toEqual({ "unreachable:rpc": "2026-10-05T00:00:00.000Z", "unreachable:indexer": "2026-10-05T06:00:00.000Z" });
+    expect(section).toContain("First seen 2026-10-05T00:00:00Z");
+    const rpcAgain = [{ at: "2026-10-05T12:00:00.000Z", services: [down("rpc", "RPC unreachable", "timeout"), ok("indexer")] }];
+    expect(firstSeenOf(serviceDeskSection(report(rpcAgain), firstSeenOf(section)))).toEqual({ "unreachable:rpc": "2026-10-05T00:00:00.000Z" });
+  });
+
+  it("says how the check was started, since a person has to stand behind it", () => {
+    const lagging = { rpcHeight: 2846396, indexerHeight: 2845976, delta: 420, threshold: 100, inSync: false };
+    const attempts = [{ at: "2026-10-05T10:00:00.000Z", services: [ok("rpc"), ok("indexer")], sync: lagging }];
+    expect(serviceDeskSection(report(attempts, { trigger: "schedule" }))).toContain("A scheduled check running in GitHub Actions saw it behind in the check's one attempt");
+    expect(serviceDeskSection(report(attempts, { trigger: "schedule" }))).toContain("by a check that runs every six hours");
+    expect(serviceDeskSection(report(attempts, { trigger: "workflow_dispatch" }))).toContain("started by workflow_dispatch");
+    expect(serviceDeskSection(report(attempts))).toContain("A check run by hand saw it behind");
   });
 
   it("dates the draft from an earlier first sighting, and swaps only its own section", () => {
