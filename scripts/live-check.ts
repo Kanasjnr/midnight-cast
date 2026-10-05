@@ -8,10 +8,14 @@
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { release, type } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
-import type { HealthReport } from "../src/commands/health.js";
+import { chainGetHeader, parseBlockNumber } from "../src/clients/rpc.js";
+import type { HealthReport, HealthUnreachable } from "../src/commands/health.js";
+import { resolveNetwork } from "../src/config.js";
+import { isBlockfrostUrl, takeProjectId } from "../src/lib/blockfrost.js";
 import {
   UNOBSERVABLE,
   UPSTREAM_MATRIX_URL,
@@ -26,6 +30,7 @@ import {
   type SupportMatrixFile,
   type VersionsReport,
 } from "../src/lib/versions.js";
+import { headRegression, serviceDeskSection, type Attempt, type Evidence, type HeadSample, type ReportInput } from "./service-desk.js";
 
 export { UPSTREAM_MATRIX_URL, parseUpstreamMatrix, versionFromTag } from "../src/lib/upstream-matrix.js";
 export type { Component, ComponentVersions, UpstreamMatrix } from "../src/lib/upstream-matrix.js";
@@ -33,7 +38,7 @@ export type { Component, ComponentVersions, UpstreamMatrix } from "../src/lib/up
 const execFileAsync = promisify(execFile);
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-export const EXIT = { clean: 0, drift: 10, outage: 20, error: 2 } as const;
+export const EXIT = { clean: 0, drift: 10, outage: 20, degraded: 30, error: 2 } as const;
 
 export type FindingKind =
   | "outage"
@@ -43,10 +48,11 @@ export type FindingKind =
   | "upstream-differs"
   | "upstream-lag"
   | "upstream-unavailable"
-  | "indexer-api-undetected";
+  | "indexer-api-undetected"
+  | "rpc-inconsistent";
 
-export type Severity = "outage" | "drift" | "info";
-export type Status = "clean" | "drift" | "outage";
+export type Severity = "outage" | "drift" | "degraded" | "info";
+export type Status = "clean" | "drift" | "degraded" | "outage";
 
 export interface Finding {
   kind: FindingKind;
@@ -70,6 +76,8 @@ export interface CheckResult {
   live: LiveSnapshot;
   bundled: ComponentVersions;
   upstream?: ComponentVersions;
+  /** What the check saw, kept for the service-desk draft. */
+  evidence?: Evidence;
 }
 
 /** The fields of the `--json` envelope that live checks read. */
@@ -96,6 +104,7 @@ const SEVERITY: Record<FindingKind, Severity> = {
   "upstream-lag": "info",
   "upstream-unavailable": "info",
   "indexer-api-undetected": "info",
+  "rpc-inconsistent": "degraded",
 };
 
 const UPSTREAM_KINDS = new Set<FindingKind>([
@@ -165,12 +174,14 @@ export function rowVersions(net: MatrixNetwork): ComponentVersions {
 export interface ClassifyInput {
   network: string;
   /** `midnight-cast health <net> --json`, or undefined if it produced nothing parseable. */
-  health?: Envelope<HealthReport>;
+  health?: Envelope<HealthReport | HealthUnreachable>;
   /** `midnight-cast versions <net> --json --no-local`. */
   versions?: Envelope<VersionsReport>;
   upstream?: UpstreamMatrix;
   upstreamError?: string;
   bundled: ComponentVersions;
+  /** Consecutive `chain_getHeader` results; a head that goes backwards means a lagging backend. */
+  heads?: HeadSample[];
 }
 
 export function classify(input: ClassifyInput): CheckResult {
@@ -190,13 +201,25 @@ export function classify(input: ClassifyInput): CheckResult {
     for (const s of health.services ?? []) {
       if (!s.optional && s.status !== "OK") add("outage", s.service, `${s.service} is ${s.status}`);
     }
-    if (health.sync?.inSync === false) {
+    const sync = "sync" in health ? health.sync : undefined;
+    if (sync?.inSync === false) {
       add(
         "outage",
         "sync",
-        `indexer is ${health.sync.delta} blocks behind the node (threshold ${health.sync.threshold})`,
+        sync.delta >= 0
+          ? `indexer is ${sync.delta} blocks behind the node (threshold ${sync.threshold})`
+          : `RPC is ${-sync.delta} blocks behind the indexer (threshold ${sync.threshold})`,
       );
     }
+  }
+
+  const regression = headRegression(input.heads);
+  if (regression) {
+    add(
+      "rpc-inconsistent",
+      "rpc",
+      `RPC head went back ${regression.drop} blocks between calls (${regression.from}, then ${regression.to})`,
+    );
   }
 
   const versions = input.versions?.data;
@@ -283,7 +306,9 @@ export function classify(input: ClassifyInput): CheckResult {
     ? "outage"
     : findings.some((f) => f.severity === "drift")
       ? "drift"
-      : "clean";
+      : findings.some((f) => f.severity === "degraded")
+        ? "degraded"
+        : "clean";
 
   return { network, status, findings, live, bundled, upstream: upstream?.versions };
 }
@@ -357,20 +382,27 @@ export function fingerprint(result: CheckResult): string {
   return createHash("sha256").update(`${result.status}\n${key}`).digest("hex").slice(0, 16);
 }
 
-/** Remove anything that could be a credential before output leaves the runner. */
+/**
+ * Remove anything that could be a credential before output leaves the runner. A shell
+ * variable such as `$BLOCKFROST_PROJECT_ID` in a reproduction isn't one, so it stays.
+ */
 export function redact(text: string, secrets: Array<string | undefined> = []): string {
   let out = text;
   for (const s of secrets) if (s) out = out.split(s).join("***");
   return out
-    .replace(/(project_id=)[^&\s"'<>]+/gi, "$1***")
-    .replace(/(project_id["']?\s*[:=]\s*["']?)[^&\s"'<>,}]+/gi, "$1***");
+    .replace(/(project_id=)(?!\$)[^&\s"'<>]+/gi, "$1***")
+    .replace(/(project_id["']?\s*[:=]\s*["']?)(?!\$)[^&\s"'<>,}]+/gi, "$1***");
+}
+
+export function reportInput(result: CheckResult): ReportInput {
+  return { network: result.network, nodeVersion: result.live.node, attempts: [], ...result.evidence };
 }
 
 export function renderMarkdown(
   result: CheckResult,
   meta: { checkedAt?: string; runUrl?: string } = {},
 ): string {
-  const icon = { clean: "✅", drift: "⚠️", outage: "❌" }[result.status];
+  const icon = { clean: "✅", drift: "⚠️", degraded: "🟠", outage: "❌" }[result.status];
   const cell = (x: string | number | undefined) => (x === undefined ? "—" : `\`${x}\``);
   const lines = [
     `### ${icon} ${result.network}: ${result.status}`,
@@ -396,6 +428,8 @@ export function renderMarkdown(
   lines.push("");
   if (meta.checkedAt) lines.push(`Checked at ${meta.checkedAt}.`);
   if (meta.runUrl) lines.push(`Run: ${meta.runUrl}`);
+  const serviceDesk = serviceDeskSection(reportInput(result));
+  if (serviceDesk) lines.push("", serviceDesk);
   return lines.join("\n");
 }
 
@@ -427,6 +461,39 @@ async function fetchUpstream(network: string): Promise<UpstreamMatrix> {
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Asks the RPC for its head a few times in a row; a load-balanced RPC with a lagging node goes backwards. */
+export async function probeHeads(rpc: string, samples = 10, intervalMs = 2_000): Promise<HeadSample[]> {
+  const heads: HeadSample[] = [];
+  for (let i = 0; i < samples; i++) {
+    if (i) await sleep(intervalMs);
+    const at = new Date().toISOString();
+    const start = Date.now();
+    try {
+      const header = await chainGetHeader(rpc);
+      const head = parseBlockNumber(String(header.number));
+      heads.push(
+        Number.isFinite(head)
+          ? { at, ms: Date.now() - start, head }
+          : { at, ms: Date.now() - start, error: `unexpected block number ${JSON.stringify(header.number)}` },
+      );
+    } catch (err) {
+      heads.push({ at, ms: Date.now() - start, error: err instanceof Error ? err.message : String(err) });
+    }
+  }
+  return heads;
+}
+
+function attemptOf(at: string, health: Envelope<HealthReport | HealthUnreachable> | undefined): Attempt {
+  const data = health?.data;
+  const sync = data && "sync" in data ? data.sync : undefined;
+  return {
+    at,
+    services: data?.services ?? [],
+    ...(data ? {} : { error: health?.error?.message ?? "health check produced no usable output" }),
+    ...(sync ? { sync } : {}),
+  };
+}
 
 interface Options {
   network?: string;
@@ -487,11 +554,23 @@ async function main(): Promise<number> {
     }
   }
 
+  let endpoints: ReturnType<typeof resolveNetwork> | undefined;
+  try {
+    endpoints = resolveNetwork(network);
+  } catch (err) {
+    console.error(
+      redact(`live-check: no endpoints for the head probe or the reproductions: ${err instanceof Error ? err.message : String(err)}`, secrets),
+    );
+  }
+
   // Retry so one slow response isn't reported as an outage.
   let result: CheckResult | undefined;
+  let last: Pick<ClassifyInput, "health" | "versions"> = {};
+  const attempts: Attempt[] = [];
   for (let attempt = 1; attempt <= opts.attempts; attempt++) {
+    const at = new Date().toISOString();
     const [health, versions] = await Promise.all([
-      runCli<HealthReport>(["health", network, "--json", "--offline"]),
+      runCli<HealthReport | HealthUnreachable>(["health", network, "--json", "--offline"]),
       runCli<VersionsReport>(["versions", network, "--json", "--no-local", "--offline"]),
     ]);
     // The verdict must be about the matrix that ships. If the CLI judged a
@@ -504,7 +583,9 @@ async function main(): Promise<number> {
       console.error(`live-check: ${mismatch}`);
       return EXIT.error;
     }
-    result = classify({ network, health, versions, upstream, upstreamError, bundled });
+    attempts.push(attemptOf(at, health));
+    last = { health, versions };
+    result = classify({ network, ...last, upstream, upstreamError, bundled });
     if (result.status !== "outage" || attempt === opts.attempts) break;
     console.error(
       `attempt ${attempt}/${opts.attempts}: outage, retrying in ${opts.delayMs / 1000}s`,
@@ -513,9 +594,33 @@ async function main(): Promise<number> {
   }
   if (!result) return EXIT.error;
 
+  // Once the retries settle, and only if the network is up: during an outage it adds nothing.
+  let heads: HeadSample[] | undefined;
+  const rpcUp = attempts.at(-1)?.services.some((s) => s.service === "rpc" && s.status === "OK");
+  if (result.status !== "outage" && rpcUp && endpoints) {
+    heads = await probeHeads(endpoints.rpc);
+    result = classify({ network, ...last, upstream, upstreamError, bundled, heads });
+  }
+
   const runUrl = process.env.GITHUB_RUN_ID
     ? `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
     : undefined;
+  result.evidence = {
+    attempts,
+    ...(heads ? { heads } : {}),
+    ...(endpoints
+      ? {
+          endpoints: {
+            rpc: takeProjectId(endpoints.rpc).url,
+            indexerHttp: takeProjectId(endpoints.indexerHttp).url,
+            blockfrost: isBlockfrostUrl(endpoints.rpc) || isBlockfrostUrl(endpoints.indexerHttp),
+          },
+        }
+      : {}),
+    environment: `${type()} ${release()}${process.env.GITHUB_ACTIONS ? " (GitHub Actions runner)" : ""}`,
+    ...(process.env.GITHUB_ACTIONS ? { trigger: process.env.GITHUB_EVENT_NAME ?? "unknown" } : {}),
+    ...(runUrl ? { runUrl } : {}),
+  };
   const fp = fingerprint(result);
   const report = redact(
     `${renderMarkdown(result, { checkedAt: new Date().toISOString(), runUrl })}\n\n<!-- live-check fingerprint: ${fp} -->\n`,

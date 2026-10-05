@@ -9,6 +9,7 @@ import {
 } from "./networks.js";
 import {
   BLOCKFROST_ENV,
+  PLUGIN_PROJECT_ID_ENV,
   hasProjectId,
   isBlockfrostUrl,
   isRetiredUrl,
@@ -170,6 +171,7 @@ function attachProjectId(
     ["flag", flags.projectId],
     ["config", section?.blockfrost_project_id],
     ["url", fromUrl],
+    ["env", process.env[PLUGIN_PROJECT_ID_ENV]],
     ["env", process.env[BLOCKFROST_ENV]],
   ];
   const found = candidates.find(([, value]) => value && value.trim() !== "");

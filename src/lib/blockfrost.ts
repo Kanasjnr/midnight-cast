@@ -3,6 +3,11 @@ import { inMcpCall } from "./surface.js";
 // headers, and the HTTP clients move it into the project_id header.
 
 export const BLOCKFROST_ENV = "BLOCKFROST_PROJECT_ID";
+// The Claude Code plugin passes its Blockfrost option in a variable of its own, so a
+// BLOCKFROST_PROJECT_ID the user exported still reaches the server when the option is empty.
+export const PLUGIN_PROJECT_ID_ENV = "MIDNIGHT_CAST_PLUGIN_PROJECT_ID";
+const PLUGIN_OPTION = "the midnight-cast plugin's Blockfrost option (/plugin, then midnight-cast, then Configure options)";
+const fromPlugin = () => PLUGIN_PROJECT_ID_ENV in process.env;
 
 export const BLOCKFROST_DOCS =
   "https://docs.midnight.network/guides/networks-and-environments#blockfrost-the-mainnet-indexer-and-rpc-provider";
@@ -65,7 +70,7 @@ export function blockfrostHttpError(service: "RPC" | "Indexer", status: number):
     return (
       `${service} rejected by Blockfrost (403): the project token is missing, invalid, ` +
       `or for a different network. Mainnet needs a Midnight Mainnet project ID (it starts with "nightmainnet"). ` +
-      `${inMcpCall() ? "This MCP server reads it from BLOCKFROST_PROJECT_ID in its environment, then config.toml" : `It is read from ${PROJECT_ID_SOURCES}`}. ` +
+      `${inMcpCall() ? `This MCP server reads it from the network's config.toml section, then ${fromPlugin() ? `${PLUGIN_OPTION}, then ` : ""}${BLOCKFROST_ENV} in its environment` : `It is read from ${PROJECT_ID_SOURCES}`}. ` +
       `See ${BLOCKFROST_DOCS}`
     );
   }
@@ -77,10 +82,12 @@ export function blockfrostHttpError(service: "RPC" | "Indexer", status: number):
 
 export function missingProjectIdError(network: string): string {
   if (inMcpCall()) {
+    const fix = fromPlugin()
+      ? `enter its project ID in ${PLUGIN_OPTION}, or export ${BLOCKFROST_ENV} before starting Claude Code`
+      : `add ${BLOCKFROST_ENV} with its project ID to this server's env in the MCP client's configuration and restart the server`;
     return (
       `The ${network} RPC and indexer are served by Blockfrost and need a project ID, and this MCP server has none. ` +
-      `Create a Midnight Mainnet project at https://blockfrost.io, then add ${BLOCKFROST_ENV} with its project ID to this server's ` +
-      `env in the MCP client's configuration and restart the server. See ${BLOCKFROST_DOCS}`
+      `Create a Midnight Mainnet project at https://blockfrost.io, then ${fix}. See ${BLOCKFROST_DOCS}`
     );
   }
   return (

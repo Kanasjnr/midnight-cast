@@ -289,6 +289,61 @@ describe("live-check classify", () => {
   });
 });
 
+describe("live-check sync direction", () => {
+  it("says the RPC is behind when its head trails the indexer", () => {
+    const base = input();
+    const health = base.health!.data! as { sync: { rpcHeight: number; indexerHeight: number; delta: number; threshold: number; inSync: boolean } };
+    health.sync = { rpcHeight: 100, indexerHeight: 500, delta: -400, threshold: 100, inSync: false };
+    const result = classify(base);
+    expect(result.findings).toContainEqual(expect.objectContaining({ kind: "outage", component: "sync", message: "RPC is 400 blocks behind the indexer (threshold 100)" }));
+  });
+
+  it("reads a health report that lists only the services, when one is down", () => {
+    const result = classify(
+      input({
+        health: {
+          ok: false,
+          error: { message: "Required services unreachable: rpc" },
+          data: { network: "preprod", healthy: false, services: [{ service: "rpc", status: "FAIL", latencyMs: 10, errorKind: "timeout" }, { service: "indexer", status: "OK", latencyMs: 10 }] },
+        },
+      }),
+    );
+    expect(result.status).toBe("outage");
+    expect(result.findings).toContainEqual(expect.objectContaining({ kind: "outage", component: "rpc" }));
+  });
+});
+
+describe("live-check degraded RPC", () => {
+  const heads = (...numbers: number[]) => numbers.map((head, i) => ({ at: `2026-10-02T11:55:4${i}.000Z`, ms: 400, head }));
+
+  it("reports a head that goes backwards as degraded, below drift", () => {
+    const degraded = classify(input({ heads: heads(2804021, 2804011, 2804027) }));
+    expect(degraded.status).toBe("degraded");
+    expect(degraded.findings).toContainEqual(expect.objectContaining({ kind: "rpc-inconsistent", severity: "degraded" }));
+    expect(exitCodeFor(degraded)).toBe(30);
+    expect(releaseBlockers(degraded)).toEqual([]);
+    expect(classify(nodeBehind({ heads: heads(2804021, 2804011) })).status).toBe("drift");
+    expect(classify(input({ heads: heads(100, 99, 101) })).status).toBe("clean");
+  });
+
+  it("keeps the fingerprint stable as the heads change", () => {
+    expect(fingerprint(classify(input({ heads: heads(2804021, 2804011) })))).toBe(
+      fingerprint(classify(input({ heads: heads(2805000, 2804990, 2805001) }))),
+    );
+  });
+
+  it("adds the service-desk draft to the report", () => {
+    const result = classify(input({ heads: heads(2804021, 2804011) }));
+    const report = renderMarkdown(
+      { ...result, evidence: { attempts: [{ at: "2026-10-02T11:55:30.000Z", services: [] }], heads: heads(2804021, 2804011) } },
+      { checkedAt: "2026-10-02T11:56:00Z" },
+    );
+    expect(report).toContain("🟠 preprod: degraded");
+    expect(report).toContain("<!-- service-desk:start -->");
+    expect(renderMarkdown(classify(input()))).not.toContain("service-desk");
+  });
+});
+
 describe("live-check fingerprint", () => {
   const drifted = () => classify(nodeBehind());
 
@@ -427,6 +482,12 @@ describe("live-check exit code", () => {
 });
 
 describe("live-check redact and render", () => {
+  it("keeps a shell variable in a reproduction, so the command still works", () => {
+    const curl = '-H "project_id: $BLOCKFROST_PROJECT_ID" https://x.io?project_id=$BLOCKFROST_PROJECT_ID';
+    expect(redact(curl)).toBe(curl);
+    expect(redact('-H "project_id: nightmainnetABC123"')).toBe('-H "project_id: ***"');
+  });
+
   it("removes explicit secrets and any project_id value", () => {
     const text =
       "fetch https://rpc.midnight-mainnet.blockfrost.io?project_id=nightmainnetABC123&x=1 " +

@@ -1,0 +1,30 @@
+{
+  "name": "midnight-cast",
+  "displayName": "midnight-cast",
+  "version": "0.1.6",
+  "description": "Diagnose Midnight networks, transactions, contracts, DUST and errors with the read-only midnight-cast CLI and MCP server",
+  "author": {
+    "name": "Kanasjnr",
+    "url": "https://github.com/Kanasjnr"
+  },
+  "homepage": "https://github.com/Kanasjnr/midnight-cast",
+  "repository": "https://github.com/Kanasjnr/midnight-cast",
+  "license": "Apache-2.0",
+  "keywords": [
+    "midnight",
+    "blockchain",
+    "indexer",
+    "dust",
+    "errors",
+    "mcp"
+  ],
+  "userConfig": {
+    "blockfrost_project_id": {
+      "type": "string",
+      "title": "Blockfrost project ID (mainnet)",
+      "description": "A Midnight Mainnet project ID from blockfrost.io, needed only for mainnet. Leave empty for preview and preprod.",
+      "sensitive": true,
+      "default": ""
+    }
+  }
+}

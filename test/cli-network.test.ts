@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { join } from "node:path";
+import { parseEnvelope } from "./schema.js";
 
 const execFileAsync = promisify(execFile);
 const cli = join(process.cwd(), "dist", "cli.js");
@@ -27,6 +28,28 @@ async function runMn(args: string[]): Promise<{
     };
   }
 }
+
+describe("health with a service down", () => {
+  it("says which service is down and why, instead of returning no data", async () => {
+    const { stdout, code } = await runMn([
+      "health", "preprod", "--json", "--offline",
+      "--rpc", CLOSED_PORT, "--indexer-http", CLOSED_PORT, "--proof-server", CLOSED_PORT,
+    ]);
+    expect(code).toBe(1);
+    const envelope = parseEnvelope(stdout) as {
+      ok: boolean;
+      error: { message: string; kind: string };
+      data: { healthy: boolean; services: Array<{ service: string; status: string; errorKind?: string }>; sync?: unknown };
+    };
+    expect(envelope.ok).toBe(false);
+    expect(envelope.error.message).toBe("Required services unreachable: rpc, indexer");
+    expect(envelope.data.healthy).toBe(false);
+    expect(envelope.data.sync).toBeUndefined();
+    const rpc = envelope.data.services.find((s) => s.service === "rpc")!;
+    expect(rpc.status).toBe("FAIL");
+    expect(rpc.errorKind).toBe(envelope.error.kind);
+  }, 20_000);
+});
 
 describe("cli positional network", () => {
   it("tx accepts network as second positional arg", async () => {

@@ -1,0 +1,15 @@
+{
+  "name": "midnight-cast",
+  "description": "midnight-cast: read-only tools for the live Midnight networks",
+  "owner": {
+    "name": "Kanasjnr",
+    "url": "https://github.com/Kanasjnr"
+  },
+  "plugins": [
+    {
+      "name": "midnight-cast",
+      "source": "./plugins/midnight-cast",
+      "description": "Diagnose Midnight networks, transactions, contracts, DUST and errors with the read-only midnight-cast CLI and MCP server"
+    }
+  ]
+}
