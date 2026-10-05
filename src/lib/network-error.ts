@@ -1,3 +1,4 @@
+import { inMcpCall } from "./surface.js";
 export type NetworkErrorKind =
   | "dns"
   | "refused"
@@ -57,7 +58,9 @@ function hintFor(kind: NetworkErrorKind, service: Service, status: number | unde
     case "refused":
       return `Nothing is listening at the ${name} URL. For a local node, check that it's running.`;
     case "timeout":
-      return `The ${name} didn't answer in time. Public endpoints can be slow, so try again, or point at another endpoint with --rpc / --indexer-http.`;
+      return inMcpCall()
+        ? `The ${name} didn't answer in time. Public endpoints can be slow, so try again shortly.`
+        : `The ${name} didn't answer in time. Public endpoints can be slow, so try again, or point at another endpoint with --rpc / --indexer-http.`;
     case "tls":
       return "The TLS handshake failed: check the URL scheme, any proxy, and your system clock.";
     case "network":
@@ -77,7 +80,9 @@ function hintFor(kind: NetworkErrorKind, service: Service, status: number | unde
     case "rpc_error":
       return "The node rejected the call. Check the method name and parameters.";
     case "graphql_error":
-      return "The indexer rejected the query, so its API version may differ. Run: midnight-cast versions <network>";
+      return inMcpCall()
+        ? "The indexer rejected the query, so its API version may differ. The versions tool compares it with the support matrix."
+        : "The indexer rejected the query, so its API version may differ. Run: midnight-cast versions <network>";
     case "invalid_response":
       return `The response wasn't valid JSON. The URL may not be a Midnight ${name}.`;
   }

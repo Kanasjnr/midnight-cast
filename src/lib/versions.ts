@@ -65,6 +65,8 @@ export interface VersionsReport {
   checks: VersionCheck[];
   localPackages?: Record<string, string>;
   localPackageChecks?: VersionCheck[];
+  /** Where local packages were looked for, and whether a package.json was there. */
+  localProject?: { dir: string; packageJson: boolean };
   scopeHints?: string[];
   allOk: boolean;
 }
@@ -420,7 +422,9 @@ export function readDeclaredDuplicates(cwd = process.cwd()): VersionCheck[] {
 export function checkLocalPackages(
   expected: MatrixNetwork,
   cwd = process.cwd(),
-): Pick<VersionsReport, "localPackages" | "localPackageChecks" | "scopeHints"> {
+): Pick<VersionsReport, "localPackages" | "localPackageChecks" | "scopeHints" | "localProject"> {
+  const localProject = { dir: cwd, packageJson: existsSync(join(cwd, "package.json")) };
+  if (!localProject.packageJson) return { localProject };
   const installed = readInstalledMidnightPackages(cwd);
   const localPackages = readLocalMidnightPackages(cwd, installed);
   const conflicts = buildScopeConflictChecks(localPackages ?? {}, installed);
@@ -432,6 +436,7 @@ export function checkLocalPackages(
   ];
   const scopeHints = localPackages ? buildScopeHints(localPackages) : [];
   return {
+    localProject,
     ...(localPackages ? { localPackages } : {}),
     ...(checks.length ? { localPackageChecks: checks } : {}),
     ...(scopeHints.length ? { scopeHints } : {}),
@@ -517,6 +522,12 @@ export function formatVersionsHuman(report: VersionsReport): string {
       "No matrix package pins for this network — compare manually to:",
       `  ledger: ${report.expected.ledger}`,
     );
+  }
+
+  if (report.localProject && !report.localProject.packageJson) {
+    lines.push("", `Local packages: not checked, no package.json in ${report.localProject.dir}`);
+  } else if (report.localProject && !report.localPackages) {
+    lines.push("", `Local packages: no Midnight packages in ${join(report.localProject.dir, "package.json")}`);
   }
 
   if (report.scopeHints?.length) {

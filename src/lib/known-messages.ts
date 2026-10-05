@@ -42,7 +42,7 @@ const PATTERNS: Pattern[] = [
       id: "blockfrost-missing-token",
       name: "Blockfrost: missing project token",
       description: "Blockfrost served the request but no project ID was sent with it.",
-      fix: "Set BLOCKFROST_PROJECT_ID, pass --project-id, or add blockfrost_project_id to the network's config section.",
+      fix: "Send the Blockfrost project ID with every request: as the project_id header over HTTP, or the project_id URL parameter for WebSockets. midnight-cast itself reads it from BLOCKFROST_PROJECT_ID, --project-id or the network's config section.",
       next: [{ command: "midnight-cast config show --network <network>", reason: "See whether a project ID is configured and where it comes from" }],
     }),
   },

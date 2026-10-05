@@ -15,7 +15,7 @@ Start here for the shortest path:
 | Decode wallet/node error | `midnight-cast decode --raw "<error>"` |
 | Inspect a tx | `midnight-cast tx <hash> --network preprod` |
 | Inspect a block | `midnight-cast block latest preprod` or `midnight-cast block <height> preprod` |
-| Inspect DUST events | `midnight-cast dust-events --network preprod --from <id>` |
+| Inspect DUST events | `midnight-cast dust-events --network preprod` |
 
 ## Global flags
 
@@ -180,19 +180,21 @@ midnight-cast matrix preview --json
 midnight-cast versions preprod --fail-on-mismatch
 cd my-dapp && midnight-cast versions preprod   # also reads local package.json deps
 midnight-cast versions preprod --no-local
+midnight-cast versions preprod --project-dir ~/code/my-dapp
 ```
 
 | Flag | Description |
 |------|-------------|
 | `--fail-on-mismatch` | Exit `1` if live checks fail (CI) |
-| `--no-local` | Do not read `package.json` in cwd |
+| `--no-local` | Do not check local packages |
+| `--project-dir <dir>` | Check the project in this directory instead of the current one |
 | `--refresh-matrix` | Fetch Midnight's published matrix even if the cached copy is fresh (also on `health`) |
 
 **Live checks:** node `system_version` against the matrix minimum (`>=minNode`; exact match for rows without one), node runtime `specVersion` against the matrix `runtimeSpec`, indexer API path (`v4`), RPC `specVersion` vs indexer `protocolVersion`, and proof server `GET /version` when a URL is configured. A minimum rather than an exact node version is used because different operators run different compatible builds: on 2 October 2026 Midnight's endpoints reported node 1.0.400 and Blockfrost's mainnet node 2.1.0, both on runtime 1000300.
 
 **Reference only:** ledger, indexer package version, and on-chain runtime are shown for manual comparison.
 
-**Local deps:** reads every Midnight package from `package.json` under either npm scope, `@midnight-ntwrk/*` or `@midnightntwrk/*`, using the installed version from `package-lock.json` when there is one. Matrix `packages` pins apply to a package whichever scope it uses, and a mismatch is reported as **MISMATCH**. Midnight is moving its packages to `@midnightntwrk`, with the same API and only the name changed. If the same package is installed under both scopes, directly or through another dependency, a `scope:<package>` check fails, because two copies of one package can break `instanceof` checks and types. Packages you still use from the old scope that have a stable release under the new one are listed under **npm scope** as a rename hint. As of 2 October 2026 those are `ledger-v8`, `onchain-runtime-v3`, `zkir-v2` and the `wallet-sdk*` packages. Installed versions are read from npm's `package-lock.json` only. In yarn or pnpm projects, and before `npm install`, a dependency without a concrete version is listed as not resolved instead of being compared.
+**Local deps:** reads every Midnight package from the project's `package.json` (the current directory, or `--project-dir`) under either npm scope, `@midnight-ntwrk/*` or `@midnightntwrk/*`, using the installed version from `package-lock.json` when there is one. Matrix `packages` pins apply to a package whichever scope it uses, and a mismatch is reported as **MISMATCH**. Midnight is moving its packages to `@midnightntwrk`, with the same API and only the name changed. If the same package is installed under both scopes, directly or through another dependency, a `scope:<package>` check fails, because two copies of one package can break `instanceof` checks and types. Packages you still use from the old scope that have a stable release under the new one are listed under **npm scope** as a rename hint. As of 2 October 2026 those are `ledger-v8`, `onchain-runtime-v3`, `zkir-v2` and the `wallet-sdk*` packages. Installed versions are read from npm's `package-lock.json` only. In yarn or pnpm projects, and before `npm install`, a dependency without a concrete version is listed as not resolved instead of being compared.
 
 **Network warning:** if the live node or runtime spec doesn't fit the selected matrix row, warns that your endpoints may point at a different environment.
 
@@ -421,21 +423,22 @@ midnight-cast dust-event 565975 --verbose --json
 
 ## `midnight-cast dust-events [network]`
 
-Stream recent DUST ledger events from a starting id.
+List DUST ledger events: the latest ones, or a run from a starting id.
 
 ```bash
+midnight-cast dust-events --network preprod
 midnight-cast dust-events --network preprod --from 565900 --limit 10
 midnight-cast dust-events preview --from 12340 --limit 5 --json
 ```
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--from <id>` | — | Start event id (recommended) |
+| `--from <id>` | latest | Start event id. Without it, the latest events are shown |
 | `--limit <n>` | `10` | Max events to collect |
 | `--verbose` | off | Full `raw` hex |
 | `--timeout <ms>` | `30000` | Subscription timeout |
 
-**Tip:** If `dust-event` fails with “not found”, use `dust-events --from` to find valid ids on that network.
+**Tip:** `dust-event` for an id the network hasn't reached yet fails at once and names the latest id; `dust-events` shows the events around it.
 
 Example output:
 
@@ -449,7 +452,7 @@ id=565902  typename=DustInitialUtxo  protocolVersion=22000  raw=0x6d69646e696768
 
 ## `midnight-cast mcp`
 
-Runs a read-only MCP server on stdio, for AI agents. It exposes `health`, `ping`, `tip`, `versions`, `block`, `tx`, `dust_event`, `dust_events`, `decode` and `explain` as tools that return the [JSON envelope](#json-output), plus the support matrix and error codes as resources. `MIDNIGHT_CAST_NETWORKS` (for example `preview,preprod`) limits the networks the model may query, and `BLOCKFROST_PROJECT_ID` supplies the mainnet project ID, which never appears in a response. Setup for each agent is in [MCP.md](./MCP.md).
+Runs a read-only MCP server on stdio, for AI agents. It exposes `health`, `ping`, `tip`, `versions`, `block`, `tx`, `dust_event`, `dust_events`, `decode` and `explain` as tools that return the [JSON envelope](#json-output), prompts for diagnosing an error, checking a network and investigating a transaction, and the support matrix, error codes and command catalog as resources. `MIDNIGHT_CAST_NETWORKS` (for example `preview,preprod`) limits the networks the model may query, `BLOCKFROST_PROJECT_ID` supplies the mainnet project ID, which never appears in a response, and `MIDNIGHT_CAST_MAX_CALLS_PER_MINUTE` sets the rate limit on network tools (30 by default). Setup for each agent is in [MCP.md](./MCP.md).
 
 ```bash
 midnight-cast mcp
@@ -499,13 +502,14 @@ With `--json`, every command prints one envelope on stdout:
 
 `command` is the command path, such as `decode ledger`, and is `null` only for a usage error. `network` is the network the command ran against, when it has one. `data` holds the command's result and `error` is `null` whenever `ok` is true. Some failed checks keep their report in `data`: a failed `ping` still lists every service, and an unhealthy `health` keeps the full report. Warnings that human mode prints on stderr, such as a config that still points at a retired mainnet host, are collected in `warnings`.
 
-`next` lists follow-up commands, always spelled `midnight-cast …`, and appears only in JSON output. Suggested commands keep any `--rpc`, `--indexer-http`, `--indexer-ws` or `--proof-server` override, so they recheck the same endpoints, but never the project ID. The suggestions are: `decode 1010` points at `decode ledger <N>` and `explain 1010`, `tx` points at `decode --raw` when a segment failed and at `dust-event <id>` for each DUST event, a failed `health` points at `ping` or `tip`, and a request that can't reach a configured endpoint points at `config show`. A placeholder in angle brackets, such as `<N>`, has to be filled in before running the command.
+`next` lists follow-up commands, always spelled `midnight-cast …`, and appears only in JSON output. Suggested commands keep any `--rpc`, `--indexer-http`, `--indexer-ws` or `--proof-server` override, so they recheck the same endpoints, but never the project ID. The suggestions are: `decode 1010` points at `decode ledger <N>` and `explain 1010`, `tx` points at `decode --raw` when a segment failed and at `dust-event <id>` for each DUST event, a failed `health` points at `ping` or `tip`, and a request that can't reach a configured endpoint points at `config show`. A placeholder in angle brackets, such as `<N>`, has to be filled in before running the command. When a step is also an MCP tool call that needs nothing filled in, it has a `tool` with the tool's `name` and `arguments`, so an agent using [the MCP server](./MCP.md) can follow it without a terminal.
 
 `error.kind` says what went wrong. The network kinds are also set on failed rows in `ping` and `health`:
 
 | `kind` | Meaning |
 | --- | --- |
 | `usage` | The command line was invalid |
+| `rate_limited` | The MCP server's limit on network calls was reached; wait and retry |
 | `dns` | The host name doesn't resolve |
 | `refused` | Nothing is listening at the URL |
 | `timeout` | No answer in time, after retries |

@@ -343,6 +343,7 @@ function registerVersions(alias: string, description: string): void {
     .description(description)
     .option("--fail-on-mismatch", "Exit 1 when live node/api checks fail (CI)")
     .option("--no-local", "Skip reading package.json in current directory")
+    .option("--project-dir <dir>", "Check the Midnight packages of the project in this directory (default: current directory)")
     .option("--refresh-matrix", "Fetch Midnight's support matrix even if a cached copy is fresh")
     .action(async (network: string | undefined, opts, cmd) => {
       await run(
@@ -353,6 +354,7 @@ function registerVersions(alias: string, description: string): void {
               ...resolveFlags(cmd),
               failOnMismatch: opts.failOnMismatch,
               local: opts.local,
+              projectDir: opts.projectDir,
               ...matrixFlags(cmd),
             },
             globalOpts(cmd),
@@ -450,17 +452,24 @@ program
   .action(async () => {
     // Loaded here so other commands don't pay for the MCP SDK.
     const { allowedNetworks, createMcpServer } = await import("./mcp/server.js");
-    let networks;
+    const { callsPerMinute } = await import("./mcp/rate-limit.js");
+    let networks: string[];
+    let perMinute: number;
     try {
       networks = allowedNetworks();
+      perMinute = callsPerMinute();
     } catch (err) {
       console.error(err instanceof Error ? err.message : String(err));
       process.exitCode = 2;
       return;
     }
-    const { StdioServerTransport } = await import("@modelcontextprotocol/sdk/server/stdio.js");
-    const server = createMcpServer({ version: cliVersion(), catalog: () => buildCatalog(program, TOPICS), networks });
-    await server.connect(new StdioServerTransport());
+    const { serveStdio } = await import("@modelcontextprotocol/server/stdio");
+    // serveStdio answers both the 2025 handshake and the stateless 2026-07-28 protocol.
+    serveStdio(() =>
+      createMcpServer({ version: cliVersion(), catalog: () => buildCatalog(program, TOPICS), networks, callsPerMinute: perMinute }),
+    );
+    // The client is gone once stdin ends; don't wait for in-flight network calls to time out.
+    process.stdin.once("end", () => process.exit(0));
   });
 
 const argv = normalizeArgv(process.argv);
