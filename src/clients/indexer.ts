@@ -214,6 +214,10 @@ export async function subscribeDustEvents(
       }
     };
 
+    if (options.signal?.aborted) {
+      finish(new Error("DUST subscription cancelled"));
+      return;
+    }
     options.signal?.addEventListener("abort", () => finish(new Error("DUST subscription cancelled")), { once: true });
 
     unsubscribe = client.subscribe(
