@@ -5,6 +5,7 @@ import { decodeCommand } from "../commands/decode.js";
 import { dustEventCommand, dustEventsCommand } from "../commands/dust.js";
 import { TOPICS, explainCommand } from "../commands/explain.js";
 import { healthCommand } from "../commands/health.js";
+import { preflightCommand } from "../commands/preflight.js";
 import { pingCommand } from "../commands/ping.js";
 import { tipCommand } from "../commands/tip.js";
 import { txCommand } from "../commands/tx.js";
@@ -158,6 +159,21 @@ export function createMcpServer(options: McpOptions): McpServer {
     LIVE,
     { network, threshold: z.number().int().min(0).optional().describe("Indexer lag, in blocks, that counts as out of sync (default 100)") },
     ({ network, threshold }) => healthCommand(network, { threshold }, json),
+  );
+  tool(
+    "preflight",
+    "preflight",
+    "Check that a network, its proof server and optionally a wallet are ready before the first transaction: the network answers and is in sync, the proof server answers at the expected version, and the wallet holds NIGHT registered for DUST generation. data.expectations quotes how long wallet sync and restore took in Midnight's examples run, so a long first sync isn't mistaken for a hang.",
+    LIVE,
+    {
+      network,
+      address: z
+        .string()
+        .min(1)
+        .optional()
+        .describe("The wallet's Midnight unshielded address (mn_addr_…) or a Cardano reward address (stake…)"),
+    },
+    ({ network, address }) => preflightCommand(network, { address }, json),
   );
   tool(
     "ping",

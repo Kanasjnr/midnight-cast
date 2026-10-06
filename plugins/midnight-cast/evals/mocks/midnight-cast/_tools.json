@@ -152,6 +152,156 @@
       }
     },
     {
+      "name": "preflight",
+      "title": "midnight-cast preflight",
+      "description": "Check that a network, its proof server and optionally a wallet are ready before the first transaction: the network answers and is in sync, the proof server answers at the expected version, and the wallet holds NIGHT registered for DUST generation. data.expectations quotes how long wallet sync and restore took in Midnight's examples run, so a long first sync isn't mistaken for a hang.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "network": {
+            "type": "string",
+            "enum": [
+              "preview",
+              "preprod",
+              "mainnet",
+              "local"
+            ],
+            "description": "Midnight network to query: preview, preprod, mainnet, local"
+          },
+          "address": {
+            "description": "The wallet's Midnight unshielded address (mn_addr_…) or a Cardano reward address (stake…)",
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "network"
+        ],
+        "$schema": "https://json-schema.org/draft/2020-12/schema"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "schemaVersion": {
+            "type": "number",
+            "const": 1
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "command": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "network": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "data": {},
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "message": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "hint": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "message",
+                  "kind",
+                  "hint"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "next": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "command": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "tool": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "arguments": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "arguments"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "command",
+                "reason"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "ok",
+          "command",
+          "network",
+          "data",
+          "warnings",
+          "error",
+          "next"
+        ],
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      }
+    },
+    {
       "name": "ping",
       "title": "midnight-cast ping",
       "description": "Check whether the network's RPC node, indexer and proof server answer, with latency and a classified error kind for each failure.",

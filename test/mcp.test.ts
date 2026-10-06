@@ -105,7 +105,7 @@ describe("MCP server", () => {
     expect(client.getInstructions()).toMatch(/call decode with the whole message first/);
   });
 
-  it("lists twelve read-only tools with typed inputs and the envelope as output", async () => {
+  it("lists thirteen read-only tools with typed inputs and the envelope as output", async () => {
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual(
       [
@@ -118,6 +118,7 @@ describe("MCP server", () => {
         "explain",
         "health",
         "ping",
+        "preflight",
         "tip",
         "tx",
         "versions",

@@ -11,6 +11,7 @@ The server ships with midnight-cast 0.2.0. Until that is on npm, build from sour
 | Tool | Reaches a network | What it does |
 | --- | --- | --- |
 | `health` | yes | Reachability, indexer sync and live versions against the support matrix in one call, and whether Midnight's own examples pass on the node the network runs |
+| `preflight` | yes | Whether a network, its proof server and optionally a wallet (`address`) are ready for a first transaction, and how long wallet sync took in Midnight's examples run |
 | `ping` | yes | Whether the RPC node, indexer and proof server answer, with latency and an error kind |
 | `tip` | yes | Node height against indexer height |
 | `versions` | yes | Live node, runtime and indexer API against the support matrix, and a project's Midnight packages against the matrix pins. Pass `projectDir` with the absolute path of the user's project: the server's working directory is wherever the client started it. `data.localProject` says which directory was checked and whether it had a `package.json` |
