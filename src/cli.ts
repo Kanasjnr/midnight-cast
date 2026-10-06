@@ -19,6 +19,7 @@ import { txCommand } from "./commands/tx.js";
 import { contractCommand } from "./commands/contract.js";
 import { agentsInitCommand } from "./commands/agents.js";
 import { dustStatusCommand } from "./commands/dust-status.js";
+import { preflightCommand } from "./commands/preflight.js";
 import { versionsCommand } from "./commands/versions.js";
 import type { ResolveFlags } from "./config.js";
 import { normalizeArgv } from "./lib/argv.js";
@@ -280,6 +281,28 @@ program
             failOnLag: opts.failOnLag,
             failOnMismatch: opts.failOnMismatch,
             ...matrixFlags(cmd),
+          },
+          globalOpts(cmd),
+        ),
+      cmd,
+    );
+  });
+
+program
+  .command("preflight [network]")
+  .description("Check a network, proof server and wallet are ready before the first transaction")
+  .option("--address <address>", "Midnight unshielded address (mn_addr_…) or Cardano reward address (stake…) to check for NIGHT and DUST")
+  .option("--timeout <ms>", "How long to read the address's transactions", "30000")
+  .action(async (network: string | undefined, opts, cmd) => {
+    await run(
+      async () =>
+        preflightCommand(
+          network,
+          {
+            ...resolveFlags(cmd),
+            ...matrixFlags(cmd),
+            address: opts.address,
+            timeoutMs: parseFlagInt(opts.timeout, "timeout", { min: 1 }),
           },
           globalOpts(cmd),
         ),

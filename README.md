@@ -134,7 +134,7 @@ The project ID is never printed. See [docs/COMMANDS.md](docs/COMMANDS.md#mainnet
 
 When something breaks, run these in order:
 
-1. `midnight-cast health` — ping + sync + versions in one shot
+1. `midnight-cast health` — ping + sync + versions in one shot (`preflight --address <wallet>` before a first transaction)
 2. `midnight-cast ping` — services up?
 3. `midnight-cast tip` — indexer synced?
 4. `midnight-cast versions` — stack matches [support matrix](https://docs.midnight.network/relnotes/support-matrix)?

@@ -17,6 +17,7 @@ midnight-cast is a read-only CLI for the Midnight networks (preview, preprod, ma
 2. The network might be the problem rather than the code: `midnight-cast health <network> --json`, then `ping` or `tip` to narrow it down. Its `data.examples` says whether Midnight's own examples pass on the node that network runs; if they pass and the network is healthy, look at the user's code or setup first.
 3. Versions might not match: `midnight-cast versions <network> --project-dir <project> --json` compares the live network and the project's Midnight packages with the support matrix.
 4. Something happened on chain: `tx <hash>` for a transaction, `contract <address>` for a deployed contract (latest action, circuit, deploy block), `dust-status <cardano-reward-address>` when a wallet has no DUST, `dust-event <id>` and `dust-events` for DUST ledger events.
-5. Background on a topic: `midnight-cast explain dust|1010|versions|transcript`. `midnight-cast explain --json` lists every command, option, exit code and error kind.
+5. Setting up, or stuck before the first transaction on preprod or preview: `midnight-cast preflight <network> --address <the wallet's mn_addr_… address> --json` checks the network, the proof server and that the wallet holds NIGHT registered for DUST, and quotes how long a first wallet sync takes so it isn't mistaken for a hang.
+6. Background on a topic: `midnight-cast explain dust|1010|versions|transcript`. `midnight-cast explain --json` lists every command, option, exit code and error kind.
 
 Mainnet goes through Blockfrost: set `BLOCKFROST_PROJECT_ID` to a Midnight Mainnet project ID. midnight-cast never prints it.

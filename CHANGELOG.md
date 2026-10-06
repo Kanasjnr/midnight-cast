@@ -4,6 +4,7 @@
 
 
 ### New commands
+- `preflight [network] [--address <address>]` checks you can send a first transaction: the network answers and is in sync, the proof server answers at the version the matrix expects, and the wallet holds NIGHT registered for DUST generation. Unshielded addresses (`mn_addr_…`) are read from the indexer's per-address UTXO history; Cardano reward addresses use the `dust-status` query. When Midnight's examples have run on the network, it quotes how long a first wallet sync and a pre-seed restore took, and the faucet. It reads only, and the MCP server has it as the `preflight` tool
 - `agents init` prints the guidance that teaches an AI coding agent to use midnight-cast, or with `--write` adds it to the project's `AGENTS.md`, `CLAUDE.md` or `GEMINI.md`. Only a marked section is ever changed, and an existing file is changed only after confirmation or `--yes`
 - A portable agent skill, `skills/midnight-cast/SKILL.md`, installs with `npx skills add Kanasjnr/midnight-cast --skill midnight-cast`. It and the three snippets in `docs/agents/` are generated from one source (`npm run agent-files`), and a test fails if they drift. `docs/agents/EVALS.md` has diagnosis tasks for running the guidance in Claude Code, Codex and Gemini CLI
 - `contract <address> [network]` looks up a deployed contract: whether it exists, its latest action (deploy, call or update) and the circuit a call ran, the deploy transaction and block, unshielded balances, and the state's size and sha256 (`--state` for the full hex). The MCP server has it as the `contract` tool

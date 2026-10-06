@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/main/schemas/preflight.schema.json",
+  "title": "preflight data",
+  "description": "Whether a network, its proof server and optionally a wallet are ready before the first transaction. ready is true when every check passed.",
+  "type": "object",
+  "required": [
+    "network",
+    "ready",
+    "checks"
+  ],
+  "properties": {
+    "network": {
+      "type": "string"
+    },
+    "ready": {
+      "type": "boolean"
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "ok",
+          "detail"
+        ],
+        "properties": {
+          "name": {
+            "enum": [
+              "network",
+              "proof-server",
+              "wallet"
+            ]
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "detail": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "wallet": {
+      "type": "object",
+      "required": [
+        "address",
+        "kind",
+        "night"
+      ],
+      "properties": {
+        "address": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "unshielded",
+            "cardano"
+          ]
+        },
+        "night": {
+          "type": "string",
+          "description": "NIGHT held, in NIGHT (1 NIGHT = 1,000,000 STAR)"
+        },
+        "nightUtxos": {
+          "type": "integer"
+        },
+        "registeredUtxos": {
+          "type": "integer",
+          "description": "NIGHT UTXOs registered for DUST generation"
+        },
+        "complete": {
+          "type": "boolean",
+          "description": "false when the address's history couldn't be read before the timeout, so the totals may be short"
+        },
+        "registered": {
+          "type": "boolean",
+          "description": "Cardano reward addresses: registered for DUST generation"
+        },
+        "dust": {
+          "type": "string",
+          "description": "Cardano reward addresses: DUST generated so far, in DUST"
+        }
+      }
+    },
+    "expectations": {
+      "type": "object",
+      "required": [
+        "report",
+        "date"
+      ],
+      "description": "What Midnight's examples run on this network measured",
+      "properties": {
+        "report": {
+          "type": "string"
+        },
+        "date": {
+          "type": "string"
+        },
+        "coldSyncMinutes": {
+          "type": "number"
+        },
+        "restoreSeconds": {
+          "type": "string"
+        },
+        "faucet": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-05",
+  "updated": "2026-10-06",
   "reports": {
     "1.0.300": {
       "nodeVersion": "1.0.300",
@@ -26,7 +26,12 @@
           "title": "One RPC failure during the aggregate sweep"
         }
       ],
-      "url": "https://github.com/midnightntwrk/midnight-examples/blob/main/reports/node-1.0.300-regression.json"
+      "url": "https://github.com/midnightntwrk/midnight-examples/blob/main/reports/node-1.0.300-regression.json",
+      "faucet": "https://midnight-tmnight-preprod.nethermind.dev/",
+      "timings": {
+        "coldSyncMinutes": 78,
+        "restoreSeconds": "52"
+      }
     },
     "1.0.400": {
       "nodeVersion": "1.0.400",
@@ -62,7 +67,12 @@
           "title": "Official preprod indexer returned 503"
         }
       ],
-      "url": "https://github.com/midnightntwrk/midnight-examples/blob/main/reports/node-1.0.400-regression.json"
+      "url": "https://github.com/midnightntwrk/midnight-examples/blob/main/reports/node-1.0.400-regression.json",
+      "faucet": "https://midnight-tmnight-preprod.nethermind.dev/",
+      "timings": {
+        "coldSyncMinutes": 67,
+        "restoreSeconds": "105-123"
+      }
     }
   }
 }

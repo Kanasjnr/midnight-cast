@@ -25,6 +25,10 @@ export interface ExamplesReport {
   verdict?: string;
   knownIssues: Array<{ severity: string; title: string }>;
   url: string;
+  /** The faucet the run funded its wallets from. */
+  faucet?: string;
+  /** How long wallets took in the run: a first sync from genesis, and a restore from the pre-seed bundle. */
+  timings?: { coldSyncMinutes?: number; restoreSeconds?: string };
 }
 
 export interface ExamplesVerdict {
@@ -52,6 +56,8 @@ export function summarizeReport(json: unknown): ExamplesReport {
     run?: { date?: unknown; network?: unknown };
     result?: Record<string, unknown>;
     issues?: Array<{ severity?: unknown; title?: unknown }>;
+    environment?: { faucet?: unknown };
+    performance?: { coldSyncBaselineMinutes?: unknown; walletBringUpSeconds?: { restore?: unknown } };
   };
   const nodeVersion = str(report?.subjectUnderTest?.version);
   const date = str(report?.run?.date);
@@ -64,6 +70,15 @@ export function summarizeReport(json: unknown): ExamplesReport {
   const [total, suitesPassed, suitesFailed, testsPassed, testsFailed] = counts as number[];
   const runtimeSpecVersion = num(report.subjectUnderTest?.runtimeSpecVersion);
   const verdict = str(result.verdict);
+  const faucet = str(report.environment?.faucet);
+  const coldSyncMinutes = num(report.performance?.coldSyncBaselineMinutes);
+  // Reports give the restore time as a number or a range such as "105-123".
+  const restore = report.performance?.walletBringUpSeconds?.restore;
+  const restoreSeconds = num(restore) !== undefined ? String(restore) : str(restore);
+  const timings = {
+    ...(coldSyncMinutes !== undefined ? { coldSyncMinutes } : {}),
+    ...(restoreSeconds ? { restoreSeconds } : {}),
+  };
   return {
     nodeVersion,
     ...(runtimeSpecVersion !== undefined ? { runtimeSpecVersion } : {}),
@@ -76,6 +91,8 @@ export function summarizeReport(json: unknown): ExamplesReport {
       .map((i) => ({ severity: str(i?.severity) ?? "unknown", title: str(i?.title) ?? "" }))
       .filter((i) => i.title),
     url: reportUrl(nodeVersion),
+    ...(faucet ? { faucet } : {}),
+    ...(Object.keys(timings).length ? { timings } : {}),
   };
 }
 
@@ -197,7 +214,7 @@ export async function examplesVerdict(
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 /** "30 Sep 2026" from "2026-09-30", whatever the locale; anything else as it is. */
-function formatDate(date: string): string {
+export function formatDate(date: string): string {
   const [year, month, day] = date.split("-").map(Number);
   return year && month && day && month >= 1 && month <= 12 ? `${day} ${MONTHS[month - 1]} ${year}` : date;
 }
