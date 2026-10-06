@@ -224,6 +224,14 @@ describe("live-check classify", () => {
     expect(classify(base).status).toBe("clean");
   });
 
+  it("doesn't call a newer proof-server patch drift or lag", () => {
+    const base = input();
+    base.versions!.data!.checks[2] = { label: "proof-server", expected: "8.1.0", live: "8.1.3", ok: true };
+    const result = classify(base);
+    expect(result.status).toBe("clean");
+    expect(result.findings.filter((f) => f.component === "proofServer")).toEqual([]);
+  });
+
   it("reports upstream lag as info only", () => {
     const base = input();
     const result = classify({
