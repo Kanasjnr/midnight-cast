@@ -163,7 +163,7 @@ midnight-cast preflight preprod --proof-server http://127.0.0.1:6300 --address s
 **Checks:**
 
 - **network:** the RPC and indexer answer, and the indexer is within the lag threshold of the node, as `health` measures it.
-- **proof server:** it answers at the configured URL (`--proof-server`, or `proof_server` in `config.toml`) and runs the version the support matrix expects. A server on the wrong version is reported as such, not as unreachable. Unlike `health`, a missing proof server fails, because a transaction can't be proved without one.
+- **proof server:** it answers at the configured URL (`--proof-server`, or `proof_server` in `config.toml`) and runs the version the support matrix expects, or a newer patch of it. A server on the wrong version is reported as such, not as unreachable. Unlike `health`, a missing proof server fails, because a transaction can't be proved without one.
 - **wallet**, with `--address`:
   - For an unshielded address, the indexer replays the address's transactions until it has caught up. The check then counts the NIGHT UTXOs it holds now, and how many are registered for DUST generation. NIGHT is the unshielded token type `00…00` (`UnshieldedTokenType(HashOutput([0u8; 32]))` in midnight-ledger), shown in NIGHT at 1,000,000 STAR each.
   - With no NIGHT, it points at the faucet. With NIGHT but none registered for DUST, it says the wallet can't pay fees until it registers. DUST builds up after registration, so a wallet registered moments ago may still need to wait.
@@ -243,7 +243,7 @@ midnight-cast versions preprod --project-dir ~/code/my-dapp
 | `--project-dir <dir>` | Check the project in this directory instead of the current one |
 | `--refresh-matrix` | Fetch Midnight's published matrix and the examples report even if the cached copies are fresh (also on `health`) |
 
-**Live checks:** node `system_version` against the matrix minimum (`>=minNode`; exact match for rows without one), node runtime `specVersion` against the matrix `runtimeSpec`, indexer API path (`v4`), RPC `specVersion` vs indexer `protocolVersion`, and proof server `GET /version` when a URL is configured. A minimum rather than an exact node version is used because different operators run different compatible builds: on 2 October 2026 Midnight's endpoints reported node 1.0.400 and Blockfrost's mainnet node 2.1.0, both on runtime 1000300.
+**Live checks:** node `system_version` against the matrix minimum (`>=minNode`; exact match for rows without one), node runtime `specVersion` against the matrix `runtimeSpec`, indexer API path (`v4`), RPC `specVersion` vs indexer `protocolVersion`, and proof server `GET /version` when a URL is configured. The proof server passes on the matrix's version or a newer patch of it: 8.1.3 passes where the matrix lists 8.1.0, since patches carry fixes (8.1.3 has ledger 8.1.3's security fix), while 8.0.x, 8.2 and 9.0 don't. A minimum rather than an exact node version is used because different operators run different compatible builds: on 2 October 2026 Midnight's endpoints reported node 1.0.400 and Blockfrost's mainnet node 2.1.0, both on runtime 1000300.
 
 **Reference only:** ledger, indexer package version, and on-chain runtime are shown for manual comparison.
 
