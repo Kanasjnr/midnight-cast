@@ -69,6 +69,7 @@ describe("decode --raw recognises messages from current tooling", () => {
       expect.objectContaining({ code: 182, name: "TransactionApplicationError", relatedHint: expect.stringContaining("#1788979") }),
     ]);
     expect(result.next).toContain("midnight-cast versions mainnet");
+    expect(decodeRaw("Invalid(Custom(182))", "preprod").decodings[0]).not.toHaveProperty("relatedHint");
   });
 
   it("deserialization codes note the stricter encoding of ledgers 8.1.2 and 8.1.3", () => {
