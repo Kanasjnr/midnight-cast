@@ -362,3 +362,114 @@ export function wsFailure(err: unknown, url?: string): NetworkError {
     kind === "timeout" ? wsTimeoutHint() : undefined,
   );
 }
+
+export interface UnshieldedUtxo {
+  tokenType: string;
+  value: string;
+  registeredForDustGeneration: boolean;
+  intentHash: string;
+  outputIndex: number;
+}
+
+export interface UnshieldedHoldings {
+  /** UTXOs the address holds now: created and not yet spent. */
+  utxos: UnshieldedUtxo[];
+  transactions: number;
+  /** False when the timeout came before the indexer caught up with the address's history. */
+  complete: boolean;
+}
+
+export const UNSHIELDED_SUBSCRIPTION = `
+  subscription UnshieldedUtxos($address: UnshieldedAddress!) {
+    unshieldedTransactions(address: $address) {
+      __typename
+      ... on UnshieldedTransaction {
+        transaction { id }
+        createdUtxos { tokenType value registeredForDustGeneration intentHash outputIndex }
+        spentUtxos { intentHash outputIndex }
+      }
+      ... on UnshieldedTransactionsProgress { highestTransactionId }
+    }
+  }
+`;
+
+type UnshieldedEvent =
+  | { __typename: "UnshieldedTransaction"; transaction: { id: number }; createdUtxos: UnshieldedUtxo[]; spentUtxos: Array<Pick<UnshieldedUtxo, "intentHash" | "outputIndex">> }
+  | { __typename: "UnshieldedTransactionsProgress"; highestTransactionId: number };
+
+/**
+ * The unshielded UTXOs an address holds. The indexer first says the highest transaction id
+ * for the address, then replays its transactions from the start, so this reads until it
+ * reaches that id (0 means none) or the timeout, whichever comes first.
+ */
+export async function unshieldedHoldings(
+  endpoints: Pick<NetworkEndpoints, "indexerWs">,
+  address: string,
+  { timeoutMs = 30_000 }: { timeoutMs?: number } = {},
+): Promise<UnshieldedHoldings> {
+  const held = new Map<string, UnshieldedUtxo>();
+  const key = (u: Pick<UnshieldedUtxo, "intentHash" | "outputIndex">) => `${u.intentHash}#${u.outputIndex}`;
+  let highest: number | undefined;
+  let transactions = 0;
+  let lastFailure: unknown;
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const { client, close } = createWsClient(endpoints.indexerWs, () => !settled, {
+      connecting: () => {},
+      connected: () => {
+        lastFailure = undefined;
+      },
+      error: (event) => {
+        lastFailure = event;
+      },
+      closed: () => {},
+    });
+    let unsubscribe = () => {};
+    const finish = (complete: boolean, err?: Error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      unsubscribe();
+      close();
+      if (err) reject(err);
+      else resolve({ utxos: [...held.values()], transactions, complete });
+    };
+    const timer = setTimeout(() => {
+      // Nothing at all is a failure; part of the history is a partial answer.
+      if (highest === undefined) finish(false, lastFailure ? wsFailure(lastFailure, endpoints.indexerWs) : subscriptionTimeout(false, false));
+      else finish(false);
+    }, timeoutMs);
+
+    unsubscribe = client.subscribe(
+      { query: UNSHIELDED_SUBSCRIPTION, variables: { address } },
+      {
+        next: (payload) => {
+          const event = (payload.data as { unshieldedTransactions?: UnshieldedEvent })?.unshieldedTransactions;
+          if (!event) return;
+          if (event.__typename === "UnshieldedTransactionsProgress") {
+            highest ??= event.highestTransactionId;
+            if (highest === 0) finish(true);
+            return;
+          }
+          transactions++;
+          for (const utxo of event.createdUtxos) held.set(key(utxo), utxo);
+          for (const utxo of event.spentUtxos) held.delete(key(utxo));
+          if (highest !== undefined && event.transaction.id >= highest) finish(true);
+        },
+        error: (err) =>
+          finish(
+            false,
+            Array.isArray(err)
+              ? new NetworkError(
+                  `Indexer rejected the query: ${err.map((e: { message?: string }) => e.message ?? String(e)).join("; ")}`,
+                  "graphql_error",
+                  "Indexer",
+                )
+              : wsFailure(err, endpoints.indexerWs),
+          ),
+        complete: () => finish(highest !== undefined),
+      },
+    );
+  });
+}
