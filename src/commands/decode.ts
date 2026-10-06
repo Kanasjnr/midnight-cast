@@ -95,7 +95,8 @@ function relatedNoteFor(code: string, network: string | undefined): RelatedNote 
       next: [{ command: `midnight-cast versions ${network ?? "<network>"}`, reason: "Compare the indexer version with the support matrix" }],
     };
   }
-  if (n === 182) {
+  // The halt is a mainnet sync bug, so other networks don't get the note.
+  if (n === 182 && (!network || network === "mainnet")) {
     return {
       hint:
         "If a node syncing mainnet from genesis stops at block #1788979 with this error (\"Intent TTL has expired\"), " +
