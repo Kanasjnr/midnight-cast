@@ -9,6 +9,7 @@ Start here for the shortest path:
 | Goal | Command |
 |------|---------|
 | Full stack health | `midnight-cast health preprod` |
+| Ready for a first transaction? | `midnight-cast preflight preprod --address mn_addr_preprod1…` |
 | Service reachability only | `midnight-cast ping preprod` |
 | Check indexer lag | `midnight-cast tip preprod` |
 | Check versions vs matrix | `midnight-cast versions preprod` |
@@ -141,6 +142,51 @@ Midnight's examples: 202 passed, 1 failed on node 1.0.400 (preprod, 30 Sep 2026)
 ```
 
 **Exit code:** `0` when RPC and indexer are up and optional CI flags pass. Version mismatches are **warnings** unless `--fail-on-mismatch` is set. Proof server failure does not fail health by itself.
+
+---
+
+## `midnight-cast preflight [network]`
+
+Checks that you can send a first transaction: the network, the proof server and, with `--address`, the wallet. Most people who get stuck before their first transaction on preprod or preview are stuck here, not in their code.
+
+```bash
+midnight-cast preflight preprod
+midnight-cast preflight preprod --address mn_addr_preprod1… --json
+midnight-cast preflight preprod --proof-server http://127.0.0.1:6300 --address stake_test1…
+```
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--address <address>` | none | The wallet to check: its Midnight unshielded address (`mn_addr_…`), or a Cardano reward address (`stake…`) for NIGHT held on Cardano |
+| `--timeout <ms>` | `30000` | How long to read the address's transactions |
+
+**Checks:**
+
+- **network:** the RPC and indexer answer, and the indexer is within the lag threshold of the node, as `health` measures it.
+- **proof server:** it answers at the configured URL (`--proof-server`, or `proof_server` in `config.toml`) and runs the version the support matrix expects. Unlike `health`, a missing proof server fails, because a transaction can't be proved without one.
+- **wallet**, with `--address`:
+  - For an unshielded address, the indexer replays the address's transactions until it has caught up. The check then counts the NIGHT UTXOs it holds now, and how many are registered for DUST generation. NIGHT is the unshielded token type `00…00` (`UnshieldedTokenType(HashOutput([0u8; 32]))` in midnight-ledger), shown in NIGHT at 1,000,000 STAR each.
+  - With no NIGHT, it points at the faucet. With NIGHT but none registered for DUST, it says the wallet can't pay fees until it registers.
+  - A busy address can take longer than `--timeout` to replay; the totals are then marked as possibly short.
+  - For a Cardano reward address it uses the same indexer query as `dust-status`.
+  - An address for another network is a usage error (exit `2`).
+
+**Expectations:** when Midnight's examples have run on this network (see [Midnight's examples](#midnights-examples)), the output quotes what that run measured: how long a new wallet's first sync took, and how long restoring one from their pre-seed bundle took. A first sync of over an hour on preprod is normal, not a hang. JSON has it as `expectations`, with the faucet the run used.
+
+Example output:
+
+```text
+Preflight: preprod
+
+  OK   network      the RPC and indexer answer, and the indexer is 2 blocks from the node
+  OK   proof server answers at https://proof-server.preprod.midnight.network and runs 8.1.0
+  FAIL wallet       no NIGHT at this address. Fund it from the faucet (https://midnight-tmnight-preprod.nethermind.dev/)
+
+Expect, from Midnight's examples run on preprod (30 Sep 2026): a new wallet's first sync took about 67 minutes; restoring one from a pre-seed bundle took 105-123 seconds.
+  https://github.com/midnightntwrk/midnight-examples/blob/main/reports/node-1.0.400-regression.json
+```
+
+**Exit code:** `0` when every check passes, `1` when any fails (the error lists them), `2` for an address it can't check. It only reads: no seeds, keys or transactions.
 
 ---
 
