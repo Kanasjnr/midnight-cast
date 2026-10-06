@@ -130,6 +130,23 @@ export function versionMatches(expected: string, live: string): boolean {
   return live === expected || live.startsWith(`${expected}-`);
 }
 
+/**
+ * Whether a proof server satisfies the version the matrix lists: that version, or a newer patch
+ * of the same major and minor. Patches carry fixes, such as 8.1.3's ledger security fix, so
+ * someone who upgraded shouldn't be told to go back.
+ */
+export function proofServerMatches(expected: string, live: string): boolean {
+  return versionMatches(expected, live) || isNewerPatch(expected, live);
+}
+
+/** "8.1.3" against "8.1.0": same major and minor, higher patch. */
+export function isNewerPatch(expected: string, live: string): boolean {
+  const core = (v: string) => /^(\d+)\.(\d+)\.(\d+)/.exec(v);
+  const e = core(expected);
+  const l = core(live);
+  return !!e && !!l && e[1] === l[1] && e[2] === l[2] && Number(l[3]) > Number(e[3]);
+}
+
 /** Compare dotted numeric versions, ignoring any "-suffix". */
 export function compareVersions(a: string, b: string): number {
   const parts = (v: string) => (v.split("-")[0] ?? v).split(".").map((n) => Number.parseInt(n, 10) || 0);
@@ -235,8 +252,10 @@ export function buildVersionChecks(
       label: "proof-server",
       expected: expected.proofServer,
       live: liveProofServer,
-      ok: versionMatches(expected.proofServer, liveProofServer),
-      note: "GET /version on configured proof server URL",
+      ok: proofServerMatches(expected.proofServer, liveProofServer),
+      note: isNewerPatch(expected.proofServer, liveProofServer)
+        ? `a newer patch than the matrix's ${expected.proofServer}; GET /version on configured proof server URL`
+        : "GET /version on configured proof server URL",
     });
   }
 

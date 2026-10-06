@@ -4,7 +4,7 @@ import {
   fetchProofServerVersion,
   proofServerBaseUrl,
 } from "../clients/proof-server.js";
-import { versionMatches } from "../lib/versions.js";
+import { isNewerPatch, proofServerMatches } from "../lib/versions.js";
 import { resolveNetwork, type ResolveFlags } from "../config.js";
 import { loadSupportMatrix } from "../lib/versions.js";
 import type { EmitResult, GlobalOptions } from "../output.js";
@@ -132,12 +132,14 @@ async function checkProofServer(
 
     const versionOk =
       expectedVersion === undefined ||
-      versionMatches(expectedVersion, liveVersion);
+      proofServerMatches(expectedVersion, liveVersion);
 
     const detail =
       expectedVersion !== undefined
         ? versionOk
-          ? `version=${liveVersion} (matches matrix ${expectedVersion})`
+          ? isNewerPatch(expectedVersion, liveVersion)
+            ? `version=${liveVersion} (newer patch than matrix ${expectedVersion})`
+            : `version=${liveVersion} (matches matrix ${expectedVersion})`
           : `version=${liveVersion} (expected ${expectedVersion})`
         : `version=${liveVersion}`;
 
