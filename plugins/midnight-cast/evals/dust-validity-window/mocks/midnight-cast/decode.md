@@ -37,9 +37,9 @@
         "fix": "Use fresher DUST",
         "docUrl": "https://docs.midnight.network/nodes/error-codes",
         "network": "preprod",
-        "ledger": "8.1.2",
-        "mapLedger": "8.1.2",
-        "networkLedger": "8.1.2",
+        "ledger": "8.1.3",
+        "mapLedger": "8.1.3",
+        "networkLedger": "8.1.3",
         "mapUpdated": "2026-10",
         "relatedHint": "Indexers before 4.3.5 could also reject the first transaction of a block with this error (fixed in 4.3.4 and 4.3.5). If only first-in-block transactions fail, check the indexer version."
       }
