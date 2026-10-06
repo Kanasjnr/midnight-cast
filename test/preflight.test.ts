@@ -1,0 +1,181 @@
+import { execFile } from "node:child_process";
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
+import { join } from "node:path";
+import { promisify } from "node:util";
+import { describe, expect, it } from "vitest";
+import { WebSocketServer } from "ws";
+import { unshieldedHoldings } from "../src/clients/indexer.js";
+import type { HealthReport, HealthUnreachable } from "../src/commands/health.js";
+import {
+  NIGHT_TOKEN_TYPE,
+  addressKind,
+  formatPreflightHuman,
+  formatUnits,
+  infrastructureChecks,
+  unshieldedWallet,
+} from "../src/commands/preflight.js";
+import { parseEnvelope } from "./schema.js";
+
+const execFileAsync = promisify(execFile);
+const CLOSED_PORT = "http://127.0.0.1:9";
+const ADDRESS = "mn_addr_preprod1rwk3px4llmgruwupgpteghcq6c6956eu3de9xtgs5f8mgcaw6rls0d5mz9";
+
+const utxo = (intentHash: string, value: string, registered = true, tokenType = NIGHT_TOKEN_TYPE) => ({
+  tokenType,
+  value,
+  registeredForDustGeneration: registered,
+  intentHash,
+  outputIndex: 0,
+});
+
+/** An indexer that answers the unshielded subscription with these events, the way graphql-transport-ws does. */
+async function fakeIndexer(events: unknown[]) {
+  const server = createServer();
+  const wss = new WebSocketServer({ server });
+  wss.on("connection", (socket) => {
+    socket.on("message", (raw) => {
+      const message = JSON.parse(String(raw)) as { type: string; id?: string };
+      if (message.type === "connection_init") socket.send(JSON.stringify({ type: "connection_ack" }));
+      if (message.type === "subscribe") {
+        for (const event of events) socket.send(JSON.stringify({ type: "next", id: message.id, payload: { data: { unshieldedTransactions: event } } }));
+      }
+    });
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  return {
+    indexerWs: `ws://127.0.0.1:${(server.address() as AddressInfo).port}`,
+    stop: () => {
+      for (const client of wss.clients) client.terminate();
+      wss.close();
+      server.close();
+    },
+  };
+}
+
+const progress = (highestTransactionId: number) => ({ __typename: "UnshieldedTransactionsProgress", highestTransactionId });
+const tx = (id: number, createdUtxos: unknown[], spentUtxos: unknown[] = []) => ({ __typename: "UnshieldedTransaction", transaction: { id }, createdUtxos, spentUtxos });
+
+describe("preflight", () => {
+  it("tells unshielded and Cardano addresses apart, and refuses another network's address", () => {
+    expect(addressKind(ADDRESS, "preprod")).toEqual({ kind: "unshielded", network: "preprod" });
+    expect(addressKind(ADDRESS, "preview")).toEqual({ error: `${ADDRESS} is a preprod address, not a preview one` });
+    expect(addressKind("stake_test1uqfu74w3wh4gfzu8m6e7j987h4lq9r3t7ef5gaw497uu85qsqfy27", "preprod")).toEqual({ kind: "cardano" });
+    expect(addressKind("0xabc", "preprod")).toHaveProperty("error");
+  });
+
+  it("shows atomic units in whole tokens", () => {
+    expect(formatUnits(12_500_000n, 1_000_000n, 6)).toBe("12.5");
+    expect(formatUnits(19_487_473n, 1_000_000n, 6)).toBe("19.487473");
+    expect(formatUnits(0n, 1_000_000n, 6)).toBe("0");
+  });
+
+  it("reads the network and proof server from health", () => {
+    const healthy = {
+      network: "preprod",
+      healthy: true,
+      services: [
+        { service: "rpc", status: "OK", latencyMs: 1 },
+        { service: "indexer", status: "OK", latencyMs: 1 },
+        { service: "proof-server", status: "OK", latencyMs: 1, optional: true },
+      ],
+      sync: { rpcHeight: 100, indexerHeight: 99, delta: 1, threshold: 100, inSync: true },
+      versions: { matrixUpdated: "2026-10", matrixStale: false, allOk: true, checks: [{ label: "proof-server", ok: true, expected: "8.1.0", live: "8.1.0" }] },
+    } as HealthReport;
+    expect(infrastructureChecks(healthy, "http://127.0.0.1:6300")).toEqual([
+      { name: "network", ok: true, detail: "the RPC and indexer answer, and the indexer is 1 block from the node" },
+      { name: "proof-server", ok: true, detail: "answers at http://127.0.0.1:6300 and runs 8.1.0" },
+    ]);
+    const oldProver = { ...healthy, versions: { ...healthy.versions, checks: [{ label: "proof-server", ok: false, expected: "8.1.0", live: "7.0.0" }] } };
+    expect(infrastructureChecks(oldProver, "http://127.0.0.1:6300")[1]).toEqual({ name: "proof-server", ok: false, detail: "runs 7.0.0, but preprod expects 8.1.0" });
+    expect(infrastructureChecks(healthy, undefined)[1]!.ok).toBe(false);
+    const lagging = { ...healthy, sync: { ...healthy.sync, indexerHeight: 0, delta: 100, inSync: false } };
+    expect(infrastructureChecks(lagging, "x")[0]).toMatchObject({ ok: false, detail: expect.stringContaining("100 blocks behind the node") });
+    const down: HealthUnreachable = {
+      network: "preprod",
+      healthy: false,
+      services: [
+        { service: "rpc", status: "FAIL", latencyMs: 1, detail: "RPC unreachable", errorKind: "refused" },
+        { service: "indexer", status: "OK", latencyMs: 1 },
+        { service: "proof-server", status: "FAIL", latencyMs: 1, optional: true, detail: "fetch failed" },
+      ],
+    };
+    expect(infrastructureChecks(down, "http://127.0.0.1:6300")).toEqual([
+      { name: "network", ok: false, detail: "RPC: RPC unreachable" },
+      { name: "proof-server", ok: false, detail: "not reachable at http://127.0.0.1:6300 (fetch failed). Start one" },
+    ]);
+  });
+
+  it("checks the wallet holds NIGHT that is registered for DUST", () => {
+    const faucet = "https://faucet.example";
+    expect(unshieldedWallet(ADDRESS, { utxos: [], transactions: 0, complete: true }, faucet).check).toEqual({
+      name: "wallet",
+      ok: false,
+      detail: `no NIGHT at this address. Fund it from the faucet (${faucet})`,
+    });
+    const unregistered = unshieldedWallet(ADDRESS, { utxos: [utxo("a", "5000000", false)], transactions: 1, complete: true }, faucet);
+    expect(unregistered.check).toMatchObject({ ok: false, detail: expect.stringContaining("5 NIGHT in 1 UTXO, none registered") });
+    const ready = unshieldedWallet(ADDRESS, { utxos: [utxo("a", "5000000"), utxo("b", "2500000", false), utxo("c", "9", true, "86".repeat(32))], transactions: 3, complete: true }, faucet);
+    expect(ready.check).toEqual({ name: "wallet", ok: true, detail: "7.5 NIGHT in 2 UTXOs, 1 registered for DUST generation" });
+    expect(ready.wallet).toMatchObject({ night: "7.5", nightUtxos: 2, registeredUtxos: 1, complete: true });
+    const partial = unshieldedWallet(ADDRESS, { utxos: [utxo("a", "1000000")], transactions: 40, complete: false }, undefined);
+    expect(partial.check.detail).toContain("read 40 transactions before the timeout");
+  });
+
+  it("follows an address's UTXOs until the indexer catches up", async () => {
+    const indexer = await fakeIndexer([progress(3), tx(1, [utxo("a", "1000000"), utxo("b", "2000000")]), tx(3, [utxo("c", "3000000")], [{ intentHash: "a", outputIndex: 0 }])]);
+    try {
+      const holdings = await unshieldedHoldings(indexer, ADDRESS, { timeoutMs: 5000 });
+      expect(holdings).toMatchObject({ transactions: 2, complete: true });
+      expect(holdings.utxos.map((u) => u.intentHash).sort()).toEqual(["b", "c"]);
+    } finally {
+      indexer.stop();
+    }
+  });
+
+  it("finishes at once for an address with no transactions, and reports a partial read at the timeout", async () => {
+    const empty = await fakeIndexer([progress(0)]);
+    const partial = await fakeIndexer([progress(5), tx(1, [utxo("a", "1000000")])]);
+    try {
+      expect(await unshieldedHoldings(empty, ADDRESS, { timeoutMs: 5000 })).toEqual({ utxos: [], transactions: 0, complete: true });
+      expect(await unshieldedHoldings(partial, ADDRESS, { timeoutMs: 300 })).toMatchObject({ transactions: 1, complete: false });
+    } finally {
+      empty.stop();
+      partial.stop();
+    }
+  });
+
+  it("says what to expect, and leaves the not-ready line to the error", () => {
+    const text = formatPreflightHuman({
+      network: "preprod",
+      ready: false,
+      checks: [{ name: "proof-server", ok: false, detail: "not reachable" }],
+      expectations: { report: "https://example/report", date: "2026-09-30", coldSyncMinutes: 67, restoreSeconds: "105-123" },
+    });
+    expect(text).toContain("FAIL proof server not reachable");
+    expect(text).toContain("Expect, from Midnight's examples run on preprod (30 Sep 2026): a new wallet's first sync took about 67 minutes; restoring one from a pre-seed bundle took 105-123 seconds.");
+    expect(text).not.toContain("Ready.");
+  });
+
+  it("reports what's down when the network can't be reached, and refuses a bad address before any request", async () => {
+    const cli = join(process.cwd(), "dist", "cli.js");
+    const run = async (args: string[]) => {
+      try {
+        const { stdout } = await execFileAsync("node", [cli, ...args], { timeout: 20000 });
+        return { stdout, code: 0 };
+      } catch (err) {
+        const e = err as { stdout?: string; code?: number };
+        return { stdout: e.stdout ?? "", code: e.code ?? 1 };
+      }
+    };
+    const down = await run(["preflight", "preprod", "--json", "--offline", "--rpc", CLOSED_PORT, "--indexer-http", CLOSED_PORT, "--proof-server", CLOSED_PORT]);
+    expect(down.code).toBe(1);
+    const envelope = parseEnvelope(down.stdout) as { error: { message: string }; data: { ready: boolean; checks: Array<{ name: string; ok: boolean }> } };
+    expect(envelope.data.ready).toBe(false);
+    expect(envelope.data.checks.map((c) => [c.name, c.ok])).toEqual([["network", false], ["proof-server", false]]);
+    expect(envelope.error.message).toBe("Not ready: network, proof server");
+    const bad = await run(["preflight", "preprod", "--json", "--address", "0xabc", "--rpc", CLOSED_PORT]);
+    expect(bad.code).toBe(2);
+    expect(JSON.parse(bad.stdout)).toMatchObject({ ok: false, error: { kind: "usage" } });
+  }, 30_000);
+});
