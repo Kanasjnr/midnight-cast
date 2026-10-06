@@ -139,6 +139,8 @@ describe("schemas", () => {
       ["decode", "--raw", "Invalid project token. ENOTFOUND indexer.mainnet.midnight.network"],
       ["explain", "dust"],
       ["explain"],
+      ["examples"],
+      ["examples", "dust", "sponsorship"],
       ["config", "show", "--network", "preprod"],
     ]) {
       expect((await runJson(args)).code, args.join(" ")).toBe(0);

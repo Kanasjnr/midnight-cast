@@ -20,6 +20,7 @@ import { contractCommand } from "./commands/contract.js";
 import { agentsInitCommand } from "./commands/agents.js";
 import { dustStatusCommand } from "./commands/dust-status.js";
 import { preflightCommand } from "./commands/preflight.js";
+import { examplesCommand } from "./commands/examples.js";
 import { versionsCommand } from "./commands/versions.js";
 import type { ResolveFlags } from "./config.js";
 import { normalizeArgv } from "./lib/argv.js";
@@ -500,6 +501,13 @@ program
   .description("Static help (e.g. explain dust); with --json and no topic, a catalog of every command")
   .action(async (topic: string | undefined, _opts, cmd) => {
     await run(async () => explainCommand(topic, globalOpts(cmd), () => buildCatalog(program, TOPICS)), cmd);
+  });
+
+program
+  .command("examples [topic...]")
+  .description("Midnight's official examples: list them, or find the code that shows a topic (e.g. examples dust sponsorship)")
+  .action(async (topic: string[], _opts, cmd) => {
+    await run(async () => examplesCommand(topic.join(" "), globalOpts(cmd)), cmd);
   });
 
 program
