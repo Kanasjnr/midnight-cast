@@ -196,6 +196,9 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: npm run examples-reports -- --check
 
+      - name: Check the examples index against its pinned commit, and note if midnight-examples moved on
+        run: npm run examples-index -- --check
+
   response-shapes:
     name: Response shapes (preview, preprod, mainnet)
     if: github.event_name != 'workflow_dispatch' || inputs.network == 'all'
