@@ -114,10 +114,11 @@ describe("explain --json catalog", () => {
     expect(names).not.toContain("config");
     expect(Object.keys(catalog.exitCodes)).toEqual(["0", "1", "2"]);
     expect(catalog.errorKinds).toHaveProperty("usage");
-    for (const name of names) {
-      const { stdout } = await execFileAsync("node", [cli, ...name.split(" "), "--help"], { timeout: 15000 });
-      expect(stdout, name).toContain("Usage:");
-    }
+    // In parallel: one process per command, run one by one, outgrows the timeout on a busy machine.
+    const helps = await Promise.all(
+      names.map(async (name) => ({ name, ...(await execFileAsync("node", [cli, ...name.split(" "), "--help"], { timeout: 30000 })) })),
+    );
+    for (const { name, stdout } of helps) expect(stdout, name).toContain("Usage:");
     for (const topic of catalog.topics) {
       expect((await runJson(["explain", topic])).code, topic).toBe(0);
     }
