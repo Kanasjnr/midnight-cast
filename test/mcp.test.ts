@@ -105,7 +105,7 @@ describe("MCP server", () => {
     expect(client.getInstructions()).toMatch(/call decode with the whole message first/);
   });
 
-  it("lists thirteen read-only tools with typed inputs and the envelope as output", async () => {
+  it("lists fourteen read-only tools with typed inputs and the envelope as output", async () => {
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual(
       [
@@ -115,6 +115,7 @@ describe("MCP server", () => {
         "dust_event",
         "dust_events",
         "dust_status",
+        "examples",
         "explain",
         "health",
         "ping",
@@ -234,8 +235,11 @@ describe("MCP server", () => {
     expect(resources.map((r) => r.uri).sort()).toEqual([
       "midnight-cast://catalog",
       "midnight-cast://error-codes",
+      "midnight-cast://examples",
       "midnight-cast://support-matrix",
     ]);
+    const examples = await client.readResource({ uri: "midnight-cast://examples" });
+    expect(JSON.parse((examples.contents[0] as { text: string }).text)).toMatchObject({ repo: "midnightntwrk/midnight-examples" });
     const matrix = await client.readResource({ uri: "midnight-cast://support-matrix" });
     expect(JSON.parse((matrix.contents[0] as { text: string }).text).networks.preprod).toBeDefined();
     const codes = await client.readResource({ uri: "midnight-cast://error-codes" });

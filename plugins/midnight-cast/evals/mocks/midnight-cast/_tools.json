@@ -1976,6 +1976,142 @@
         "idempotentHint": true,
         "openWorldHint": false
       }
+    },
+    {
+      "name": "examples",
+      "title": "midnight-cast examples",
+      "description": "Working code from Midnight's official examples (midnightntwrk/midnight-examples), each compiled and tested in CI. Give a topic such as \"DUST sponsorship\", \"send shielded tokens\" or \"verify a signature in a circuit\" to get the examples that show it, with file paths, line ranges, links pinned to a commit and the code itself. Without a topic, lists every example and what it covers. Prefer these over writing Midnight code from memory.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "topic": {
+            "description": "What the code should show; omit to list every example",
+            "type": "string"
+          }
+        },
+        "$schema": "https://json-schema.org/draft/2020-12/schema"
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "schemaVersion": {
+            "type": "number",
+            "const": 1
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "command": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "network": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "data": {},
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "message": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "hint": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "message",
+                  "kind",
+                  "hint"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "next": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "command": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "tool": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "arguments": {
+                      "type": "object",
+                      "propertyNames": {
+                        "type": "string"
+                      },
+                      "additionalProperties": {}
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "arguments"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "command",
+                "reason"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "schemaVersion",
+          "ok",
+          "command",
+          "network",
+          "data",
+          "warnings",
+          "error",
+          "next"
+        ],
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
     }
   ]
 }
