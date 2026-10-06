@@ -40,6 +40,7 @@
     "live-check": "tsx scripts/live-check.ts",
     "error-codes": "tsx scripts/error-code-parity.ts",
     "examples-reports": "tsx scripts/examples-reports.ts",
+    "examples-index": "tsx scripts/examples-index.ts",
     "fixtures": "tsx scripts/record-fixtures.ts",
     "smoke:tarball": "tsx scripts/smoke-tarball.ts",
     "agent-files": "tsx scripts/agent-files.ts"
