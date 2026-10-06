@@ -23,7 +23,7 @@ Each finding is classified, and the classification decides what happens:
 | Finding | Meaning | Scheduled run | Release PR |
 | --- | --- | --- | --- |
 | outage | A required service still failed after three attempts | Job fails, issue opened | Blocks |
-| bundled-drift | The live network doesn't satisfy the bundled matrix: node below `minNode`, a different runtime spec, a different proof server, or an unexpected indexer API (the same checks `midnight-cast versions` runs) | Issue opened | Blocks |
+| bundled-drift | The live network doesn't satisfy the bundled matrix: node below `minNode`, a different runtime spec, a proof server other than the bundled version or a newer patch of it, or an unexpected indexer API (the same checks `midnight-cast versions` runs) | Issue opened | Blocks |
 | upstream-ahead | Midnight's matrix lists a different indexer, on-chain runtime or compact runtime than the bundled one (components the endpoints don't reveal) | Issue opened | Blocks |
 | upstream-differs | Midnight's matrix lists a different node or proof server than the bundled one. These are checked against the live network instead, and Midnight can list versions a network doesn't run yet, or that have no public release | Reported only | Reported only |
 | protocol-split | Node and indexer disagree on the protocol version | Issue opened | Blocks |
