@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  isNewerPatch,
+  proofServerMatches,
   loadSupportMatrix,
   buildVersionChecks,
   buildLocalPackageChecks,
@@ -217,6 +219,14 @@ describe("minimum node and runtime spec", () => {
     for (const network of ["preview", "preprod", "mainnet"]) {
       expect(bundled.networks[network], network).toMatchObject({ minNode: "1.0.400", ledger: "8.1.3", minNodeReason: expect.stringContaining("GHSA-wr7g-rr4v-jmj8") });
     }
+  });
+
+  it("accepts the proof server the matrix lists or a newer patch of it", () => {
+    for (const live of ["8.1.0", "8.1.0-abc", "8.1.3", "8.1.4-rc.1"]) expect(proofServerMatches("8.1.0", live), live).toBe(true);
+    for (const live of ["8.0.3", "8.2.0", "9.0.0", "7.9.9"]) expect(proofServerMatches("8.1.0", live), live).toBe(false);
+    expect(isNewerPatch("8.1.0", "8.1.0")).toBe(false);
+    const check = buildVersionChecks({ ...row, proofServer: "8.1.0" }, live("1.0.400"), "8.1.3").find((c) => c.label === "proof-server");
+    expect(check).toMatchObject({ ok: true, note: expect.stringContaining("a newer patch than the matrix's 8.1.0") });
   });
 
   it("checks the runtime spec exactly", () => {

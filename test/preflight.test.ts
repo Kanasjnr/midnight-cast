@@ -106,6 +106,11 @@ describe("preflight", () => {
       "not reachable at http://127.0.0.1:6300 (fetch failed). Start one running 8.1.0, the version preprod expects",
     );
     expect(proofServerCheck([ok("proof-server", "8.1.0")], "http://127.0.0.1:6300", "8.1.0", "preprod")).toMatchObject({ ok: true });
+    expect(proofServerCheck([ok("proof-server", "8.1.3")], "http://127.0.0.1:6300", "8.1.0", "preprod")).toEqual({
+      name: "proof-server",
+      ok: true,
+      detail: "answers at http://127.0.0.1:6300 and runs 8.1.3, a newer patch than the 8.1.0 preprod lists",
+    });
     expect(proofServerCheck([ok("proof-server", "1.2.3")], "http://127.0.0.1:6300", undefined, "local")).toMatchObject({ ok: true });
     expect(proofServerCheck([], undefined, "8.1.0", "mainnet")).toMatchObject({ ok: false, detail: expect.stringContaining("no proof server configured") });
   });
