@@ -18,7 +18,7 @@
         "id": "unsupported-block-version",
         "name": "UnsupportedBlockVersion",
         "description": "The tool reading the chain doesn't know runtime 1.0.300 (spec_version 1000300), which Preview, Preprod and Mainnet run. Toolkit 1.0.0 and node 1.0.2 can't read its blocks.",
-        "fix": "Upgrade the node and toolkit to 1.0.300 or newer."
+        "fix": "Upgrade the node and toolkit to 1.0.400, which Preview, Preprod and Mainnet run on runtime 1.0.300."
       }
     ]
   },
