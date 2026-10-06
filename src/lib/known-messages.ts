@@ -30,7 +30,7 @@ const PATTERNS: Pattern[] = [
             : `The tool reading the chain doesn't know runtime spec_version ${spec}.`,
         fix:
           spec === CURRENT_SPEC_VERSION
-            ? "Upgrade the node and toolkit to 1.0.300 or newer."
+            ? "Upgrade the node and toolkit to 1.0.400, which Preview, Preprod and Mainnet run on runtime 1.0.300."
             : "Upgrade the node, toolkit or indexer to a release that supports this runtime.",
         next: [{ command: "midnight-cast versions <network>", reason: "See which versions the network expects" }],
       };

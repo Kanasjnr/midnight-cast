@@ -11,7 +11,7 @@ describe("decode --raw recognises messages from current tooling", () => {
   it("UnsupportedBlockVersion from toolkit 1.0.0 on runtime 1.0.300", () => {
     const result = decodeRaw("Error: UnsupportedBlockVersion(1000300)", "preprod");
     expect(result.decodings).toEqual([
-      expect.objectContaining({ kind: "message", id: "unsupported-block-version", fix: "Upgrade the node and toolkit to 1.0.300 or newer." }),
+      expect.objectContaining({ kind: "message", id: "unsupported-block-version", fix: "Upgrade the node and toolkit to 1.0.400, which Preview, Preprod and Mainnet run on runtime 1.0.300." }),
     ]);
     expect(result.next).toEqual(["midnight-cast versions preprod"]);
   });
@@ -63,9 +63,18 @@ describe("decode --raw recognises messages from current tooling", () => {
     expect(result.next).toContain("midnight-cast versions preprod");
   });
 
-  it("deserialization codes note ledger 8.1.2's stricter encoding", () => {
+  it("TransactionApplicationError notes the node 1.0.300 mainnet sync halt", () => {
+    const result = decodeRaw("Transaction(3) failed due to Invalid(Custom(182)). Aborting the rest of the block execution.", "mainnet");
+    expect(result.decodings).toEqual([
+      expect.objectContaining({ code: 182, name: "TransactionApplicationError", relatedHint: expect.stringContaining("#1788979") }),
+    ]);
+    expect(result.next).toContain("midnight-cast versions mainnet");
+  });
+
+  it("deserialization codes note the stricter encoding of ledgers 8.1.2 and 8.1.3", () => {
     const result = decodeRaw("1010: Invalid Transaction: Custom error: 1");
     expect(result.decodings[1]).toMatchObject({ code: 1, relatedHint: expect.stringContaining("8.1.2") });
+    expect(result.decodings[1]).toMatchObject({ relatedHint: expect.stringContaining("Since ledger 8.1.3 (node 1.0.400)") });
   });
 
   it("reads \"ledger N\" as a code only when the text says it is one", () => {
