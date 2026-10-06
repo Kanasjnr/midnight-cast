@@ -95,10 +95,21 @@ function relatedNoteFor(code: string, network: string | undefined): RelatedNote 
       next: [{ command: `midnight-cast versions ${network ?? "<network>"}`, reason: "Compare the indexer version with the support matrix" }],
     };
   }
+  // The halt is a mainnet sync bug, so other networks don't get the note.
+  if (n === 182 && (!network || network === "mainnet")) {
+    return {
+      hint:
+        "If a node syncing mainnet from genesis stops at block #1788979 with this error (\"Intent TTL has expired\"), " +
+        "that's a known bug in node 1.0.300 (midnight-node#2229), fixed in node 1.0.400: upgrade, and the node resumes without a resync.",
+      next: [{ command: `midnight-cast versions ${network ?? "<network>"}`, reason: "Compare the node version with the support matrix" }],
+    };
+  }
   if (n >= 0 && n <= 11) {
     return {
       hint:
         "Since ledger 8.1.2 the node rejects non-canonical encodings and values that break their type's rules. " +
+        "Since ledger 8.1.3 (node 1.0.400), contract call transcripts must also hold canonical field values (below the field order) and no `noop 0`; " +
+        "compactc and midnight-js never produce these, so a hand-built or modified transaction is the usual cause. " +
         "Make sure the ledger and SDK packages that built this match the network.",
       next: [{ command: "midnight-cast explain versions", reason: "Which package versions the network expects" }],
     };

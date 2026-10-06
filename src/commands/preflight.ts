@@ -9,7 +9,7 @@ import { checkEndpoints, narrowDown } from "../lib/next-steps.js";
 import { settle } from "../lib/settle.js";
 import { inMcpCall } from "../lib/surface.js";
 import { resolveSupportMatrix } from "../lib/upstream-matrix.js";
-import { fetchLiveVersions, versionMatches } from "../lib/versions.js";
+import { fetchLiveVersions, isNewerPatch, proofServerMatches } from "../lib/versions.js";
 import type { EmitResult, GlobalOptions, NextStep } from "../output.js";
 import { fail } from "../output.js";
 import { runServiceChecks, type ServiceResult } from "./ping.js";
@@ -127,13 +127,14 @@ export function proofServerCheck(services: ServiceResult[], url: string | undefi
   }
   const row = services.find((s) => s.service === "proof-server");
   // ping marks a wrong version FAIL as well; a version means it answered.
-  if (row?.version && expected && !versionMatches(expected, row.version)) {
+  if (row?.version && expected && !proofServerMatches(expected, row.version)) {
     return { name: "proof-server", ok: false, detail: `answers at ${url} but runs ${row.version}; ${network} expects ${expected}` };
   }
   if (!row || (row.status !== "OK" && !row.version)) {
     return { name: "proof-server", ok: false, detail: `not reachable at ${url}${row?.detail ? ` (${row.detail})` : ""}. Start one${runs}` };
   }
-  return { name: "proof-server", ok: true, detail: `answers at ${url}${row.version ? ` and runs ${row.version}` : ""}` };
+  const newer = row.version && expected && isNewerPatch(expected, row.version) ? `, a newer patch than the ${expected} ${network} lists` : "";
+  return { name: "proof-server", ok: true, detail: `answers at ${url}${row.version ? ` and runs ${row.version}${newer}` : ""}` };
 }
 
 /** The wallet check for a Midnight unshielded address, from the UTXOs it holds. */

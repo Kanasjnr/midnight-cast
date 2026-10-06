@@ -39,6 +39,10 @@
         "minNode": {
           "type": "string"
         },
+        "minNodeReason": {
+          "type": "string",
+          "description": "Why a node older than minNode falls short"
+        },
         "runtimeSpec": {
           "type": "integer"
         },

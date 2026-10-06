@@ -101,7 +101,7 @@ Example output:
 
 ```text
 Checks:
-  node: expected=>=1.0.300 live=1.0.400 → OK (recommended 1.0.300)
+  node: expected=>=1.0.400 live=1.0.400 → OK (recommended 1.0.400)
   runtimeSpec: expected=1000300 live=1000300 → OK (node runtime spec_version vs matrix)
   indexer-api: expected=v4 live=v4 → OK (from configured indexer URL path)
   protocolVersion: expected=1000300 live=1000300 → OK (RPC specVersion vs indexer latest block)
