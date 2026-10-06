@@ -25,6 +25,7 @@ import {
   type UpstreamMatrix,
 } from "../src/lib/upstream-matrix.js";
 import {
+  proofServerMatches,
   versionMatches,
   type MatrixNetwork,
   type SupportMatrixFile,
@@ -295,7 +296,9 @@ export function classify(input: ClassifyInput): CheckResult {
         );
       }
       const seen = live[key];
-      if (seen && !versionMatches(up, seen)) {
+      // A newer proof-server patch than upstream lists isn't lag.
+      const matches = key === "proofServer" ? proofServerMatches : versionMatches;
+      if (seen && !matches(up, seen)) {
         add("upstream-lag", key, `live ${seen}, upstream matrix ${up}`, { live: seen, upstream: up });
       }
     }
