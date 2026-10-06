@@ -3,6 +3,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { join } from "node:path";
 import { parseEnvelope } from "./schema.js";
+import { loadSupportMatrix } from "../src/lib/versions.js";
 
 const execFileAsync = promisify(execFile);
 const integration = process.env.INTEGRATION === "1";
@@ -111,9 +112,11 @@ describe.skipIf(!integration)("smoke (live preview)", () => {
     };
     expect(parsed.data.name).toBe("InvalidDustSpendProof");
     expect(parsed.data.network).toBe("preview");
-    expect(parsed.data.ledger).toBe("8.1.2");
+    // Read from the matrix rather than pinned, so a ledger upgrade doesn't break the smoke run.
+    const ledger = loadSupportMatrix().networks.preview!.ledger;
+    expect(parsed.data.ledger).toBe(ledger);
     expect(
       (parsed.data as { networkLedger?: string }).networkLedger,
-    ).toBe("8.1.2");
+    ).toBe(ledger);
   });
 });
