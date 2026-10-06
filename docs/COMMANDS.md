@@ -130,7 +130,7 @@ Sync:
 
 Versions:
   Matrix updated:  2026-10
-  node: OK (expected >=1.0.300, live 1.0.400)
+  node: OK (expected >=1.0.400, live 1.0.400)
   runtimeSpec: OK (expected 1000300, live 1000300)
   indexer-api: OK (expected v4, live v4)
   protocolVersion: OK (expected 1000300, live 1000300)
@@ -271,7 +271,7 @@ Example output:
 
 ```text
 Checks:
-  node: expected=>=1.0.300 live=1.0.400 → OK (recommended 1.0.300)
+  node: expected=>=1.0.400 live=1.0.400 → OK (recommended 1.0.400)
   runtimeSpec: expected=1000300 live=1000300 → OK (node runtime spec_version vs matrix)
   indexer-api: expected=v4 live=v4 → OK (from configured indexer URL path)
   protocolVersion: expected=1000300 live=1000300 → OK (RPC specVersion vs indexer latest block)
@@ -414,7 +414,7 @@ Auto-detects and decodes everything it finds in one pasted error:
 
 Hex codes need the `0x` prefix, "ledger N" counts only as "ledger error N" or "ledger code N", and single-word ledger names such as `Transaction` aren't matched in free text, since they also appear in ordinary error messages ("Invalid Transaction").
 
-Some ledger codes carry a related hint. `OutOfDustValidityWindow` (171) notes the indexer bug fixed in 4.3.4 and 4.3.5, which rejected the first transaction of a block. The deserialization codes (0–11) note that ledger 8.1.2 rejects non-canonical encodings.
+Some ledger codes carry a related hint. `OutOfDustValidityWindow` (171) notes the indexer bug fixed in 4.3.4 and 4.3.5, which rejected the first transaction of a block. `TransactionApplicationError` (182) notes the node 1.0.300 bug that halts a fresh mainnet sync at block #1788979, fixed in node 1.0.400. The deserialization codes (0–11) note that ledger 8.1.2 rejects non-canonical encodings, and that ledger 8.1.3 (node 1.0.400) also rejects contract call transcripts with non-canonical field values or `noop 0`.
 
 ### Shorthand
 

@@ -53,6 +53,7 @@
 - Live check: node and proof-server numbers in Midnight's matrix that differ from the bundled ones are reported as `upstream-differs` (info), since those components are checked against the live network
 
 ### Support matrix
+- Node 1.0.400, now publicly released, is the recommended and minimum node on preview, preprod and mainnet, and the networks' ledger is 8.1.3. 1.0.400 carries the fix for the critical ledger advisory GHSA-wr7g-rr4v-jmj8, and nodes on ledger 8.1.2 disagree with the network about which contract calls are valid. A node below the minimum now fails `versions` and `health` with that reason, which the matrix row holds (`minNodeReason`). The error map is checked against node-1.0.400 and is unchanged. Project package pins stay as they were: Midnight.js 4.1.1 still builds on ledger 8.1.0, and the release notes say DApps have nothing to change
 - `versions`, `matrix` and `health` judge against Midnight's published support matrix (`midnightntwrk/midnight-docs`), fetched with a 3-second timeout and cached for six hours in `~/.cache/midnight-cast/`, so they stay current between releases. It updates the indexer, on-chain runtime and Compact runtime; node, proof server, runtime `spec_version`, ledger and indexer API stay as bundled, since those are checked live or aren't in the published file. A local `support-matrix.json` override still comes first, and the bundled matrix is used when offline or when nothing can be fetched
 - The output says which matrix was used (`Matrix:` line, `matrixSource` in JSON), and shows disagreements inside the published file, such as mainnet's node `tag` 1.0.400 against `containerTag` 1.0.300, as notes (`matrixNotes`)
 - `--offline` (or `MN_OFFLINE=1`) uses the bundled matrix; `--refresh-matrix` refetches even with a fresh cache
@@ -60,6 +61,7 @@
 - The published-matrix parser is shared by the CLI and the live check, which runs the CLI with `--offline` so it still judges the matrix that ships
 
 ### Decode
+- `Custom(182)` notes that a fresh mainnet sync on node 1.0.300 halts at block #1788979 with it (midnight-node#2229), and that node 1.0.400 resumes without a resync. The deserialization codes (0–11) also note ledger 8.1.3's rejection of non-canonical field values and `noop 0` in contract call transcripts. `UnsupportedBlockVersion(1000300)` now says to upgrade to node and toolkit 1.0.400
 - `decode --raw` recognises messages from current tooling and explains them, with `kind: "message"` and a `next` step: `UnsupportedBlockVersion(1000300)` from toolkit 1.0.0 or node 1.0.2 (upgrade to 1.0.300), Blockfrost's missing and invalid project token responses, the retired mainnet hosts, and output from Compact 0.35 / Compact runtime 0.20, which target ledger 9 (run `compact update 0.31` for the public networks)
 - `OutOfDustValidityWindow` (171) notes the indexer bug, fixed in 4.3.4 and 4.3.5, that rejected the first transaction of a block, and the deserialization codes (0–11) note ledger 8.1.2's stricter encoding rules
 - The ledger code map was checked against node 1.0.300 and matches all 120 codes. The new codes in node 2.x aren't added, since they arrive only with a runtime upgrade
