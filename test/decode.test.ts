@@ -19,9 +19,9 @@ describe("decodeCommand", () => {
     expect(data.kind).toBe("ledger");
     expect(data.code).toBe(170);
     expect(data.name).toBe("InvalidDustSpendProof");
-    // Bundled map and every network are on ledger 8.1.2: no mismatch.
-    expect(data.ledger).toBe("8.1.2");
-    expect(data.networkLedger).toBe("8.1.2");
+    // Bundled map and every network are on ledger 8.1.3: no mismatch.
+    expect(data.ledger).toBe("8.1.3");
+    expect(data.networkLedger).toBe("8.1.3");
     expect(data.mapMismatch).toBeUndefined();
   });
 

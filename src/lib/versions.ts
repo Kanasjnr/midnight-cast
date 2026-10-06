@@ -19,6 +19,8 @@ export interface MatrixNetwork {
    * Blockfrost, self-hosted) run different builds of a compatible node.
    */
   minNode?: string;
+  /** Why an older node falls short, shown when one does. */
+  minNodeReason?: string;
   /** Runtime spec_version the network runs; checked exactly when set. */
   runtimeSpec?: number;
   ledger: string;
@@ -192,7 +194,14 @@ export function buildVersionChecks(
       expected: expected.minNode ? `>=${expected.minNode}` : expected.node,
       live: live.nodeVersion,
       ok: nodeSatisfies(expected, live.nodeVersion),
-      ...(expected.minNode ? { note: `recommended ${expected.node}` } : {}),
+      ...(expected.minNode
+        ? {
+            note:
+              !nodeSatisfies(expected, live.nodeVersion) && expected.minNodeReason
+                ? `below ${expected.minNode}: ${expected.minNodeReason}`
+                : `recommended ${expected.node}`,
+          }
+        : {}),
     },
     ...(expected.runtimeSpec !== undefined
       ? [

@@ -79,7 +79,7 @@ describe("cli positional network", () => {
       data: { network: string; ledger: string };
     };
     expect(parsed.data.network).toBe("preview");
-    expect(parsed.data.ledger).toBe("8.1.2");
+    expect(parsed.data.ledger).toBe("8.1.3");
   });
 
   it("rpc accepts network when params omitted", async () => {

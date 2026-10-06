@@ -3,10 +3,11 @@
   "updated": "2026-10",
   "networks": {
     "preview": {
-      "node": "1.0.300",
-      "minNode": "1.0.300",
+      "node": "1.0.400",
+      "minNode": "1.0.400",
+      "minNodeReason": "node 1.0.400 carries ledger 8.1.3, which fixes the critical advisory GHSA-wr7g-rr4v-jmj8, and older nodes disagree with the network about which contract calls are valid",
       "runtimeSpec": 1000300,
-      "ledger": "8.1.2",
+      "ledger": "8.1.3",
       "indexer": "4.3.5",
       "indexerApi": "v4",
       "proofServer": "8.0.3",
@@ -19,10 +20,11 @@
       }
     },
     "preprod": {
-      "node": "1.0.300",
-      "minNode": "1.0.300",
+      "node": "1.0.400",
+      "minNode": "1.0.400",
+      "minNodeReason": "node 1.0.400 carries ledger 8.1.3, which fixes the critical advisory GHSA-wr7g-rr4v-jmj8, and older nodes disagree with the network about which contract calls are valid",
       "runtimeSpec": 1000300,
-      "ledger": "8.1.2",
+      "ledger": "8.1.3",
       "indexer": "4.3.302",
       "indexerApi": "v4",
       "proofServer": "8.1.0",
@@ -35,10 +37,11 @@
       }
     },
     "mainnet": {
-      "node": "1.0.300",
-      "minNode": "1.0.300",
+      "node": "1.0.400",
+      "minNode": "1.0.400",
+      "minNodeReason": "node 1.0.400 carries ledger 8.1.3, which fixes the critical advisory GHSA-wr7g-rr4v-jmj8, and older nodes disagree with the network about which contract calls are valid",
       "runtimeSpec": 1000300,
-      "ledger": "8.1.2",
+      "ledger": "8.1.3",
       "indexer": "4.3.302",
       "indexerApi": "v4",
       "proofServer": "8.1.0",
