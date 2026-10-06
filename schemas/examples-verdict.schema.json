@@ -108,6 +108,24 @@
         },
         "url": {
           "type": "string"
+        },
+        "faucet": {
+          "type": "string",
+          "description": "The faucet the run funded its wallets from"
+        },
+        "timings": {
+          "type": "object",
+          "description": "How long wallets took in the run",
+          "properties": {
+            "coldSyncMinutes": {
+              "type": "number",
+              "description": "A new wallet's first sync from genesis"
+            },
+            "restoreSeconds": {
+              "type": "string",
+              "description": "Restoring a wallet from the pre-seed bundle, as the report gives it (a number or a range)"
+            }
+          }
         }
       }
     },
