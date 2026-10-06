@@ -397,78 +397,98 @@ type UnshieldedEvent =
   | { __typename: "UnshieldedTransaction"; transaction: { id: number }; createdUtxos: UnshieldedUtxo[]; spentUtxos: Array<Pick<UnshieldedUtxo, "intentHash" | "outputIndex">> }
   | { __typename: "UnshieldedTransactionsProgress"; highestTransactionId: number };
 
+const graphqlFailure = (errors: Array<{ message?: string }>) =>
+  new NetworkError(`Indexer rejected the query: ${errors.map((e) => e.message ?? String(e)).join("; ")}`, "graphql_error", "Indexer");
+
 /**
- * The unshielded UTXOs an address holds. The indexer first says the highest transaction id
- * for the address, then replays its transactions from the start, so this reads until it
- * reaches that id (0 means none) or the timeout, whichever comes first.
+ * The unshielded UTXOs an address holds. The indexer says the highest transaction id for the
+ * address (0 means none) and replays its transactions from the start, in either order, so
+ * this reads until it has both and has reached that id, or until the timeout.
  */
 export async function unshieldedHoldings(
   endpoints: Pick<NetworkEndpoints, "indexerWs">,
   address: string,
-  { timeoutMs = 30_000 }: { timeoutMs?: number } = {},
+  { timeoutMs = 30_000, signal }: { timeoutMs?: number; signal?: AbortSignal } = {},
 ): Promise<UnshieldedHoldings> {
   const held = new Map<string, UnshieldedUtxo>();
   const key = (u: Pick<UnshieldedUtxo, "intentHash" | "outputIndex">) => `${u.intentHash}#${u.outputIndex}`;
   let highest: number | undefined;
+  let lastId = 0;
   let transactions = 0;
+  let connected = false;
   let lastFailure: unknown;
+  let attemptError: unknown;
 
   return new Promise((resolve, reject) => {
     let settled = false;
     const { client, close } = createWsClient(endpoints.indexerWs, () => !settled, {
-      connecting: () => {},
+      connecting: () => {
+        attemptError = undefined;
+      },
       connected: () => {
+        connected = true;
         lastFailure = undefined;
       },
       error: (event) => {
+        attemptError = event;
         lastFailure = event;
       },
-      closed: () => {},
+      closed: (event) => {
+        const code = (event as { code?: unknown })?.code;
+        if (code === 1000 || code === 1001) return;
+        // A transport failure closes with 1006, which says less than its own error.
+        lastFailure = code === 1006 && attemptError ? attemptError : event;
+      },
     });
     let unsubscribe = () => {};
-    const finish = (complete: boolean, err?: Error) => {
+    const finish = (outcome: { complete: boolean } | Error) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
       unsubscribe();
       close();
-      if (err) reject(err);
-      else resolve({ utxos: [...held.values()], transactions, complete });
+      if (outcome instanceof Error) reject(outcome);
+      else resolve({ utxos: [...held.values()], transactions, complete: outcome.complete });
     };
+    const caughtUp = () => highest !== undefined && (highest === 0 || lastId >= highest);
     const timer = setTimeout(() => {
       // Nothing at all is a failure; part of the history is a partial answer.
-      if (highest === undefined) finish(false, lastFailure ? wsFailure(lastFailure, endpoints.indexerWs) : subscriptionTimeout(false, false));
-      else finish(false);
+      if (highest === undefined && transactions === 0) {
+        finish(lastFailure ? wsFailure(lastFailure, endpoints.indexerWs) : subscriptionTimeout(connected, false));
+      } else finish({ complete: false });
     }, timeoutMs);
+    if (signal?.aborted) return finish(new Error("Cancelled"));
+    signal?.addEventListener("abort", () => finish(new Error("Cancelled")), { once: true });
 
     unsubscribe = client.subscribe(
       { query: UNSHIELDED_SUBSCRIPTION, variables: { address } },
       {
         next: (payload) => {
-          const event = (payload.data as { unshieldedTransactions?: UnshieldedEvent })?.unshieldedTransactions;
+          if (payload.errors?.length) return finish(graphqlFailure(payload.errors as Array<{ message?: string }>));
+          const event = (payload.data as { unshieldedTransactions?: UnshieldedEvent } | null)?.unshieldedTransactions;
           if (!event) return;
           if (event.__typename === "UnshieldedTransactionsProgress") {
             highest ??= event.highestTransactionId;
-            if (highest === 0) finish(true);
-            return;
+          } else {
+            transactions++;
+            lastId = Math.max(lastId, event.transaction.id);
+            for (const utxo of event.createdUtxos) held.set(key(utxo), utxo);
+            for (const utxo of event.spentUtxos) held.delete(key(utxo));
           }
-          transactions++;
-          for (const utxo of event.createdUtxos) held.set(key(utxo), utxo);
-          for (const utxo of event.spentUtxos) held.delete(key(utxo));
-          if (highest !== undefined && event.transaction.id >= highest) finish(true);
+          if (caughtUp()) finish({ complete: true });
         },
         error: (err) =>
           finish(
-            false,
             Array.isArray(err)
-              ? new NetworkError(
-                  `Indexer rejected the query: ${err.map((e: { message?: string }) => e.message ?? String(e)).join("; ")}`,
-                  "graphql_error",
-                  "Indexer",
-                )
-              : wsFailure(err, endpoints.indexerWs),
+              ? graphqlFailure(err)
+              : wsFailure((err as { code?: unknown })?.code === 1006 && lastFailure ? lastFailure : err, endpoints.indexerWs),
           ),
-        complete: () => finish(highest !== undefined),
+        complete: () =>
+          finish(
+            highest === undefined && transactions === 0
+              ? new NetworkError("Indexer ended the subscription without sending anything", "invalid_response", "Indexer")
+              : { complete: caughtUp() },
+          ),
       },
     );
   });
