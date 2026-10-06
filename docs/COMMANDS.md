@@ -163,13 +163,14 @@ midnight-cast preflight preprod --proof-server http://127.0.0.1:6300 --address s
 **Checks:**
 
 - **network:** the RPC and indexer answer, and the indexer is within the lag threshold of the node, as `health` measures it.
-- **proof server:** it answers at the configured URL (`--proof-server`, or `proof_server` in `config.toml`) and runs the version the support matrix expects. Unlike `health`, a missing proof server fails, because a transaction can't be proved without one.
+- **proof server:** it answers at the configured URL (`--proof-server`, or `proof_server` in `config.toml`) and runs the version the support matrix expects. A server on the wrong version is reported as such, not as unreachable. Unlike `health`, a missing proof server fails, because a transaction can't be proved without one.
 - **wallet**, with `--address`:
   - For an unshielded address, the indexer replays the address's transactions until it has caught up. The check then counts the NIGHT UTXOs it holds now, and how many are registered for DUST generation. NIGHT is the unshielded token type `00…00` (`UnshieldedTokenType(HashOutput([0u8; 32]))` in midnight-ledger), shown in NIGHT at 1,000,000 STAR each.
-  - With no NIGHT, it points at the faucet. With NIGHT but none registered for DUST, it says the wallet can't pay fees until it registers.
-  - A busy address can take longer than `--timeout` to replay; the totals are then marked as possibly short.
-  - For a Cardano reward address it uses the same indexer query as `dust-status`.
-  - An address for another network is a usage error (exit `2`).
+  - With no NIGHT, it points at the faucet. With NIGHT but none registered for DUST, it says the wallet can't pay fees until it registers. DUST builds up after registration, so a wallet registered moments ago may still need to wait.
+  - A busy address can take longer than `--timeout` to replay. The totals are then marked as possibly short, and a read that found no NIGHT before the timeout says so rather than sending you to the faucet.
+  - For a Cardano reward address it uses the same indexer query as `dust-status`, and fails while no DUST has been generated yet.
+  - The wallet is read alongside the other checks, and not at all if the indexer is down. An indexer error is reported as such, never as an empty wallet.
+  - The address must belong to the network: `mn_addr1…` on mainnet, `mn_addr_<network id>1…` on preview and preprod, `mn_addr_undeployed1…` on a local devnet, and `stake1…` on mainnet or `stake_test1…` elsewhere for Cardano. Anything else, or an empty `--address`, is a usage error (exit `2`).
 
 **Expectations:** when Midnight's examples have run on this network (see [Midnight's examples](#midnights-examples)), the output quotes what that run measured: how long a new wallet's first sync took, and how long restoring one from their pre-seed bundle took. A first sync of over an hour on preprod is normal, not a hang. JSON has it as `expectations`, with the faucet the run used.
 
@@ -186,7 +187,9 @@ Expect, from Midnight's examples run on preprod (30 Sep 2026): a new wallet's fi
   https://github.com/midnightntwrk/midnight-examples/blob/main/reports/node-1.0.400-regression.json
 ```
 
-**Exit code:** `0` when every check passes, `1` when any fails (the error lists them), `2` for an address it can't check. It only reads: no seeds, keys or transactions.
+It works on `local` and on networks from `config.toml` too; without a support matrix row it doesn't check the proof server's version.
+
+**Exit code:** `0` when every check passes, `1` when any fails (the error lists them, and `error.kind` is the first failure's kind, such as `refused`), `2` for an address it can't check. It only reads: no seeds, keys or transactions.
 
 ---
 
