@@ -39,6 +39,17 @@
           "excerpt": "export circuit storeMessage(newMessage: Opaque<\"string\">): [] {\n  message = disclose(newMessage);\n}"
         },
         {
+          "path": "examples/hello-world/src/test/hw.test.ts",
+          "symbol": "it('Deploys the contract'",
+          "about": "Deploying a contract with deployContract",
+          "lines": [
+            175,
+            193
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/hello-world/src/test/hw.test.ts#L175-L193",
+          "excerpt": "  it('Deploys the contract', async () => {\n    logger.info(`Creating private state...`);\n\n    const deployed: DeployedContract<Contract> =\n      await (deployContract<Contract>)(providers, {\n        compiledContract: CompiledHelloWorldContract,\n        privateStateId: PRIVATE_STATE_ID,\n        initialPrivateState: {},\n      });\n\n    logger.info(`Setting the contract address...`);\n    contractAddress = deployed.deployTxData.public.contractAddress;\n    logger.info(`Contract deployed at: ${contractAddress}`);\n    expect(contractAddress).toBeDefined();\n    expect(contractAddress.length).toBeGreaterThan(0);\n\n    const state = await queryLedger(providers);\n    expect(state.message).toEqual('');\n  });"
+        },
+        {
           "path": "examples/hello-world/src/providers.ts",
           "symbol": "export function buildProviders",
           "about": "Wiring up the midnight-js providers a contract needs",

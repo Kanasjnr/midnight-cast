@@ -11,6 +11,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { fetchGitHub } from "./github.js";
 import {
   EXAMPLES_REPO,
   reportPath,
@@ -23,22 +24,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const bundledPath = join(root, "src", "data", "examples-reports.json");
 
 /** GETs JSON, retrying server errors and dropped connections so one blip doesn't fail the live check. */
-async function get(url: string, attempts = 3): Promise<unknown> {
-  const token = process.env.GITHUB_TOKEN;
-  for (let attempt = 1; ; attempt++) {
-    try {
-      const res = await fetch(url, {
-        headers: { Accept: "application/vnd.github+json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        signal: AbortSignal.timeout(20_000),
-      });
-      if (res.ok) return await res.json();
-      if (res.status < 500 || attempt === attempts) throw new Error(`${url}: HTTP ${res.status}`);
-    } catch (err) {
-      if (attempt === attempts || String(err).includes("HTTP 4")) throw err;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 2_000 * attempt));
-  }
-}
+const get = async (url: string): Promise<unknown> => JSON.parse(await fetchGitHub(url));
 
 /** Every report in the repository, by node version. */
 export async function fetchReports(): Promise<Record<string, ExamplesReport>> {

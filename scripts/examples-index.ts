@@ -14,6 +14,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { ExampleFile, ExamplesIndex } from "../src/lib/examples-index.js";
+import { fetchGitHub, notice } from "./github.js";
 
 const REPO = "midnightntwrk/midnight-examples";
 export const COMMIT = "4056c6cf773596bccc2a15fac32cc817d6143a39";
@@ -37,6 +38,7 @@ const EXAMPLES: Source[] = [
     topics: ["getting started", "first contract", "deploy a contract", "store state", "providers", "network config", "wallet sync"],
     files: [
       { path: "contract/hello-world.compact", symbol: "export circuit storeMessage", about: "A circuit that writes a public ledger value" },
+      { path: "src/test/hw.test.ts", symbol: "it('Deploys the contract'", about: "Deploying a contract with deployContract" },
       { path: "src/providers.ts", symbol: "export function buildProviders", about: "Wiring up the midnight-js providers a contract needs" },
       { path: "src/config.ts", symbol: "export function getConfig", about: "Choosing the network's endpoints (local, preview, preprod)" },
       { path: "src/wallet.ts", symbol: "export async function syncWallet", about: "Syncing a wallet and reporting its progress" },
@@ -154,38 +156,64 @@ const EXAMPLES: Source[] = [
 
 const raw = (path: string) => `https://raw.githubusercontent.com/${REPO}/${COMMIT}/${path}`;
 
-async function fetchText(url: string, attempts = 3): Promise<string> {
-  for (let attempt = 1; ; attempt++) {
-    try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(20_000) });
-      if (res.ok) return await res.text();
-      if (res.status < 500 || attempt === attempts) throw new Error(`${url}: HTTP ${res.status}`);
-    } catch (err) {
-      if (attempt === attempts || String(err).includes("HTTP 4")) throw err;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 2_000 * attempt));
-  }
-}
-
-/** The lines of the declaration that starts with `symbol`: through its closing brace, or its own line for a one-line declaration. */
+/**
+ * The lines of the declaration that starts with `symbol`: through the brace that closes its body,
+ * or to its `;` for a one-line declaration. Strings and comments are skipped. The body is the
+ * first `{` outside the parameter list and type arguments, so an object type in a signature or
+ * a return type doesn't end it early; for a call such as `it('…', () => {`, it's the first `{`.
+ */
 export function locate(source: string, symbol: string): [number, number] {
   const lines = source.split("\n");
+  const boundary = !/[A-Za-z0-9_$]$/.test(symbol);
   const start = lines.findIndex((line) => {
     const trimmed = line.trim();
-    return trimmed.startsWith(symbol) && /[\s(<]/.test(trimmed.charAt(symbol.length) || " ");
+    return trimmed.startsWith(symbol) && (boundary || /[\s(<]/.test(trimmed.charAt(symbol.length) || " "));
   });
   if (start === -1) throw new Error(`"${symbol}" not found`);
+  const call = /^[\w.]+\(/.test(symbol);
+  let paren = 0;
+  let angle = 0;
   let depth = 0;
-  let opened = false;
+  let body = false;
+  let quote: string | null = null;
+  let comment = false;
   for (let i = start; i < lines.length; i++) {
-    for (const ch of lines[i]!) {
-      if (ch === "{") {
-        depth++;
-        opened = true;
-      } else if (ch === "}") depth--;
+    const line = lines[i]!;
+    for (let j = 0; j < line.length; j++) {
+      const ch = line[j]!;
+      if (comment) {
+        if (ch === "*" && line[j + 1] === "/") (comment = false), j++;
+        continue;
+      }
+      if (quote) {
+        if (ch === "\\") j++;
+        else if (ch === quote) quote = null;
+        continue;
+      }
+      if (ch === "/" && line[j + 1] === "/") break;
+      if (ch === "/" && line[j + 1] === "*") {
+        comment = true;
+        j++;
+        continue;
+      }
+      if (ch === "'" || ch === '"' || ch === "`") {
+        quote = ch;
+        continue;
+      }
+      if (!body) {
+        if (ch === "(") paren++;
+        else if (ch === ")") paren--;
+        else if (ch === "<") angle++;
+        else if (ch === ">" && line[j - 1] !== "=") angle = Math.max(0, angle - 1);
+        else if (ch === "{" && (call || (paren === 0 && angle === 0))) (body = true), (depth = 1);
+        else if (ch === ";" && paren === 0) return [start + 1, i + 1];
+        continue;
+      }
+      if (ch === "{") depth++;
+      else if (ch === "}" && --depth === 0) return [start + 1, i + 1];
     }
-    if (!opened && lines[i]!.trimEnd().endsWith(";")) return [start + 1, i + 1];
-    if (opened && depth === 0) return [start + 1, i + 1];
+    // Only template literals span lines.
+    if (quote && quote !== "`") quote = null;
   }
   throw new Error(`"${symbol}" has no end`);
 }
@@ -197,21 +225,25 @@ function excerpt(source: string, [start, end]: [number, number]): string {
 
 /** The pinned toolchain table in the repository's README: component → version. */
 export function readToolchain(readme: string): Record<string, string> {
-  const section = readme.slice(readme.indexOf("## Pinned toolchain"));
+  const at = readme.indexOf("## Pinned toolchain");
+  if (at === -1) throw new Error("the README has no \"## Pinned toolchain\" section");
+  const rest = readme.slice(at + 3);
+  const next = rest.search(/^## /m);
+  const section = next === -1 ? rest : rest.slice(0, next);
   return Object.fromEntries(
     [...section.matchAll(/^\| ([^|]+?) \| `([^`]+)`[^|]*\|$/gm)].map((m) => [m[1]!.replace(/`/g, "").trim(), m[2]!]),
   );
 }
 
 export async function buildIndex(): Promise<ExamplesIndex> {
-  const readme = await fetchText(raw("README.md"));
+  const readme = await fetchGitHub(raw("README.md"));
   const sources = new Map<string, string>();
   const examples = [];
   for (const example of EXAMPLES) {
     const files: ExampleFile[] = [];
     for (const file of example.files) {
       const path = `examples/${example.name}/${file.path}`;
-      if (!sources.has(path)) sources.set(path, await fetchText(raw(path)));
+      if (!sources.has(path)) sources.set(path, await fetchGitHub(raw(path)));
       const source = sources.get(path)!;
       let lines: [number, number];
       try {
@@ -262,18 +294,22 @@ async function main(): Promise<number> {
   }
   console.log(`The examples index matches ${REPO}@${COMMIT.slice(0, 7)}.`);
   try {
-    const head = (JSON.parse(await fetchText(`https://api.github.com/repos/${REPO}/commits/main`)) as { sha: string }).sha;
+    const head = (JSON.parse(await fetchGitHub(`https://api.github.com/repos/${REPO}/commits/main`)) as { sha: string }).sha;
     if (head !== COMMIT) {
-      const toolchain = readToolchain(await fetchText(`https://raw.githubusercontent.com/${REPO}/${head}/README.md`));
-      const changed = Object.entries(toolchain).filter(([k, v]) => index.toolchain[k] !== v).map(([k, v]) => `${k} ${index.toolchain[k] ?? "—"} → ${v}`);
-      console.log(
-        `Note: ${REPO} main is at ${head.slice(0, 7)}, past the pinned ${COMMIT.slice(0, 7)}.` +
-          (changed.length ? ` Its pinned toolchain changed: ${changed.join(", ")}.` : "") +
-          " Review it and move COMMIT in scripts/examples-index.ts when it's worth following.",
+      const toolchain = readToolchain(await fetchGitHub(`https://raw.githubusercontent.com/${REPO}/${head}/README.md`));
+      const keys = [...new Set([...Object.keys(index.toolchain), ...Object.keys(toolchain)])];
+      const changed = keys
+        .filter((k) => index.toolchain[k] !== toolchain[k])
+        .map((k) => `${k} ${index.toolchain[k] ?? "—"} → ${toolchain[k] ?? "removed"}`);
+      notice(
+        "midnight-examples moved on",
+        `${REPO} main is at ${head.slice(0, 7)}, past the pinned ${COMMIT.slice(0, 7)}.` +
+          (changed.length ? ` Its pinned toolchain changed: ${changed.join(", ")}.` : " Its pinned toolchain is unchanged.") +
+          " Review it, and move COMMIT in scripts/examples-index.ts when it's worth following.",
       );
     }
   } catch (err) {
-    console.log(`Note: couldn't compare with ${REPO} main (${err instanceof Error ? err.message : String(err)}).`);
+    notice("midnight-examples not compared", `couldn't compare the pin with ${REPO} main: ${err instanceof Error ? err.message : String(err)}`);
   }
   return 0;
 }

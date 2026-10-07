@@ -196,7 +196,24 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: npm run examples-reports -- --check
 
+  examples-index:
+    name: Examples index (midnight-examples pin)
+    if: github.event_name != 'workflow_dispatch' || inputs.network == 'all'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+
       - name: Check the examples index against its pinned commit, and note if midnight-examples moved on
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: npm run examples-index -- --check
 
   response-shapes:
