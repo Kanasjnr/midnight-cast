@@ -24,7 +24,8 @@ const GUIDE = `midnight-cast is a read-only CLI for the Midnight networks (previ
 3. Versions might not match: \`midnight-cast versions <network> --project-dir <project> --json\` compares the live network and the project's Midnight packages with the support matrix.
 4. Something happened on chain: \`tx <hash>\` for a transaction, \`contract <address>\` for a deployed contract (latest action, circuit, deploy block), \`dust-status <cardano-reward-address>\` when a wallet has no DUST, \`dust-event <id>\` and \`dust-events\` for DUST ledger events.
 5. Setting up, or stuck before the first transaction on preprod or preview: \`midnight-cast preflight <network> --address <the wallet's mn_addr_… address> --json\` checks the network, the proof server and that the wallet holds NIGHT registered for DUST, and quotes how long a first wallet sync takes so it isn't mistaken for a hang.
-6. Background on a topic: \`midnight-cast explain dust|1010|versions|transcript\`. \`midnight-cast explain --json\` lists every command, option, exit code and error kind.
+6. Writing Midnight code: \`midnight-cast examples "<what it should do>" --json\` returns the official examples that show it (midnightntwrk/midnight-examples, compiled and tested in CI), with file paths, line ranges, pinned links and the code. Start from those rather than from memory.
+7. Background on a topic: \`midnight-cast explain dust|1010|versions|transcript\`. \`midnight-cast explain --json\` lists every command, option, exit code and error kind.
 
 Mainnet goes through Blockfrost: set \`BLOCKFROST_PROJECT_ID\` to a Midnight Mainnet project ID. midnight-cast never prints it.`;
 

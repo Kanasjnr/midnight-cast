@@ -17,6 +17,7 @@ Start here for the shortest path:
 | Inspect a tx | `midnight-cast tx <hash> --network preprod` |
 | Inspect a block | `midnight-cast block latest preprod` or `midnight-cast block <height> preprod` |
 | Inspect DUST events | `midnight-cast dust-events --network preprod` |
+| Working code for a pattern | `midnight-cast examples dust sponsorship` |
 
 ## Global flags
 
@@ -567,6 +568,48 @@ Runs a read-only MCP server on stdio, for AI agents. It exposes `health`, `ping`
 midnight-cast mcp
 MIDNIGHT_CAST_NETWORKS=preview,preprod midnight-cast mcp
 ```
+
+---
+
+## `midnight-cast examples [topic]`
+
+Finds working code in Midnight's official examples ([midnightntwrk/midnight-examples](https://github.com/midnightntwrk/midnight-examples)), each compiled and tested in CI against one pinned toolchain. Give a topic in your own words and it returns the examples that show it: what each one covers, the files and line ranges, links pinned to a commit, and, for the best match, the code itself. Without a topic it lists every example and its topics. It works offline.
+
+```bash
+midnight-cast examples
+midnight-cast examples dust sponsorship
+midnight-cast examples "verify a signature in a circuit" --json
+```
+
+Example output (cut short):
+
+```text
+Midnight's examples for "dust sponsorship" (midnightntwrk/midnight-examples at 4056c6c, pinned to Compact language 0.23, Compact compiler 0.31.1, @midnight-ntwrk/midnight-js-* 4.1.1)
+
+private-party: Private on-chain data, access control, and DUST sponsorship: one wallet pays the fees for another's transaction
+  Having a sponsor wallet pay the DUST fee and submit: examples/private-party/src/sponsor.ts:96-115
+    https://github.com/midnightntwrk/midnight-examples/blob/4056c6c…/examples/private-party/src/sponsor.ts#L96-L115
+
+    export async function sponsorAndSubmit(
+    …
+```
+
+The index covers all eleven examples:
+- hello-world;
+- calculator;
+- private-party;
+- token-transfers;
+- silent-auction;
+- election;
+- secret-message;
+- zk-loan;
+- shielded-chips;
+- private-bid;
+- battleship.
+
+The topics and code locations are chosen by hand. `npm run examples-index` finds each location by its declaration at the pinned commit, so the line ranges and excerpts always match the linked code. The JSON has the toolchain the examples are pinned to (Compact language and compiler, midnight-js, wallet SDK, Node.js), so you can tell when your project is on a different generation. A topic with no match exits `1`; a topic of only filler words, such as "show me code", lists every example. When an example matches as a whole but none of its files does, the JSON says so (`filesMatched: false`) and lists all of its files, and the human output shows no excerpt rather than an unrelated one.
+
+`live.yml` checks the index against its pinned commit and notes when midnight-examples has moved past it, with any toolchain change; moving the pin is a deliberate change to `COMMIT` in `scripts/examples-index.ts`.
 
 ---
 

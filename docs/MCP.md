@@ -22,6 +22,7 @@ The server ships with midnight-cast 0.2.0. Until that is on npm, build from sour
 | `dust_event` | yes | One DUST ledger event by id. An id the network hasn't reached fails at once, naming the latest |
 | `dust_events` | yes | The latest DUST ledger events, or up to 50 from an id |
 | `decode` | no | Explains a pasted error: 1010 rejections, `Custom(N)` ledger codes, pallet errors, JSON-RPC codes and known tooling messages |
+| `examples` | no | Working code from Midnight's official examples for a topic, with files, line ranges, pinned links and the code; without a topic, every example |
 | `explain` | no | Background on a topic: `dust`, `1010`, `versions` or `transcript` |
 
 Every tool is annotated `readOnlyHint: true` and `destructiveHint: false`, and `openWorldHint` is true only for the tools that reach a network. Each declares the envelope as its output schema and returns it both as structured content and as text. A failed check comes back with `isError: true` and the envelope explaining why.
@@ -42,7 +43,7 @@ Three prompts start the usual investigations. Clients that support prompts usual
 
 Network arguments complete from the allow-list.
 
-Three resources are available: `midnight-cast://support-matrix`, the versions each network is expected to run; `midnight-cast://error-codes`, the ledger, pallet and JSON-RPC codes `decode` knows; and `midnight-cast://catalog`, every CLI command with its options, exit codes and error kinds, for agents that also have a terminal.
+Four resources are available: `midnight-cast://support-matrix`, the versions each network is expected to run; `midnight-cast://error-codes`, the ledger, pallet and JSON-RPC codes `decode` knows; `midnight-cast://examples`, every official Midnight example with its topics and the code that shows them; and `midnight-cast://catalog`, every CLI command with its options, exit codes and error kinds, for agents that also have a terminal.
 
 ## Configuration
 
