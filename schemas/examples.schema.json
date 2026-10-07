@@ -35,7 +35,8 @@
           "summary",
           "url",
           "topics",
-          "files"
+          "files",
+          "filesMatched"
         ],
         "properties": {
           "name": {
@@ -94,6 +95,10 @@
                 }
               }
             }
+          },
+          "filesMatched": {
+            "type": "boolean",
+            "description": "False when the example matched as a whole but none of its files did, so files lists all of them"
           }
         }
       }

@@ -4,18 +4,19 @@ import { describe, expect, it } from "vitest";
 import { examplesCommand } from "../src/commands/examples.js";
 import { findExamples, loadExamplesIndex, words } from "../src/lib/examples-index.js";
 import { COMMIT, locate, readToolchain } from "../scripts/examples-index.js";
+import { toolCallFor } from "../src/lib/next-steps.js";
 import { schemaErrors } from "./schema.js";
 
 const index = loadExamplesIndex();
 // A full envelope around a command's result, as the CLI prints it.
-const envelope = (result: { ok: boolean; data?: unknown }) => ({
+const envelope = (result: { ok: boolean; data?: unknown; error?: string }) => ({
   schemaVersion: 1,
   ok: result.ok,
   command: "examples",
   network: null,
   data: result.data ?? null,
   warnings: [],
-  error: null,
+  error: result.ok ? null : { message: result.error ?? "", kind: null, hint: null },
   next: [],
 });
 const top = (query: string) => findExamples(index, query)[0];
@@ -56,6 +57,34 @@ describe("Midnight's examples", () => {
 
   it("reads words the way people write them", () => {
     expect(words("Send the Tokens, sponsorship!")).toEqual(["send", "token", "sponsorship"]);
+    expect(words("export circuit sendShieldedToUser")).toEqual(["send", "shielded", "user"]);
+    expect(words("Minting the witness's circuits")).toEqual(["mint", "witness"]);
+  });
+
+  it("finds code for words that only appear inside a file's description or symbol", () => {
+    expect(top("mint a token")).toMatchObject({ name: "token-transfers", filesMatched: true });
+    expect(top("mint a token")?.files[0]?.symbol).toBe("export circuit mintAndReceive");
+    expect(top("how do I deploy")).toMatchObject({ name: "hello-world", filesMatched: true });
+    expect(top("how do I deploy")?.files[0]?.symbol).toBe("it('Deploys the contract'");
+    expect(top("shielded chips")?.name).toBe("shielded-chips");
+  });
+
+  it("doesn't end a declaration early on a brace in a signature, a string or a comment", () => {
+    const source = [
+      "export async function syncWallet(",
+      "  wallet: { a: string },",
+      "): Promise<{ ok: boolean }> {",
+      "  const close = '}';",
+      "  // a } in a comment",
+      "  /* and { here */",
+      "  return { ok: true };",
+      "}",
+      "it('Deploys the contract', async () => {",
+      "  await deploy({ x: 1 });",
+      "});",
+    ].join("\n");
+    expect(locate(source, "export async function syncWallet")).toEqual([1, 8]);
+    expect(locate(source, "it('Deploys the contract'")).toEqual([9, 11]);
   });
 
   it("finds a declaration's lines, through its closing brace or on its own line", () => {
@@ -66,9 +95,12 @@ describe("Midnight's examples", () => {
     expect(() => locate(source, "export circuit ad")).toThrow("not found");
   });
 
-  it("reads the pinned toolchain table from the README", () => {
-    const readme = "## Pinned toolchain\n\n| Component | Version |\n|---|---|\n| Compact language (`pragma`) | `0.23` |\n| Node.js | `22` (see `.nvmrc`) |\n";
+  it("reads the pinned toolchain table from the README, and only that table", () => {
+    const readme =
+      "## Pinned toolchain\n\n| Component | Version |\n|---|---|\n| Compact language (`pragma`) | `0.23` |\n| Node.js | `22` (see `.nvmrc`) |\n\n" +
+      "## Environment\n\n| MIDNIGHT_NETWORK | `preprod` |\n";
     expect(readToolchain(readme)).toEqual({ "Compact language (pragma)": "0.23", "Node.js": "22" });
+    expect(() => readToolchain("# No table here\n")).toThrow("Pinned toolchain");
   });
 
   it("lists every example without a topic, and answers a topic with matches, as valid envelopes", () => {
@@ -79,6 +111,14 @@ describe("Midnight's examples", () => {
     expect(schemaErrors(envelope(found))).toEqual([]);
     const none = examplesCommand("kubernetes", { json: true });
     expect(none).toMatchObject({ ok: false, exitCode: 1, error: 'No example matches "kubernetes"' });
+    expect(schemaErrors(envelope(none))).toEqual([]);
+    expect(none.next).toEqual([expect.objectContaining({ command: "midnight-cast examples" })]);
+    expect(toolCallFor("midnight-cast examples")).toEqual({ name: "examples", arguments: {} });
+  });
+
+  it("lists the examples for a topic of only filler words, rather than failing", () => {
+    const listed = examplesCommand("show me code", { json: true });
+    expect(listed).toMatchObject({ ok: true, data: { examples: expect.any(Array) } });
   });
 
   it("ships the index with the package data", () => {

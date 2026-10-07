@@ -1,4 +1,4 @@
-import { findExamples, loadExamplesIndex, type ExampleMatch, type ExamplesIndex } from "../lib/examples-index.js";
+import { findExamples, loadExamplesIndex, words, type ExampleMatch, type ExamplesIndex } from "../lib/examples-index.js";
 import type { EmitResult, GlobalOptions } from "../output.js";
 
 export interface ExamplesReport {
@@ -16,7 +16,8 @@ export interface ExamplesReport {
 export function examplesCommand(topic: string | undefined, options: GlobalOptions, index: ExamplesIndex = loadExamplesIndex()): EmitResult {
   const base = { repo: index.repo, commit: index.commit, toolchain: index.toolchain };
   const query = topic?.trim();
-  if (!query) {
+  // A topic of only filler words ("show me code") asks for the list.
+  if (!query || !words(query).length) {
     const report: ExamplesReport = {
       ...base,
       examples: index.examples.map(({ name, summary, topics, url }) => ({ name, summary, topics, url })),
@@ -57,8 +58,8 @@ function formatMatches(report: ExamplesReport): string {
   matches.forEach((match, i) => {
     lines.push("", `${match.name}: ${match.summary}`);
     for (const file of match.files) lines.push(`  ${file.about}: ${file.path}:${file.lines[0]}-${file.lines[1]}`, `    ${file.url}`);
-    // The best match's best file, so the answer is on screen.
-    if (i === 0 && match.files[0]) lines.push("", ...match.files[0].excerpt.split("\n").map((l) => `    ${l}`));
+    // The best match's best file, so the answer is on screen; not when no file matched, as it could be any of them.
+    if (i === 0 && match.filesMatched && match.files[0]) lines.push("", ...match.files[0].excerpt.split("\n").map((l) => `    ${l}`));
   });
   return lines.join("\n");
 }
