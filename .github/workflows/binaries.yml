@@ -1,0 +1,217 @@
+name: Binaries
+
+# Builds the standalone binaries and runs each one the way a user gets it, on its own OS and
+# architecture. A release PR into main must pass it, and publish.yml runs it again before
+# publishing, then attaches the archives. PRs into next-release smoke offline, like the other
+# checks there. The macOS binaries are built on macOS, where codesign can sign them.
+
+on:
+  pull_request:
+    branches: [main, next-release]
+  workflow_call:
+    inputs:
+      attest:
+        description: Record build provenance for the archives
+        type: boolean
+        default: false
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  SMOKE_FLAGS: ${{ github.event_name == 'pull_request' && github.base_ref == 'next-release' && '--offline' || '' }}
+
+jobs:
+  linux:
+    name: Build Linux and Windows, smoke Linux x64
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+
+      # The Windows archive is a zip, and Ubuntu's tar doesn't write one.
+      - run: sudo apt-get update && sudo apt-get install -y zip
+
+      - name: Build
+        run: npm run binaries -- --target linux-x64 --target linux-x64-musl --target linux-arm64 --target linux-arm64-musl --target windows-x64
+
+      - name: Smoke the glibc binary on the runner
+        run: npm run smoke:binary -- build/release/midnight-cast-linux-x64.tar.gz ${{ env.SMOKE_FLAGS }}
+
+      - name: Images for the container smokes
+        run: |
+          docker build -t midnight-cast-alpine -f .github/smoke/alpine.Dockerfile .github/smoke
+          docker build -t midnight-cast-debian -f .github/smoke/debian.Dockerfile .github/smoke
+
+      - name: Smoke the musl binary in Alpine
+        run: npm run smoke:binary -- build/release/midnight-cast-linux-x64-musl.tar.gz --docker midnight-cast-alpine ${{ env.SMOKE_FLAGS }}
+
+      - name: Smoke the glibc binary in Debian
+        run: npm run smoke:binary -- build/release/midnight-cast-linux-x64.tar.gz --docker midnight-cast-debian ${{ env.SMOKE_FLAGS }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: binaries-linux-windows
+          path: build/release/midnight-cast-*
+          if-no-files-found: error
+
+  linux-arm64:
+    name: Smoke Linux arm64
+    needs: linux
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: binaries-linux-windows
+          path: build/release
+
+      - name: Smoke the glibc binary on the runner
+        run: npm run smoke:binary -- build/release/midnight-cast-linux-arm64.tar.gz ${{ env.SMOKE_FLAGS }}
+
+      - name: Smoke the musl binary in Alpine
+        run: |
+          docker build -t midnight-cast-alpine -f .github/smoke/alpine.Dockerfile .github/smoke
+          npm run smoke:binary -- build/release/midnight-cast-linux-arm64-musl.tar.gz --docker midnight-cast-alpine ${{ env.SMOKE_FLAGS }}
+
+  macos:
+    name: Build macOS, smoke arm64
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+
+      - name: Build and sign
+        run: npm run binaries -- --target darwin-arm64 --target darwin-x64
+
+      - name: Smoke the binary for this Mac
+        run: npm run smoke:binary -- build/release/midnight-cast-darwin-arm64.tar.gz ${{ env.SMOKE_FLAGS }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: binaries-macos
+          path: build/release/midnight-cast-*
+          if-no-files-found: error
+
+  macos-intel:
+    name: Smoke macOS x64
+    needs: macos
+    runs-on: macos-15-intel
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: binaries-macos
+          path: build/release
+
+      - name: Smoke the binary for this Mac
+        run: npm run smoke:binary -- build/release/midnight-cast-darwin-x64.tar.gz ${{ env.SMOKE_FLAGS }}
+
+  windows:
+    name: Smoke Windows
+    needs: linux
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: binaries-linux-windows
+          path: build/release
+
+      - name: Smoke the Windows binary
+        run: npm run smoke:binary -- build/release/midnight-cast-windows-x64.zip ${{ env.SMOKE_FLAGS }}
+
+  release:
+    name: Checksums and provenance
+    needs: [linux, linux-arm64, macos, macos-intel, windows]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: binaries-*
+          merge-multiple: true
+          path: build/release
+
+      - name: One SHA256SUMS for every archive, beside the installers
+        run: npm run binaries -- --checksums && cat build/release/SHA256SUMS
+
+      - name: Record build provenance
+        if: inputs.attest
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            build/release/*.tar.gz
+            build/release/*.zip
+            build/release/SHA256SUMS
+            build/release/install.sh
+            build/release/install.ps1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: midnight-cast-binaries
+          path: build/release/
+          if-no-files-found: error
