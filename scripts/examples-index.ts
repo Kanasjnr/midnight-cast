@@ -75,6 +75,7 @@ const EXAMPLES: Source[] = [
       { path: "contract/token-transfers.compact", symbol: "export circuit sendToUser", about: "Sending unshielded tokens to a user" },
       { path: "contract/token-transfers.compact", symbol: "export circuit receiveNightTokens", about: "Receiving NIGHT into a contract" },
       { path: "contract/token-transfers.compact", symbol: "export circuit sendNightTokensToUser", about: "Sending NIGHT from a contract to a user" },
+      { path: "contract/token-transfers.compact", symbol: "export circuit receiveShieldedTokens", about: "Receiving a shielded coin into a contract, which claims it" },
       { path: "contract/token-transfers.compact", symbol: "export circuit sendShieldedToUser", about: "Sending shielded tokens to a user" },
       { path: "contract/token-transfers.compact", symbol: "export circuit mintAndSendShielded", about: "Minting a shielded token and sending it in one call" },
     ],

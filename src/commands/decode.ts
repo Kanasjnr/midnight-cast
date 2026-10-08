@@ -1,4 +1,4 @@
-import { describeLinks, examplesForLedgerCode, linksFor } from "../lib/example-links.js";
+import { describeLinks, examplesForLedgerCode, resolveLinks } from "../lib/example-links.js";
 import { loadDataJson } from "../lib/data-path.js";
 import {
   findLedgerCodesByName,
@@ -503,9 +503,9 @@ function decodeKnownMessage(message: KnownMessage, options: DecodeOptions): Emit
   const next = message.next.map((step) =>
     options.network ? { ...step, command: step.command.replace("<network>", options.network) } : step,
   );
-  const examples = linksFor(message.exampleTopics ?? []);
+  const examples = resolveLinks(message.examples ?? []);
   if (options.json) {
-    const { next: _, exampleTopics: __, ...rest } = message;
+    const { next: _, examples: __, ...rest } = message;
     return { ...success({ kind: "message" as const, ...rest, ...(examples.length ? { examples } : {}) }), next };
   }
   const text = [

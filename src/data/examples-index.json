@@ -268,6 +268,17 @@
         },
         {
           "path": "examples/token-transfers/contract/token-transfers.compact",
+          "symbol": "export circuit receiveShieldedTokens",
+          "about": "Receiving a shielded coin into a contract, which claims it",
+          "lines": [
+            48,
+            50
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/token-transfers/contract/token-transfers.compact#L48-L50",
+          "excerpt": "export circuit receiveShieldedTokens(coin: ShieldedCoinInfo): [] {\n   receiveShielded(disclose(coin));\n}"
+        },
+        {
+          "path": "examples/token-transfers/contract/token-transfers.compact",
           "symbol": "export circuit sendShieldedToUser",
           "about": "Sending shielded tokens to a user",
           "lines": [

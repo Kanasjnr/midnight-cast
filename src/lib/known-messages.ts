@@ -7,8 +7,8 @@ export interface KnownMessage {
   description: string;
   fix: string;
   next: NextStep[];
-  /** Topics in Midnight's examples that show working code for this, resolved through the examples index. */
-  exampleTopics?: string[];
+  /** Declarations in Midnight's examples that show working code for this. */
+  examples?: Array<{ example: string; symbol: string }>;
 }
 
 interface Pattern {
@@ -83,7 +83,11 @@ const PATTERNS: Pattern[] = [
         { command: "midnight-cast preflight <network> --address <wallet address>", reason: "Check the wallet holds NIGHT registered for DUST" },
         { command: "midnight-cast explain dust", reason: "How NIGHT generates DUST" },
       ],
-      exampleTopics: ["insufficient funds dust wallet errors", "dust sponsorship", "wallet sync"],
+      examples: [
+        { example: "hello-world", symbol: "function withHint" },
+        { example: "private-party", symbol: "export async function sponsorAndSubmit" },
+        { example: "hello-world", symbol: "export async function syncWallet" },
+      ],
     }),
   },
   {

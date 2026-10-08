@@ -42,8 +42,11 @@ export interface ExampleMatch {
   filesMatched: boolean;
 }
 
+let cached: ExamplesIndex | undefined;
+
 export function loadExamplesIndex(): ExamplesIndex {
-  return loadDataJson<ExamplesIndex>("examples-index.json");
+  cached ??= loadDataJson<ExamplesIndex>("examples-index.json");
+  return cached;
 }
 
 // Words that say nothing about which example is meant, including the keywords every declaration has.
