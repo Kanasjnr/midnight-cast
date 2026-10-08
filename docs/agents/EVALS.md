@@ -16,12 +16,12 @@ These tasks check that a coding agent, given only the midnight-cast guidance (th
 
 ## Results
 
-| Agent | Version | Date | Task 1 | Task 2 | Task 3 | Task 4 |
-| --- | --- | --- | --- | --- | --- | --- |
-| Claude Code | not yet run | | | | | |
-| Claude Code plugin (`claude plugin eval`, mocked tools, one run each) | Claude Code 2.1.289, its default model | 5 October 2026 | pass | pass | pass | pass |
-| OpenAI Codex CLI | not yet run | | | | | |
-| Gemini CLI | not yet run | | | | | |
+| Agent | Version | Date | Task 1 | Task 2 | Task 3 | Task 4 | Task 5 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Claude Code | not yet run | | | | | | |
+| Claude Code plugin (`claude plugin eval`, mocked tools, one run each) | Claude Code 2.1.289, its default model | 5 October 2026 | pass | pass | pass | pass | not run |
+| OpenAI Codex CLI | not yet run | | | | | | |
+| Gemini CLI | not yet run | | | | | | |
 
 ## Claude Code plugin evals
 
