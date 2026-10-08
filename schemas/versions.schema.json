@@ -201,6 +201,59 @@
     },
     "examples": {
       "$ref": "examples-verdict.schema.json"
+    },
+    "examplesToolchain": {
+      "type": "object",
+      "description": "The project against the toolchain Midnight's examples are pinned to. Advice beside the support-matrix checks: it doesn't change allOk or the exit code.",
+      "required": [
+        "repo",
+        "commit",
+        "toolchain",
+        "checks"
+      ],
+      "properties": {
+        "repo": {
+          "type": "string"
+        },
+        "commit": {
+          "type": "string"
+        },
+        "toolchain": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "label",
+              "expected",
+              "live",
+              "ok"
+            ],
+            "properties": {
+              "label": {
+                "type": "string"
+              },
+              "expected": {
+                "type": "string"
+              },
+              "live": {
+                "type": "string"
+              },
+              "ok": {
+                "type": "boolean"
+              },
+              "note": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

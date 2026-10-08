@@ -19,6 +19,8 @@ import { EXPLAIN_VERSIONS } from "../lib/next-steps.js";
 import { resolveSupportMatrix } from "../lib/upstream-matrix.js";
 import { settle } from "../lib/settle.js";
 import { examplesVerdict } from "../lib/examples-report.js";
+import { examplesToolchainChecks } from "../lib/examples-toolchain.js";
+import { loadExamplesIndex } from "../lib/examples-index.js";
 
 export async function versionsCommand(
   networkArg: string | undefined,
@@ -75,6 +77,10 @@ export async function versionsCommand(
 
   const checks = buildVersionChecks(expected, live, liveProofServer);
   const local = flags.local !== false ? checkLocalPackages(expected, projectDir) : {};
+  // Advice beside the matrix: the toolchain Midnight's examples are known to work with.
+  const index = loadExamplesIndex();
+  const toolchainChecks =
+    flags.local !== false ? examplesToolchainChecks(index.toolchain, { dir: projectDir, packages: local.localPackages }) : [];
   const { localPackageChecks } = local;
   const allOk =
     checks.every((c) => c.ok) &&
@@ -101,6 +107,7 @@ export async function versionsCommand(
     checks,
     ...local,
     examples: await examples,
+    ...(toolchainChecks.length ? { examplesToolchain: { repo: index.repo, commit: index.commit, toolchain: index.toolchain, checks: toolchainChecks } } : {}),
     allOk,
   };
 

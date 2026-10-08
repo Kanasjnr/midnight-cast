@@ -73,6 +73,8 @@ export interface VersionsReport {
   scopeHints?: string[];
   /** Whether Midnight's examples pass on the node this network runs. */
   examples?: ExamplesVerdict;
+  /** The project against the toolchain Midnight's examples are pinned to: advice, not part of allOk. */
+  examplesToolchain?: { repo: string; commit: string; toolchain: Record<string, string>; checks: VersionCheck[] };
   allOk: boolean;
 }
 
@@ -535,6 +537,12 @@ export function formatVersionsHuman(report: VersionsReport): string {
   }
 
   if (report.examples) lines.push("", ...describeExamples(report.examples));
+
+  if (report.examplesToolchain) {
+    const t = report.examplesToolchain;
+    lines.push("", `Against Midnight's examples (${t.repo} at ${t.commit.slice(0, 7)}, known to work together; advice, not a matrix check):`);
+    for (const check of t.checks) lines.push(`  ${check.label}: examples=${check.expected} project=${check.live} → ${check.ok ? "OK" : "DIFFERS"}${check.note ? ` (${check.note})` : ""}`);
+  }
 
   if (report.localPackageChecks?.length) {
     lines.push("", "Local package checks (Midnight packages vs matrix):");
