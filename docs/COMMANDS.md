@@ -268,6 +268,8 @@ The published matrix updates only what the endpoints can't reveal: the indexer, 
 - It is `unverified`, with a `reason`, when the node version has no report (it is never matched to an older one), when the report ran a different runtime `spec_version` or another network, or when it has no passing tests. The runs are on preprod, so mainnet and preview show the preprod run for context but stay unverified: the same node on another network isn't what the examples tested.
 - The report is fetched for that exact version with a 3-second timeout and cached like the published matrix: six hours, a week as a fallback, and no retry for an hour after a failure. A report that says it's about a different node version is rejected. Offline, or when nothing can be fetched, the summaries bundled with this release are used, and a cached copy older than them is ignored. `source` says which was used, and how old it is. Reading the report never fails `versions` or `health`; a problem shows as `unverified` with the reason.
 
+**Against Midnight's examples:** next to the matrix checks, `versions` compares the project with the toolchain Midnight's examples are pinned to, a set known to compile and pass its tests together (`examplesToolchain` in JSON). It covers the `midnight-js-*` packages, `testkit-js`, the wallet SDK, the `pragma language_version` in the project's `.compact` files (build output and `node_modules` skipped; a constraint such as `>= 0.16 && <= 0.20` must admit the examples' language) and the Node.js version in `.nvmrc` or `engines`. It checks only what the project declares, and it's advice: a difference doesn't change `allOk` or the exit code, since a project can be right on other versions. For example: "wallet-sdk: examples=1.2.0 project=1.0.4 → DIFFERS (the official examples run 1.2.0)".
+
 Example output:
 
 ```text
@@ -414,6 +416,14 @@ Auto-detects and decodes everything it finds in one pasted error:
   - Output from Compact toolchain 0.35 or Compact runtime 0.20 (`--feature-zkir-v3`, ZKIR 3.1, `ContractModuleProvider`, `ledger-v9`), which target ledger 9, not yet on the public networks
 
 Hex codes need the `0x` prefix, "ledger N" counts only as "ledger error N" or "ledger code N", and single-word ledger names such as `Transaction` aren't matched in free text, since they also appear in ordinary error messages ("Invalid Transaction").
+
+Where Midnight's examples show the fix, a decoding links that code, at the examples index's pinned commit (`examples` in JSON, `Code:` lines otherwise):
+- stale-DUST errors (170, 171, 196) link hello-world's wallet sync;
+- fees beyond the available DUST (138 and the fee-calculation codes) link private-party's DUST sponsorship;
+- token balance and unshielded-input errors link token-transfers' send circuits;
+- Zswap errors link its shielded circuits.
+
+The wallet's "Insufficient Funds: could not balance dust" (`Wallet.InsufficientFunds`), the failure the examples' UI explains to new users, decodes as a known message with all three.
 
 Some ledger codes carry a related hint. `OutOfDustValidityWindow` (171) notes the indexer bug fixed in 4.3.4 and 4.3.5, which rejected the first transaction of a block. `TransactionApplicationError` (182) notes the node 1.0.300 bug that halts a fresh mainnet sync at block #1788979, fixed in node 1.0.400. The deserialization codes (0–11) note that ledger 8.1.2 rejects non-canonical encodings, and that ledger 8.1.3 (node 1.0.400) also rejects contract call transcripts with non-canonical field values or `noop 0`.
 
@@ -615,7 +625,7 @@ The topics and code locations are chosen by hand. `npm run examples-index` finds
 
 ## `midnight-cast explain [topic]`
 
-Static help (no network). Topics: `dust`, `1010`, `versions`, `transcript`.
+Static help (no network). Topics: `dust`, `1010`, `versions`, `transcript`, `sync`. `sync` is for a wallet that seems stuck syncing. It quotes the first-sync and pre-seed times Midnight's examples measured on preprod, from their FAST-SYNC notes and their latest regression report, and says how to rule out the network and how the examples start wallets from a pre-seeded bundle. `dust` and `sync` end with working code from Midnight's examples (`examples` in JSON).
 
 ```bash
 midnight-cast explain dust

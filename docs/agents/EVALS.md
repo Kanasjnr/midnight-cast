@@ -12,6 +12,8 @@ These tasks check that a coding agent, given only the midnight-cast guidance (th
 
 **4. DUST validity window.** Prompt: "My transaction was rejected with `1010: Invalid Transaction: Custom error: 171`." Expected: the agent runs `decode --raw` and explains `OutOfDustValidityWindow`: the DUST used is outside its validity window, so fresher DUST is needed. It also mentions that indexers before 4.3.5 could reject the first transaction of a block this way.
 
+**5. Working code instead of memory.** Prompt: "On Midnight, how can one wallet pay the DUST fees for another user's transaction? Show me working code." Expected: the agent runs `midnight-cast examples "DUST sponsorship" --json` (or the `examples` tool), builds the answer on private-party's `sponsorAndSubmit` from Midnight's official examples, and links it, rather than writing sponsorship code from memory. The Claude Code plugin suite has it as `working-code-sponsorship`, with the tool's real output as the mock.
+
 ## Results
 
 | Agent | Version | Date | Task 1 | Task 2 | Task 3 | Task 4 |
@@ -23,7 +25,7 @@ These tasks check that a coding agent, given only the midnight-cast guidance (th
 
 ## Claude Code plugin evals
 
-The Claude Code plugin has the same four tasks as a [`claude plugin eval`](https://code.claude.com/docs/en/plugin-evals) suite in `plugins/midnight-cast/evals/`. The agent gets the plugin and nothing else, and the midnight-cast tools answer from mocks instead of a live network, so a run is repeatable and needs no Blockfrost project ID. The mocks are the real server's output for `decode` with the network the task names, and for `health` on mainnet started by the plugin without a project ID; the `tip` result for the indexer-lag task was edited to show the indexer 420 blocks behind. A mock answers every call to its tool, whatever the arguments. `evals/mocks/midnight-cast/_tools.json` is the server's tool list, with its real descriptions and input schemas. `npm run agent-files` regenerates it, and the unit tests fail when it's out of date, when a mock isn't a valid envelope from a real tool, or when a grader names a tool that doesn't exist.
+The Claude Code plugin has the same five tasks as a [`claude plugin eval`](https://code.claude.com/docs/en/plugin-evals) suite in `plugins/midnight-cast/evals/`. The agent gets the plugin and nothing else, and the midnight-cast tools answer from mocks instead of a live network, so a run is repeatable and needs no Blockfrost project ID. The mocks are the real server's output for `decode` with the network the task names, for `health` on mainnet started by the plugin without a project ID, and for `examples` on "DUST sponsorship"; the `tip` result for the indexer-lag task was edited to show the indexer 420 blocks behind. A mock answers every call to its tool, whatever the arguments. `evals/mocks/midnight-cast/_tools.json` is the server's tool list, with its real descriptions and input schemas. `npm run agent-files` regenerates it, and the unit tests fail when it's out of date, when a mock isn't a valid envelope from a real tool, or when a grader names a tool that doesn't exist.
 
 Each case checks that the agent called the right tool and that its answer names the cause; the missing-project-ID task also has a judge that fails any answer reporting an outage. Every run is a model call on your account, so start small:
 
