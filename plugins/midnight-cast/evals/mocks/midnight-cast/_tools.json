@@ -1835,7 +1835,7 @@
     {
       "name": "explain",
       "title": "midnight-cast explain",
-      "description": "Background on a Midnight topic: dust, 1010, versions, transcript.",
+      "description": "Background on a Midnight topic: dust, 1010, versions, transcript, sync.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1845,7 +1845,8 @@
               "1010",
               "dust",
               "versions",
-              "transcript"
+              "transcript",
+              "sync"
             ],
             "description": "Topic to explain"
           }

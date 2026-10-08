@@ -62,7 +62,7 @@ describe("the Claude Code plugin", () => {
     // _tools.json is generated from the server, so the drift test keeps it current.
     const tools = new Set(json(join(evals, "mocks", "midnight-cast", "_tools.json")).tools.map((t: { name: string }) => t.name));
     const cases = readdirSync(evals).filter((name) => existsSync(join(evals, name, "prompt.md")));
-    expect(cases.length).toBe(4);
+    expect(cases.length).toBe(5);
     for (const name of cases) {
       const mocks = join(evals, name, "mocks", "midnight-cast");
       for (const file of readdirSync(mocks).filter((f) => f.endsWith(".md") && !f.startsWith("_"))) {
