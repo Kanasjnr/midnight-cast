@@ -15,6 +15,42 @@
         },
         "text": {
           "type": "string"
+        },
+        "examples": {
+          "type": "array",
+          "description": "Working code from Midnight's examples for this topic",
+          "items": {
+            "type": "object",
+            "required": [
+              "example",
+              "about",
+              "path",
+              "lines",
+              "url"
+            ],
+            "properties": {
+              "example": {
+                "type": "string"
+              },
+              "about": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              },
+              "lines": {
+                "type": "array",
+                "items": {
+                  "type": "integer"
+                },
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "url": {
+                "type": "string"
+              }
+            }
+          }
         }
       }
     },
