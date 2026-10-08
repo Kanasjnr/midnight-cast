@@ -114,22 +114,21 @@ function syncHelp(): string {
     "A new wallet's first sync takes a long time, and that's normal: almost all of it",
     "is building the network-wide DUST generation tree, which grows with the chain.",
     "",
-    "What Midnight's examples measured on preprod:",
-    "  - Their FAST-SYNC notes: about 78 minutes for a brand-new wallet to reach the",
-    "    chain tip, and about 75 seconds for one restored from their pre-seed bundle.",
     ...(latest
       ? [
-          `  - Their node ${latest.nodeVersion} run (${formatDate(latest.date)}): ${latest.timings!.coldSyncMinutes} minutes for a first sync from genesis` +
-            (latest.timings!.restoreSeconds ? `,` : "."),
-          ...(latest.timings!.restoreSeconds ? [`    and ${latest.timings!.restoreSeconds} seconds restoring from the pre-seed bundle.`] : []),
+          `What Midnight's examples measured on ${latest.network}, in their node ${latest.nodeVersion} run (${formatDate(latest.date)}):`,
+          `  - ${latest.timings!.coldSyncMinutes} minutes for a first sync from genesis.`,
+          ...(latest.timings!.restoreSeconds ? [`  - ${latest.timings!.restoreSeconds} seconds for a wallet restored from their pre-seed bundle.`] : []),
+          "",
         ]
       : []),
+    "Their FAST-SYNC notes explain where the time goes and how the pre-seed works:",
+    `  ${fastSync}`,
     "",
     "What to do:",
     "  - Let a first sync finish. To rule out the network, run midnight-cast tip <network>:",
     "    an indexer far behind the node makes every wallet look stuck.",
-    "  - For tests and demos, start wallets from a pre-seeded bundle, as the examples do:",
-    `    ${fastSync}`,
+    "  - For tests and demos, start wallets from a pre-seeded bundle, as the examples do.",
     "  - midnight-cast preflight <network> --address <wallet> checks the wallet holds NIGHT",
     "    registered for DUST, and quotes these timings.",
   ].join("\n");
@@ -159,7 +158,8 @@ export function explainCommand(
   }
 
   const key = topic.toLowerCase() as (typeof TOPICS)[number];
-  const help = HELP_BY_TOPIC[key];
+  // Own properties only: "constructor" isn't a topic.
+  const help = Object.hasOwn(HELP_BY_TOPIC, key) ? HELP_BY_TOPIC[key] : undefined;
   if (!help) {
     return fail(`Unknown topic "${topic}". Available: ${TOPICS.join(", ")}`);
   }
