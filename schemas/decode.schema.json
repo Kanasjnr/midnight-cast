@@ -39,6 +39,42 @@
         },
         "mapMismatch": {
           "type": "string"
+        },
+        "examples": {
+          "type": "array",
+          "description": "Working code from Midnight's examples for this kind of error, at the examples index's pinned commit",
+          "items": {
+            "type": "object",
+            "required": [
+              "example",
+              "about",
+              "path",
+              "lines",
+              "url"
+            ],
+            "properties": {
+              "example": {
+                "type": "string"
+              },
+              "about": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              },
+              "lines": {
+                "type": "array",
+                "items": {
+                  "type": "integer"
+                },
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "url": {
+                "type": "string"
+              }
+            }
+          }
         }
       }
     },
@@ -163,6 +199,42 @@
         },
         "fix": {
           "type": "string"
+        },
+        "examples": {
+          "type": "array",
+          "description": "Working code from Midnight's examples for this kind of error, at the examples index's pinned commit",
+          "items": {
+            "type": "object",
+            "required": [
+              "example",
+              "about",
+              "path",
+              "lines",
+              "url"
+            ],
+            "properties": {
+              "example": {
+                "type": "string"
+              },
+              "about": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              },
+              "lines": {
+                "type": "array",
+                "items": {
+                  "type": "integer"
+                },
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "url": {
+                "type": "string"
+              }
+            }
+          }
         }
       }
     },

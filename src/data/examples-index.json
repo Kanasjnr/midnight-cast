@@ -23,7 +23,8 @@
         "store state",
         "providers",
         "network config",
-        "wallet sync"
+        "wallet sync",
+        "wallet errors"
       ],
       "url": "https://github.com/midnightntwrk/midnight-examples/tree/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/hello-world",
       "files": [
@@ -81,6 +82,17 @@
           ],
           "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/hello-world/src/wallet.ts#L137-L185",
           "excerpt": "export async function syncWallet(\n  logger: Logger,\n  wallet: WalletFacade,\n  timeout = 300_000,\n): Promise<FacadeState> {\n  logger.info('Syncing wallet...');\n  let emissionCount = 0;\n  return Rx.firstValueFrom(\n    wallet.state().pipe(\n      Rx.tap((state: FacadeState) => {\n        emissionCount++;\n        const shielded = isProgressStrictlyComplete(state.shielded.state.progress);\n        const unshielded = isProgressStrictlyComplete(state.unshielded.progress);\n        const dust = isProgressStrictlyComplete(state.dust.state.progress);\n        logger.info(\n          `Wallet sync [${emissionCount}]: shielded=${formatProgress(state.shielded.state.progress)}, ` +\n            `unshielded=${formatProgress(state.unshielded.progress)}, dust=${formatProgress(state.dust.state.progress)}`,\n        );\n        if (!shielded) {\n          logger.debug(`  shielded.progress: ${JSON.stringify(state.shielded.state.progress)}`);\n        }\n        if (!unshielded) {\n          logger.debug(`  unshielded.progress: ${JSON.stringify(state.unshielded.progress)}`);\n        }\n  // …"
+        },
+        {
+          "path": "examples/hello-world/ui/src/lib/errors.ts",
+          "symbol": "function withHint",
+          "about": "Explaining a wallet's InsufficientFunds error (no DUST for fees) to a user",
+          "lines": [
+            48,
+            53
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/hello-world/ui/src/lib/errors.ts#L48-L53",
+          "excerpt": "function withHint(message: string, tag: unknown): string {\n  if (tag === \"Wallet.InsufficientFunds\" && /dust/i.test(message)) {\n    return `${message}. The wallet needs DUST to pay fees: hold NIGHT registered for DUST generation, then wait for DUST to accrue.`;\n  }\n  return message;\n}"
         }
       ]
     },
@@ -253,6 +265,17 @@
           ],
           "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/token-transfers/contract/token-transfers.compact#L40-L46",
           "excerpt": "export circuit sendNightTokensToUser(amount: Uint<64>, user_addr: UserAddress): [] {\n    sendUnshielded(\n        default<Bytes<32>>,\n        disclose(amount) as Uint<128>,\n        right<ContractAddress, UserAddress>(disclose(user_addr))\n    );\n}"
+        },
+        {
+          "path": "examples/token-transfers/contract/token-transfers.compact",
+          "symbol": "export circuit receiveShieldedTokens",
+          "about": "Receiving a shielded coin into a contract, which claims it",
+          "lines": [
+            48,
+            50
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/token-transfers/contract/token-transfers.compact#L48-L50",
+          "excerpt": "export circuit receiveShieldedTokens(coin: ShieldedCoinInfo): [] {\n   receiveShielded(disclose(coin));\n}"
         },
         {
           "path": "examples/token-transfers/contract/token-transfers.compact",

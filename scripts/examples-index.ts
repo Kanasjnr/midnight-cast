@@ -35,13 +35,14 @@ const EXAMPLES: Source[] = [
   {
     name: "hello-world",
     summary: "The smallest working DApp: a contract that stores a message, its tests against a local network, and a browser UI",
-    topics: ["getting started", "first contract", "deploy a contract", "store state", "providers", "network config", "wallet sync"],
+    topics: ["getting started", "first contract", "deploy a contract", "store state", "providers", "network config", "wallet sync", "wallet errors"],
     files: [
       { path: "contract/hello-world.compact", symbol: "export circuit storeMessage", about: "A circuit that writes a public ledger value" },
       { path: "src/test/hw.test.ts", symbol: "it('Deploys the contract'", about: "Deploying a contract with deployContract" },
       { path: "src/providers.ts", symbol: "export function buildProviders", about: "Wiring up the midnight-js providers a contract needs" },
       { path: "src/config.ts", symbol: "export function getConfig", about: "Choosing the network's endpoints (local, preview, preprod)" },
       { path: "src/wallet.ts", symbol: "export async function syncWallet", about: "Syncing a wallet and reporting its progress" },
+      { path: "ui/src/lib/errors.ts", symbol: "function withHint", about: "Explaining a wallet's InsufficientFunds error (no DUST for fees) to a user" },
     ],
   },
   {
@@ -74,6 +75,7 @@ const EXAMPLES: Source[] = [
       { path: "contract/token-transfers.compact", symbol: "export circuit sendToUser", about: "Sending unshielded tokens to a user" },
       { path: "contract/token-transfers.compact", symbol: "export circuit receiveNightTokens", about: "Receiving NIGHT into a contract" },
       { path: "contract/token-transfers.compact", symbol: "export circuit sendNightTokensToUser", about: "Sending NIGHT from a contract to a user" },
+      { path: "contract/token-transfers.compact", symbol: "export circuit receiveShieldedTokens", about: "Receiving a shielded coin into a contract, which claims it" },
       { path: "contract/token-transfers.compact", symbol: "export circuit sendShieldedToUser", about: "Sending shielded tokens to a user" },
       { path: "contract/token-transfers.compact", symbol: "export circuit mintAndSendShielded", about: "Minting a shielded token and sending it in one call" },
     ],

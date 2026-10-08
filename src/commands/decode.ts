@@ -1,3 +1,4 @@
+import { describeLinks, examplesForLedgerCode, resolveLinks } from "../lib/example-links.js";
 import { loadDataJson } from "../lib/data-path.js";
 import {
   findLedgerCodesByName,
@@ -201,6 +202,7 @@ function decodeLedger(input: string, options: DecodeOptions): EmitResult {
   const ledgerMeta = ledgerMapMeta(options, data);
   const mapMismatch = ledgerMapMismatch(options, data);
   const related = relatedNoteFor(code, options.network);
+  const examples = examplesForLedgerCode(Number(code));
   const payload = {
     kind: "ledger" as const,
     code: parseInt(code, 10),
@@ -217,6 +219,7 @@ function decodeLedger(input: string, options: DecodeOptions): EmitResult {
     mapUpdated: data.updated,
     ...(mapMismatch ? { mapMismatch } : {}),
     ...(related ? { relatedHint: related.hint } : {}),
+    ...(examples.length ? { examples } : {}),
   };
   const next = related?.next ?? [];
 
@@ -232,6 +235,7 @@ function decodeLedger(input: string, options: DecodeOptions): EmitResult {
     `Desc:   ${entry.description}`,
     `Fix:    ${entry.fix}`,
     ...(related ? [`Hint:   ${related.hint}`] : []),
+    ...describeLinks(examples).map((l) => `Code:   ${l}`),
     ...(mapMismatch ? [`Warn:   ${mapMismatch}`] : []),
     ...(meta ? [meta] : []),
     `Docs:   ${data.docUrl}`,
@@ -499,14 +503,16 @@ function decodeKnownMessage(message: KnownMessage, options: DecodeOptions): Emit
   const next = message.next.map((step) =>
     options.network ? { ...step, command: step.command.replace("<network>", options.network) } : step,
   );
+  const examples = resolveLinks(message.examples ?? []);
   if (options.json) {
-    const { next: _, ...rest } = message;
-    return { ...success({ kind: "message" as const, ...rest }), next };
+    const { next: _, examples: __, ...rest } = message;
+    return { ...success({ kind: "message" as const, ...rest, ...(examples.length ? { examples } : {}) }), next };
   }
   const text = [
     `Kind:   message (${message.name})`,
     `Desc:   ${message.description}`,
     `Fix:    ${message.fix}`,
+    ...describeLinks(examples).map((l) => `Code:   ${l}`),
   ].join("\n");
   return { ...success(text), next };
 }

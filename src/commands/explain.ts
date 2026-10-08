@@ -1,8 +1,12 @@
 import type { EmitResult, GlobalOptions } from "../output.js";
 import type { Catalog } from "../lib/catalog.js";
 import { fail, success } from "../output.js";
+import { describeLinks, examplesForTopic } from "../lib/example-links.js";
+import { loadExamplesIndex } from "../lib/examples-index.js";
+import { formatDate, type BundledReports } from "../lib/examples-report.js";
+import { loadDataJson } from "../lib/data-path.js";
 
-export const TOPICS = ["dust", "1010", "versions", "transcript"] as const;
+export const TOPICS = ["dust", "1010", "versions", "transcript", "sync"] as const;
 
 const DUST_HELP = `
 DUST on Midnight
@@ -97,11 +101,45 @@ Matrix:
   https://docs.midnight.network/relnotes/support-matrix
 `.trim();
 
-const HELP_BY_TOPIC: Record<(typeof TOPICS)[number], string> = {
+/** Built when asked, from the examples' measurements bundled with this release. */
+function syncHelp(): string {
+  const index = loadExamplesIndex();
+  const reports = Object.values(loadDataJson<BundledReports>("examples-reports.json").reports);
+  const latest = reports.filter((r) => r.timings?.coldSyncMinutes !== undefined).sort((a, b) => b.date.localeCompare(a.date))[0];
+  const fastSync = `https://github.com/${index.repo}/blob/${index.commit}/FAST-SYNC.md`;
+  return [
+    "Wallet sync on preview and preprod",
+    "==================================",
+    "",
+    "A new wallet's first sync takes a long time, and that's normal: almost all of it",
+    "is building the network-wide DUST generation tree, which grows with the chain.",
+    "",
+    ...(latest
+      ? [
+          `What Midnight's examples measured on ${latest.network}, in their node ${latest.nodeVersion} run (${formatDate(latest.date)}):`,
+          `  - ${latest.timings!.coldSyncMinutes} minutes for a first sync from genesis.`,
+          ...(latest.timings!.restoreSeconds ? [`  - ${latest.timings!.restoreSeconds} seconds for a wallet restored from their pre-seed bundle.`] : []),
+          "",
+        ]
+      : []),
+    "Their FAST-SYNC notes explain where the time goes and how the pre-seed works:",
+    `  ${fastSync}`,
+    "",
+    "What to do:",
+    "  - Let a first sync finish. To rule out the network, run midnight-cast tip <network>:",
+    "    an indexer far behind the node makes every wallet look stuck.",
+    "  - For tests and demos, start wallets from a pre-seeded bundle, as the examples do.",
+    "  - midnight-cast preflight <network> --address <wallet> checks the wallet holds NIGHT",
+    "    registered for DUST, and quotes these timings.",
+  ].join("\n");
+}
+
+const HELP_BY_TOPIC: Record<(typeof TOPICS)[number], string | (() => string)> = {
   dust: DUST_HELP,
   "1010": HELP_1010,
   versions: VERSIONS_HELP,
   transcript: TRANSCRIPT_HELP,
+  sync: syncHelp,
 };
 
 export function explainCommand(
@@ -120,14 +158,17 @@ export function explainCommand(
   }
 
   const key = topic.toLowerCase() as (typeof TOPICS)[number];
-  const text = HELP_BY_TOPIC[key];
-  if (!text) {
+  // Own properties only: "constructor" isn't a topic.
+  const help = Object.hasOwn(HELP_BY_TOPIC, key) ? HELP_BY_TOPIC[key] : undefined;
+  if (!help) {
     return fail(`Unknown topic "${topic}". Available: ${TOPICS.join(", ")}`);
   }
+  const text = typeof help === "function" ? help() : help;
+  const examples = examplesForTopic(key);
 
   if (options.json) {
-    return success({ topic: key, text });
+    return success({ topic: key, text, ...(examples.length ? { examples } : {}) });
   }
 
-  return success(text);
+  return success(examples.length ? `${text}\n\nWorking code from Midnight's examples:\n${describeLinks(examples).map((l) => `  ${l}`).join("\n")}` : text);
 }
