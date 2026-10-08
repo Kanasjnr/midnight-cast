@@ -141,6 +141,8 @@ describe("schemas", () => {
       ["explain"],
       ["examples"],
       ["examples", "dust", "sponsorship"],
+      ["explain", "sync"],
+      ["decode", "--raw", "Wallet.InsufficientFunds: Insufficient Funds: could not balance dust"],
       ["config", "show", "--network", "preprod"],
     ]) {
       expect((await runJson(args)).code, args.join(" ")).toBe(0);
