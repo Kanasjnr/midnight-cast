@@ -4,16 +4,19 @@
 
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import { NEW_SCOPE, OLD_SCOPE } from "./npm-scope.js";
-import type { VersionCheck } from "./versions.js";
+import { packageBaseName } from "./npm-scope.js";
+import { compareVersions, type VersionCheck } from "./versions.js";
 
-const SKIP_DIRS = new Set(["node_modules", ".git", "dist", "build", "managed", ".yarn", "coverage"]);
+const SKIP_DIRS = new Set(["node_modules", "dist", "build", "managed", "coverage", "target", "out"]);
+const MAX_DEPTH = 4;
+const MAX_DIRS = 500;
 
-/** Every `pragma language_version …` in the project's .compact files, by file, skipping build output. */
-export function findPragmas(dir: string, depth = 6): Array<{ file: string; constraint: string }> {
+/** Every `pragma language_version …` in the project's .compact files, skipping build output and anything unreadable. */
+export function findPragmas(dir: string): Array<{ file: string; constraint: string }> {
   const found: Array<{ file: string; constraint: string }> = [];
+  let visited = 0;
   const walk = (current: string, level: number) => {
-    if (level > depth) return;
+    if (level > MAX_DEPTH || ++visited > MAX_DIRS) return;
     let entries;
     try {
       entries = readdirSync(current, { withFileTypes: true });
@@ -21,12 +24,16 @@ export function findPragmas(dir: string, depth = 6): Array<{ file: string; const
       return;
     }
     for (const entry of entries) {
+      const path = join(current, entry.name);
       if (entry.isDirectory()) {
-        if (!SKIP_DIRS.has(entry.name) && !entry.name.startsWith(".")) walk(join(current, entry.name), level + 1);
-      } else if (entry.name.endsWith(".compact")) {
-        const path = join(current, entry.name);
-        const match = /^\s*pragma\s+language_version\s+([^;]+);/m.exec(readFileSync(path, "utf8"));
-        if (match) found.push({ file: path, constraint: match[1]!.trim() });
+        if (!SKIP_DIRS.has(entry.name) && !entry.name.startsWith(".")) walk(path, level + 1);
+      } else if (entry.isFile() && entry.name.endsWith(".compact")) {
+        try {
+          const match = /^\s*pragma\s+language_version\s+([^;]+);/m.exec(readFileSync(path, "utf8"));
+          if (match) found.push({ file: path, constraint: match[1]!.trim() });
+        } catch {
+          // An unreadable file is left out; this check is advice and mustn't fail versions.
+        }
       }
     }
   };
@@ -34,88 +41,109 @@ export function findPragmas(dir: string, depth = 6): Array<{ file: string; const
   return found;
 }
 
-const parts = (v: string) => v.split(".").map((n) => Number.parseInt(n, 10));
+/** Whether two versions agree on every component the shorter one names: "0.23" and "0.23.0" do. */
+function samePrefix(a: string, b: string): boolean {
+  const pa = a.split(".");
+  const pb = b.split(".");
+  return pa.slice(0, Math.min(pa.length, pb.length)).every((n, i) => Number(n) === Number(pb[i]));
+}
 
 /**
- * Whether a pragma constraint admits a language version: `0.23` (that version, any patch),
- * `>= 0.25.0`, or terms joined by `&&`. Undefined when it can't be read.
+ * Whether a version satisfies a range, in the forms package.json, .nvmrc and Compact pragmas use:
+ * `||` alternatives of space- or `&&`-joined comparators (`>=`, `>`, `<=`, `<`, `=`), caret and
+ * tilde ranges, x-ranges (`22.x`, `22`) and bare versions. Undefined when the range has anything
+ * else, such as a dist-tag or a workspace link.
  */
-export function pragmaAdmits(constraint: string, version: string): boolean | undefined {
-  const want = parts(version);
-  const results = constraint.split("&&").map((term) => {
-    const m = /^\s*(>=|<=|>|<|==|=)?\s*(\d+(?:\.\d+)*)\s*$/.exec(term);
-    if (!m) return undefined;
-    const bound = parts(m[2]!);
-    const op = m[1] ?? "prefix";
-    if (op === "prefix") return bound.every((n, i) => want[i] === n);
-    let cmp = 0;
-    for (let i = 0; i < Math.max(bound.length, want.length) && cmp === 0; i++) cmp = Math.sign((want[i] ?? 0) - (bound[i] ?? 0));
-    return { ">=": cmp >= 0, "<=": cmp <= 0, ">": cmp > 0, "<": cmp < 0, "=": cmp === 0, "==": cmp === 0 }[op];
+export function satisfies(range: string, version: string): boolean | undefined {
+  const alternatives = range.split("||").map((alternative) => {
+    // Compact writes ">= 0.16", with a space after the operator.
+    const terms = alternative.replace(/&&/g, " ").replace(/(>=|<=|==|>|<|=|\^|~)\s+/g, "$1").trim().split(/\s+/).filter(Boolean);
+    if (!terms.length) return undefined;
+    const results = terms.map((term) => {
+      const m = /^(>=|<=|>|<|==|=|\^|~)?v?(\d+(?:\.(?:\d+|x|\*))*)$/.exec(term);
+      if (!m) return undefined;
+      const bound = m[2]!.replace(/\.(x|\*)$/g, "").replace(/\.(x|\*)/g, "");
+      const cmp = compareVersions(version, bound);
+      const [major, minor] = bound.split(".").map(Number);
+      switch (m[1]) {
+        case ">=": return cmp >= 0;
+        case ">": return cmp > 0;
+        case "<=": return cmp <= 0 || samePrefix(bound, version);
+        case "<": return cmp < 0;
+        case "^": return cmp >= 0 && (major === 0 ? samePrefix(`${major}.${minor ?? 0}`, version) : samePrefix(`${major}`, version));
+        case "~": return cmp >= 0 && samePrefix(`${major}.${minor ?? 0}`, version);
+        default: return samePrefix(bound, version);
+      }
+    });
+    return results.some((r) => r === undefined) ? undefined : results.every(Boolean);
   });
-  return results.some((r) => r === undefined) ? undefined : results.every(Boolean);
+  if (alternatives.some((a) => a === true)) return true;
+  return alternatives.some((a) => a === undefined) ? undefined : false;
 }
 
-const core = (v: string) => /(\d+\.\d+\.\d+)/.exec(v)?.[1];
-const base = (name: string) => (name.startsWith(OLD_SCOPE) ? name.slice(OLD_SCOPE.length) : name.startsWith(NEW_SCOPE) ? name.slice(NEW_SCOPE.length) : undefined);
-
-function packageCheck(label: string, expected: string, versions: string[]): VersionCheck | undefined {
-  const found = [...new Set(versions.map((v) => core(v) ?? v))];
-  if (!found.length) return undefined;
-  const ok = found.every((v) => v === expected);
-  return { label, expected, live: found.join(", "), ok, note: ok ? "as the examples" : `the official examples run ${expected}` };
+/** A package check against the examples' version: exact pins and installed versions compared, ranges asked whether they admit it, anything else left out. */
+function packageCheck(label: string, expected: string, specs: string[]): VersionCheck | undefined {
+  const verdicts = specs.map((spec) => satisfies(spec, expected));
+  if (!verdicts.length || verdicts.every((v) => v === undefined)) return undefined;
+  const ok = verdicts.every((v) => v !== false);
+  const live = [...new Set(specs)].join(", ");
+  return { label, expected, live, ok, note: ok ? "admits the examples' version" : `the official examples run ${expected}` };
 }
 
-/** The Node.js major a project declares, from .nvmrc or package.json engines. */
+/** The Node.js version a project declares, from .nvmrc or package.json engines. */
 function declaredNode(dir: string): string | undefined {
   try {
-    if (existsSync(join(dir, ".nvmrc"))) return readFileSync(join(dir, ".nvmrc"), "utf8").trim().replace(/^v/, "");
-    const engines = (JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as { engines?: { node?: string } }).engines?.node;
-    return engines?.trim();
+    if (existsSync(join(dir, ".nvmrc"))) return readFileSync(join(dir, ".nvmrc"), "utf8").trim();
+    return (JSON.parse(readFileSync(join(dir, "package.json"), "utf8")) as { engines?: { node?: string } }).engines?.node?.trim();
   } catch {
     return undefined;
   }
 }
 
-/** Whether a declared Node.js version or range admits a major: `22`, `v22.3.0`, `>=20`, `^22`, `22.x`. */
+/** Whether a declared Node.js version or range admits some release of a major. */
 export function nodeAdmits(declared: string, major: string): boolean | undefined {
-  const m = /^(>=|\^|~)?\s*v?(\d+)(?:\.(?:\d+|x|\*))*(?:\s.*)?$/.exec(declared.trim());
-  if (!m) return undefined;
-  const n = Number(m[2]);
-  return m[1] === ">=" ? Number(major) >= n : Number(major) === n;
+  // An exact version, as .nvmrc usually holds, admits its own major.
+  const exact = /^v?(\d+)(?:\.\d+){0,2}$/.exec(declared.trim());
+  if (exact) return exact[1] === major;
+  const tries = [`${major}.0.0`, `${major}.99.99`].map((v) => satisfies(declared, v));
+  if (tries.includes(true)) return true;
+  return tries.includes(undefined) ? undefined : false;
 }
 
 /**
  * The project against the examples' toolchain: Midnight.js, testkit and the wallet SDK from its
  * packages, the language from its pragmas, and Node.js from .nvmrc or engines. Only what the
- * project declares is checked.
+ * project declares, in forms that can be read, is checked.
  */
 export function examplesToolchainChecks(
   toolchain: Record<string, string>,
   project: { dir: string; packages?: Record<string, string> },
 ): VersionCheck[] {
   const entries = Object.entries(project.packages ?? {});
-  const versionsOf = (match: (name: string) => boolean) => entries.filter(([name]) => match(base(name) ?? "")).map(([, v]) => v);
+  const specsOf = (match: (base: string) => boolean) =>
+    entries.filter(([name]) => match(packageBaseName(name) ?? "")).map(([, spec]) => spec);
   const checks: Array<VersionCheck | undefined> = [];
   const js = toolchain["@midnight-ntwrk/midnight-js-*"];
-  if (js) checks.push(packageCheck("midnight-js", js, versionsOf((b) => b.startsWith("midnight-js-"))));
+  if (js) checks.push(packageCheck("midnight-js", js, specsOf((b) => b.startsWith("midnight-js-"))));
   const testkit = toolchain["@midnight-ntwrk/testkit-js"];
-  if (testkit) checks.push(packageCheck("testkit-js", testkit, versionsOf((b) => b === "testkit-js")));
+  if (testkit) checks.push(packageCheck("testkit-js", testkit, specsOf((b) => b === "testkit-js")));
   const wallet = toolchain["wallet SDK"];
-  if (wallet) checks.push(packageCheck("wallet-sdk", wallet, versionsOf((b) => b === "wallet-sdk")));
+  if (wallet) checks.push(packageCheck("wallet-sdk", wallet, specsOf((b) => b === "wallet-sdk")));
 
   const language = toolchain["Compact language (pragma)"];
-  if (language) {
-    const pragmas = findPragmas(project.dir);
-    const constraints = [...new Set(pragmas.map((p) => p.constraint))];
-    if (constraints.length) {
-      const admitted = constraints.map((c) => pragmaAdmits(c, language));
-      const ok = admitted.every((a) => a === true);
+  // Only a directory that is a project gets walked: the MCP server's default may be / or a home directory.
+  if (language && existsSync(join(project.dir, "package.json"))) {
+    const readable = [...new Set(findPragmas(project.dir).map((p) => p.constraint))]
+      .map((constraint) => ({ constraint, admits: satisfies(constraint, language) }))
+      .filter((p) => p.admits !== undefined);
+    if (readable.length) {
+      const ok = readable.every((p) => p.admits);
       checks.push({
         label: "pragma language_version",
         expected: language,
-        live: constraints.join(", "),
+        live: readable.map((p) => p.constraint).join(", "),
         ok,
-        note: ok ? "admits the examples' language" : admitted.includes(undefined) ? "couldn't read every pragma" : `the official examples use ${language}`,
+        note: ok ? "admits the examples' language" : `the official examples use ${language}`,
       });
     }
   }

@@ -78,9 +78,8 @@ export async function versionsCommand(
   const checks = buildVersionChecks(expected, live, liveProofServer);
   const local = flags.local !== false ? checkLocalPackages(expected, projectDir) : {};
   // Advice beside the matrix: the toolchain Midnight's examples are known to work with.
-  const index = loadExamplesIndex();
-  const toolchainChecks =
-    flags.local !== false ? examplesToolchainChecks(index.toolchain, { dir: projectDir, packages: local.localPackages }) : [];
+  const index = flags.local !== false ? loadExamplesIndex() : undefined;
+  const toolchainChecks = index ? examplesToolchainChecks(index.toolchain, { dir: projectDir, packages: local.localPackages }) : [];
   const { localPackageChecks } = local;
   const allOk =
     checks.every((c) => c.ok) &&
@@ -107,7 +106,7 @@ export async function versionsCommand(
     checks,
     ...local,
     examples: await examples,
-    ...(toolchainChecks.length ? { examplesToolchain: { repo: index.repo, commit: index.commit, toolchain: index.toolchain, checks: toolchainChecks } } : {}),
+    ...(index && toolchainChecks.length ? { examplesToolchain: { repo: index.repo, commit: index.commit, toolchain: index.toolchain, checks: toolchainChecks } } : {}),
     allOk,
   };
 
