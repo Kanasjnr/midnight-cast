@@ -162,7 +162,13 @@ midnight-cast rpc chain_getHeader --json
 midnight-cast versions preprod --fail-on-mismatch   # CI; local Midnight packages (either npm scope) vs matrix pins
 ```
 
-## For agents and scripts
+## Using with AI agents
+
+An agent working on a Midnight project needs to know what the network is doing right now, what an error means, and what working code looks like. midnight-cast answers all three from live data and Midnight's own sources, in a form an agent can parse, and its MCP server can't change anything.
+
+It sits next to two other sources an agent may already have. The Kapa answer engine answers questions from Midnight's documentation and examples. [Midnight Expert](https://github.com/midnightntwrk/midnight-expert) gives agents skills and MCP tools for writing and verifying Compact and SDK code. midnight-cast is the part neither covers: the live state of preview, preprod and mainnet, the meaning of a specific error code on the ledger the network runs, whether a project's versions match the network, and which of Midnight's official examples shows a pattern.
+
+### The JSON contract
 
 Add `--json` to any command for one stable envelope: `ok`, `data`, a structured `error` with a `kind` and `hint`, any `warnings`, and `next`, the follow-up commands an expert would run. `midnight-cast explain --json` describes every command, option, exit code and error kind in one call, and [`schemas/`](schemas) has a JSON Schema for each command's output. Exit codes are `0` for success, `1` for a failed check and `2` for a usage error. See [JSON output](docs/COMMANDS.md#json-output).
 
@@ -171,11 +177,25 @@ midnight-cast decode --raw "1010: Invalid Transaction: Custom error: 186" --json
 midnight-cast explain --json
 ```
 
-Agents that speak MCP can use midnight-cast directly: `midnight-cast mcp` runs a read-only MCP server on stdio with tools for `health`, `ping`, `tip`, `versions`, `block`, `tx`, the DUST events, `decode` and `explain`, each returning the same envelope. For example, in Claude Code:
+### The MCP server
+
+Agents that speak MCP can use midnight-cast directly: `midnight-cast mcp` runs an MCP server on stdio with 14 tools, `health`, `preflight`, `ping`, `tip`, `versions`, `block`, `tx`, `dust_event`, `dust_events`, `contract`, `dust_status`, `decode`, `explain` and `examples`, each returning the same envelope. For example, in Claude Code:
 
 ```bash
 claude mcp add --transport stdio midnight-cast -- npx -y midnight-cast mcp
 ```
+
+A sandbox or CI image without Node.js can run the same server from the [standalone binary](#midnight-cast): `midnight-cast mcp`.
+
+### What an agent can and can't do with it
+
+- Every MCP tool only reads, and each is marked read-only to the client. None signs or submits a transaction, and none needs a wallet, a key or a seed. The CLI's `rpc` command, which passes any JSON-RPC method to a node, isn't an MCP tool.
+- `MIDNIGHT_CAST_NETWORKS` limits which networks the model may query, for example `preview,preprod`.
+- Tools that reach a network are rate limited, 30 calls a minute by default (`MIDNIGHT_CAST_MAX_CALLS_PER_MINUTE`), so a looping agent can't exhaust public endpoints or a Blockfrost plan.
+- The only secret it holds is an optional Blockfrost project ID for mainnet. It's sent only to Blockfrost and redacted from every response, so the model never sees it.
+- `decode`, `explain` and `examples` work offline from data bundled with the release.
+
+### Guidance, skill and plugin
 
 To teach a coding agent when and how to use midnight-cast, add the guidance to your project: `midnight-cast agents init --write` appends a marked section to `AGENTS.md` (read by Codex, Cursor, Copilot, Gemini CLI, Windsurf, Aider and others; use `--file CLAUDE.md` for Claude Code), or install the portable skill with `npx skills add Kanasjnr/midnight-cast --skill midnight-cast`. The snippets are in [docs/agents](docs/agents).
 
