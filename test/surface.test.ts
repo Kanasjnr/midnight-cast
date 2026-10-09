@@ -5,10 +5,17 @@ import { runAsMcpCall } from "../src/lib/surface.js";
 
 describe("messages for MCP calls", () => {
   it("say where an MCP server gets the Blockfrost ID instead of naming CLI flags", () => {
-    expect(missingProjectIdError("mainnet")).toContain("--project-id");
-    const mcp = runAsMcpCall(() => missingProjectIdError("mainnet"));
-    expect(mcp).toContain("this server's env in the MCP client's configuration");
-    expect(mcp).not.toContain("--project-id");
+    // Outside the plugin: the plugin's variable, if this machine has one, changes the advice.
+    const plugin = process.env.MIDNIGHT_CAST_PLUGIN_MAINNET_PROJECT_ID;
+    delete process.env.MIDNIGHT_CAST_PLUGIN_MAINNET_PROJECT_ID;
+    try {
+      expect(missingProjectIdError("mainnet")).toContain("--project-id");
+      const mcp = runAsMcpCall(() => missingProjectIdError("mainnet"));
+      expect(mcp).toContain("this server's env in the MCP client's configuration");
+      expect(mcp).not.toContain("--project-id");
+    } finally {
+      if (plugin !== undefined) process.env.MIDNIGHT_CAST_PLUGIN_MAINNET_PROJECT_ID = plugin;
+    }
   });
 
   it("send Claude Code plugin users to the plugin's option", () => {

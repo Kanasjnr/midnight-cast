@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  isProjectIdEnv,
   blockfrostHttpError,
   isBlockfrostUrl,
   blockfrostNetwork,
@@ -21,7 +22,9 @@ import { detectIndexerApi } from "../src/lib/versions.js";
 const TOKEN = "nightmainnetTESTabcdefgh12345678";
 const configDir = join(tmpdir(), `midnight-cast-blockfrost-${process.pid}`);
 const previousXdg = process.env.XDG_CONFIG_HOME;
-const previousToken = process.env.BLOCKFROST_PROJECT_ID;
+// The live smoke job exports real project IDs; each test starts from none but the hermetic fake preprod one.
+const projectIdEnvs = () => Object.keys(process.env).filter(isProjectIdEnv);
+let previousIds: Record<string, string | undefined> = {};
 
 function writeConfig(toml: string) {
   mkdirSync(join(configDir, "midnight-cast"), { recursive: true });
@@ -31,14 +34,16 @@ function writeConfig(toml: string) {
 beforeEach(() => {
   mkdirSync(configDir, { recursive: true });
   process.env.XDG_CONFIG_HOME = configDir;
-  delete process.env.BLOCKFROST_PROJECT_ID;
+  previousIds = Object.fromEntries(projectIdEnvs().map((name) => [name, process.env[name]]));
+  for (const name of projectIdEnvs()) delete process.env[name];
+  process.env.BLOCKFROST_PREPROD_PROJECT_ID = "nightpreprodTESTONLY";
 });
 
 afterEach(() => {
   if (previousXdg === undefined) delete process.env.XDG_CONFIG_HOME;
   else process.env.XDG_CONFIG_HOME = previousXdg;
-  if (previousToken === undefined) delete process.env.BLOCKFROST_PROJECT_ID;
-  else process.env.BLOCKFROST_PROJECT_ID = previousToken;
+  for (const name of projectIdEnvs()) delete process.env[name];
+  for (const [name, value] of Object.entries(previousIds)) if (value !== undefined) process.env[name] = value;
   rmSync(configDir, { recursive: true, force: true });
   vi.unstubAllGlobals();
 });
