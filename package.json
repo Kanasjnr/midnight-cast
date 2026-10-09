@@ -2,6 +2,7 @@
   "name": "midnight-cast",
   "version": "0.1.6",
   "description": "Read-only developer CLI for Midnight: network health, indexer queries, error decoding",
+  "mcpName": "io.github.Kanasjnr/midnight-cast",
   "author": "Kanasjnr",
   "type": "module",
   "repository": {
@@ -45,7 +46,8 @@
     "smoke:tarball": "tsx scripts/smoke-tarball.ts",
     "agent-files": "tsx scripts/agent-files.ts",
     "binaries": "tsx scripts/build-binaries.ts",
-    "smoke:binary": "tsx scripts/smoke-binary.ts"
+    "smoke:binary": "tsx scripts/smoke-binary.ts",
+    "version": "tsx scripts/sync-server-json.ts"
   },
   "keywords": [
     "midnight",

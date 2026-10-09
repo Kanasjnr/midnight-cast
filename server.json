@@ -1,0 +1,42 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.Kanasjnr/midnight-cast",
+  "title": "midnight-cast",
+  "description": "Read-only tools for live Midnight networks: health, transactions, DUST, errors and example code",
+  "websiteUrl": "https://github.com/Kanasjnr/midnight-cast#using-with-ai-agents",
+  "repository": {
+    "url": "https://github.com/Kanasjnr/midnight-cast",
+    "source": "github"
+  },
+  "version": "0.1.6",
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "midnight-cast",
+      "version": "0.1.6",
+      "transport": {
+        "type": "stdio"
+      },
+      "packageArguments": [
+        {
+          "type": "positional",
+          "value": "mcp"
+        }
+      ],
+      "environmentVariables": [
+        {
+          "name": "BLOCKFROST_PROJECT_ID",
+          "description": "Blockfrost project ID for a Midnight Mainnet project, needed only to query mainnet. It is never shown to the model.",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "MIDNIGHT_CAST_NETWORKS",
+          "description": "Comma-separated networks the model may query, such as preview,preprod. Default: every built-in network.",
+          "isRequired": false
+        }
+      ]
+    }
+  ]
+}
