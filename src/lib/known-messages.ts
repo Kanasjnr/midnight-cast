@@ -1,4 +1,4 @@
-import { RETIRED_HOSTS } from "./blockfrost.js";
+import { RETIRED, RETIRED_HOSTS, blockfrostProject } from "./blockfrost.js";
 import type { NextStep } from "../output.js";
 
 export interface KnownMessage {
@@ -44,7 +44,7 @@ const PATTERNS: Pattern[] = [
       id: "blockfrost-missing-token",
       name: "Blockfrost: missing project token",
       description: "Blockfrost served the request but no project ID was sent with it.",
-      fix: "Send the Blockfrost project ID with every request: as the project_id header over HTTP, or the project_id URL parameter for WebSockets. midnight-cast itself reads it from BLOCKFROST_PROJECT_ID, --project-id or the network's config section.",
+      fix: "Send the Blockfrost project ID with every request: as the project_id header over HTTP, or the project_id URL parameter for WebSockets. Each network needs its own. midnight-cast itself reads it from --project-id, the network's config section, BLOCKFROST_<NETWORK>_PROJECT_ID (such as BLOCKFROST_PREPROD_PROJECT_ID) or BLOCKFROST_PROJECT_ID.",
       next: [{ command: "midnight-cast config show --network <network>", reason: "See whether a project ID is configured and where it comes from" }],
     }),
   },
@@ -54,20 +54,24 @@ const PATTERNS: Pattern[] = [
       id: "blockfrost-invalid-token",
       name: "Blockfrost: invalid project token",
       description: "Blockfrost rejected the project ID: it is wrong, revoked, or for a different network.",
-      fix: 'Use a project ID created for the same network; Midnight Mainnet IDs start with "nightmainnet". Copy it again from the Blockfrost dashboard.',
+      fix: 'Use a project ID created for the same network: a Midnight Preprod project for preprod, a Midnight Mainnet one (its ID starts with "nightmainnet") for mainnet. Copy it again from the Blockfrost dashboard.',
       next: [{ command: "midnight-cast config show --network <network>", reason: "See which project ID is used and where it comes from" }],
     }),
   },
   {
+    // The decommissioned preprod indexer names its host in a 410 ENDPOINT_DECOMMISSIONED answer, so it matches here too.
     test: new RegExp([...RETIRED_HOSTS].map((host) => `\\b${host.replaceAll(".", "\\.")}\\b`).join("|"), "i"),
-    describe: () => ({
-      id: "retired-mainnet-host",
-      name: "Retired mainnet endpoint",
-      description:
-        "rpc.mainnet.midnight.network and indexer.mainnet.midnight.network were retired on 2026-09-30 and can stop answering at any time. Mainnet RPC and indexer are now served by Blockfrost.",
-      fix: "Point the app and tools at Blockfrost's mainnet endpoints with a Midnight Mainnet project ID.",
-      next: [{ command: "midnight-cast config init --network mainnet", reason: "Write a config with the Blockfrost mainnet endpoints" }],
-    }),
+    describe: (match) => {
+      const { network, date } = RETIRED[match[0].toLowerCase()]!;
+      const project = blockfrostProject(network);
+      return {
+        id: "retired-midnight-host",
+        name: `Retired ${network} endpoint`,
+        description: `rpc.${network}.midnight.network and indexer.${network}.midnight.network were retired on ${date}. The ${network} RPC and indexer are now served by Blockfrost.`,
+        fix: `Point the app and tools at Blockfrost's ${network} endpoints with a ${project} project ID.`,
+        next: [{ command: `midnight-cast config init --network ${network}`, reason: `Write a config with the Blockfrost ${network} endpoints` }],
+      };
+    },
   },
   {
     // The wording Midnight's examples handle in their UI (ui/src/lib/errors.ts).
