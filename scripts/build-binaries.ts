@@ -5,8 +5,9 @@
 //   tsx scripts/build-binaries.ts [--target <target>]... [--all]
 //   tsx scripts/build-binaries.ts --checksums
 //
-// Without --target it builds for this machine. It needs Bun, at the version in .bun-version, and
-// macOS for the macOS targets, which it signs. --checksums only rewrites build/release/SHA256SUMS.
+// Without --target it builds for this machine, and --all builds every target this machine can. It
+// needs Bun, at the version in .bun-version. The macOS targets are built on macOS, which signs them,
+// and the Windows target on Windows. --checksums only rewrites build/release/SHA256SUMS.
 
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -103,13 +104,8 @@ export function systemTar(): string {
 }
 
 function pack(target: Target, dir: string, files: string[], archive: string): void {
-  if (!target.startsWith("windows")) {
-    execFileSync("tar", ["-czf", archive, "-C", dir, ...files]);
-  } else if (process.platform === "linux") {
-    execFileSync("zip", ["-q", "-j", archive, ...files.map((f) => join(dir, f))]);
-  } else {
-    execFileSync(systemTar(), ["-a", "-cf", archive, "-C", dir, ...files]);
-  }
+  if (target.startsWith("windows")) execFileSync(systemTar(), ["-a", "-cf", archive, "-C", dir, ...files]);
+  else execFileSync("tar", ["-czf", archive, "-C", dir, ...files]);
 }
 
 /** SHA256SUMS lines, in the format install.sh and install.ps1 read: the hash, two spaces, the file name. */
@@ -126,11 +122,22 @@ export function writeChecksums(releaseDir: string): void {
   for (const script of ["install.sh", "install.ps1"]) copyFileSync(join(root, script), join(releaseDir, script));
 }
 
+/**
+ * Whether this machine can build a target. Bun leaves a macOS binary's signature invalid, and Apple
+ * silicon kills a binary whose signature doesn't verify, so macOS builds them to sign them. A Windows
+ * binary cross-compiled on Linux crashed on Windows, so Windows builds its own.
+ */
+export function canBuild(target: Target, platform: NodeJS.Platform = process.platform): boolean {
+  if (target.startsWith("darwin")) return platform === "darwin";
+  if (target.startsWith("windows")) return platform === "win32";
+  return true;
+}
+
 export function build(targets: Target[]): string[] {
-  // Bun leaves a macOS binary's signature invalid, and Apple silicon kills a binary whose signature doesn't verify.
-  const darwin = targets.filter((t) => t.startsWith("darwin"));
-  if (darwin.length && process.platform !== "darwin") {
-    throw new Error(`${darwin.join(" and ")} must be built on macOS, where codesign can sign them`);
+  const elsewhere = targets.filter((t) => !canBuild(t));
+  if (elsewhere.length) {
+    const where = (t: Target) => (t.startsWith("darwin") ? `${t} on macOS, which signs it` : `${t} on Windows, since one built elsewhere crashes there`);
+    throw new Error(`Build ${elsewhere.map(where).join(", and ")}`);
   }
   const pinned = readFileSync(join(root, ".bun-version"), "utf8").trim();
   const running = bunVersion();
@@ -190,7 +197,10 @@ if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
         const missing = (Object.keys(TARGETS) as Target[]).map(archiveName).filter((name) => !existsSync(join(releaseDir, name)));
         if (missing.length) throw new Error(`build/release is missing ${missing.join(", ")}`);
         writeChecksums(releaseDir);
-      } else build(args.includes("--all") ? (Object.keys(TARGETS) as Target[]) : named.length ? (named as Target[]) : [hostTarget()]);
+      } else {
+        const all = (Object.keys(TARGETS) as Target[]).filter((t) => canBuild(t));
+        build(args.includes("--all") ? all : named.length ? (named as Target[]) : [hostTarget()]);
+      }
     } catch (err) {
       console.error(err instanceof Error ? err.message : String(err));
       process.exitCode = 1;

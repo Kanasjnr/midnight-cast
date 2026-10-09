@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { TARGETS, archiveName, binaryName, entrySource, hostTarget, isTarget, thirdPartyLicenses, writeChecksums } from "../scripts/build-binaries.js";
+import { TARGETS, archiveName, binaryName, canBuild, entrySource, hostTarget, isTarget, thirdPartyLicenses, writeChecksums } from "../scripts/build-binaries.js";
 
 describe("standalone binaries", () => {
   it("builds every platform the installers detect, with the baseline runtime on x64", () => {
@@ -14,6 +14,14 @@ describe("standalone binaries", () => {
     }
     expect(isTarget(hostTarget())).toBe(true);
     expect(isTarget("constructor")).toBe(false);
+  });
+
+  it("builds macOS binaries on macOS and the Windows one on Windows, and the Linux ones anywhere", () => {
+    expect(canBuild("darwin-arm64", "linux")).toBe(false);
+    expect(canBuild("darwin-x64", "darwin")).toBe(true);
+    expect(canBuild("windows-x64", "linux")).toBe(false);
+    expect(canBuild("windows-x64", "win32")).toBe(true);
+    expect(canBuild("linux-arm64-musl", "darwin")).toBe(true);
   });
 
   it("names archives the way install.sh and install.ps1 ask for them", () => {
