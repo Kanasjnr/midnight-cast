@@ -175,6 +175,10 @@ Most clients accept this `mcpServers` block:
 }
 ```
 
+### From the MCP Registry
+
+From 0.2.0, midnight-cast is listed in the [MCP Registry](https://registry.modelcontextprotocol.io) as `io.github.Kanasjnr/midnight-cast`. Clients and galleries that install from the registry start it as `npx -y midnight-cast mcp` and can ask for `BLOCKFROST_PROJECT_ID` (a secret, needed only for mainnet) and `MIDNIGHT_CAST_NETWORKS`, as described in `server.json`.
+
 ## Compatibility
 
 | Client | Version tested | Date | Result |
