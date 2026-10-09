@@ -106,6 +106,7 @@
 
 ### Docs
 - `docs/LIVE-CHECKS.md`: how CI tests live networks and how to enable mainnet
+- The README's "Using with AI agents" section, formerly "For agents and scripts", says what midnight-cast adds next to the Kapa answer engine and Midnight Expert, lists all 14 MCP tools, and spells out what an agent can and can't do with the server: every tool reads only, the networks can be limited, network calls are rate limited, and the Blockfrost project ID never reaches the model
 
 ## 0.1.6
 
