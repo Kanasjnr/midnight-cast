@@ -7,7 +7,13 @@ import { join } from "node:path";
 import { Ajv2020 } from "ajv/dist/2020.js";
 import { outputSchemaFor } from "../src/lib/catalog.js";
 
-export type Run = (args: string[]) => Promise<{ stdout: string; code: number }>;
+export type Run = (args: string[]) => Promise<{ stdout: string; code: number; stderr?: string }>;
+
+/** The start of a failed command's stderr, which is where a crash or a missing file says what happened. */
+export function showStderr(result: { stderr?: string }): void {
+  const lines = (result.stderr ?? "").trim().split("\n").filter(Boolean).slice(0, 5);
+  for (const line of lines) console.log(`     ${line}`);
+}
 
 export function checker() {
   const failures: string[] = [];
@@ -91,7 +97,9 @@ export async function commandChecks(
   ];
   for (const args of offlineCommands) {
     const result = await run(args);
-    check(result.code === 0 && valid(result.stdout), `midnight-cast ${args.join(" ")}`);
+    const ok = result.code === 0 && valid(result.stdout);
+    check(ok, `midnight-cast ${args.join(" ")}`);
+    if (!ok) showStderr(result);
   }
 
   const human = await run(["explain"]);

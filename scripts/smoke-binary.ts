@@ -17,7 +17,7 @@ import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { packageVersion } from "../src/lib/data-path.js";
 import { sha256sums, systemTar } from "./build-binaries.js";
-import { checker, commandChecks, mcpTools, schemaValidator, type Run } from "./smoke-checks.js";
+import { checker, commandChecks, mcpTools, schemaValidator, showStderr, type Run } from "./smoke-checks.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const windows = process.platform === "win32";
@@ -96,7 +96,7 @@ async function main(): Promise<number> {
     const result = docker
       ? await exec("docker", [...dockerArgs(false, bundled), ...cliArgs])
       : await exec(join(unpacked, binaryName), cliArgs, { cwd, env: bundled ? env : { MN_OFFLINE: "" } });
-    return { stdout: result.stdout, code: result.code };
+    return { stdout: result.stdout, code: result.code, stderr: result.stderr };
   };
   const run: Run = (cliArgs) => runWith(cliArgs, true);
   const startMcp = () => {
@@ -110,13 +110,16 @@ async function main(): Promise<number> {
   const version = packageVersion();
   const v = await run(["--version"]);
   check(v.code === 0 && v.stdout.trim() === version, `midnight-cast --version prints ${version}`);
+  if (v.code !== 0) showStderr(v);
 
   await commandChecks(run, valid, check, startMcp);
 
   // Each reads a different bundled data file, which a binary carries inside it.
   for (const cliArgs of [["explain", "sync", "--json"], ["examples", "dust", "sponsorship", "--json"], ["versions", "--json"]]) {
     const result = await run(cliArgs);
-    check(result.code === 0 && valid(result.stdout), `midnight-cast ${cliArgs.join(" ")} (bundled data)`);
+    const ok = result.code === 0 && valid(result.stdout);
+    check(ok, `midnight-cast ${cliArgs.join(" ")} (bundled data)`);
+    if (!ok) showStderr(result);
   }
 
   if (!offline) {
@@ -169,8 +172,9 @@ async function installerChecks(
     const installed = await install(goodUrl!, join(work, "installed"), docker);
     check(
       installed.code === 0 && installed.versions.length === 2 && installed.versions.every((line) => line === version),
-      `${windows ? "install.ps1" : "install.sh"} installs midnight-cast and mn ${version}${installed.code ? `: ${installed.output.trim().split("\n").pop()}` : ""}`,
+      `${windows ? "install.ps1" : "install.sh"} installs midnight-cast and mn ${version}`,
     );
+    if (installed.code !== 0) showStderr({ stderr: installed.output });
     const tampered = await install(badUrl!, join(work, "not-installed"), docker);
     check(
       tampered.code !== 0 && /doesn't match its checksum/.test(tampered.output) && !tampered.versions.length,
@@ -199,7 +203,9 @@ async function install(
   }
   const env = { MIDNIGHT_CAST_DOWNLOAD_URL: url, MIDNIGHT_CAST_INSTALL_DIR: dir };
   const result = windows
-    ? await exec("powershell", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", join(root, "install.ps1")], { env })
+    ? // Windows PowerShell, as a user starts it. PowerShell 7's module path, inherited from a CI step, makes
+      // built-in commands such as Get-FileHash fail to load in it.
+      await exec("powershell", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", join(root, "install.ps1")], { env: { ...env, PSModulePath: undefined } })
     : await exec("sh", [join(root, "install.sh")], { env });
   const output = result.stdout + result.stderr;
   if (result.code !== 0) return { code: result.code, output, versions: [] };
