@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { resolveNetwork } from "../src/config.js";
 import {
   isNewerPatch,
   proofServerMatches,
@@ -251,10 +252,9 @@ const integration = process.env.INTEGRATION === "1";
 describe.skipIf(!integration)("fetchLiveVersions", () => {
   // Matrix drift is tracked by .github/workflows/live.yml; assert invariants only.
   it("reads preprod live versions", async () => {
-    const live = await fetchLiveVersions(
-      "https://rpc.preprod.midnight.network",
-      "https://indexer.preprod.midnight.network/api/v4/graphql",
-    );
+    // Preprod is Blockfrost's, reached with the project ID CI exports.
+    const preprod = resolveNetwork("preprod");
+    const live = await fetchLiveVersions(preprod.rpc, preprod.indexerHttp);
     expect(live.nodeVersion).toMatch(/^\d+\.\d+\.\d+/);
     expect(live.indexerApi).toBe("v4");
     expect(live.runtimeSpecVersion).toBeGreaterThan(0);

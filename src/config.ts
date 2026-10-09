@@ -9,9 +9,12 @@ import {
 } from "./networks.js";
 import {
   BLOCKFROST_ENV,
-  PLUGIN_PROJECT_ID_ENV,
   hasProjectId,
+  blockfrostNetwork,
   isBlockfrostUrl,
+  networkProjectIdEnv,
+  pluginProjectIdEnv,
+  projectIdNetwork,
   isRetiredUrl,
   missingProjectIdError,
   retiredEndpointWarning,
@@ -104,7 +107,7 @@ export function resolveNetwork(
   name?: string,
   flags: ResolveFlags = {},
   { requireProjectId = true }: { requireProjectId?: boolean } = {},
-): NetworkEndpoints & { network: string; projectIdSource?: ProjectIdSource } {
+): NetworkEndpoints & { network: string; projectIdSource?: ProjectIdSource; projectIdEnv?: string } {
   const file = loadConfigFile();
   const networkName =
     flags.network ??
@@ -145,11 +148,12 @@ export function resolveNetwork(
   const retired = [merged.rpc, merged.indexerHttp].filter(isRetiredUrl);
   if (retired.length > 0) warn(retiredEndpointWarning(networkName, retired));
 
-  const projectIdSource = attachProjectId(merged, networkName, flags, fromFile, requireProjectId);
+  const projectId = attachProjectId(merged, networkName, flags, fromFile, requireProjectId);
   return {
     ...merged,
     network: networkName,
-    ...(projectIdSource ? { projectIdSource } : {}),
+    ...(projectId ? { projectIdSource: projectId.source } : {}),
+    ...(projectId?.env ? { projectIdEnv: projectId.env } : {}),
   };
 }
 
@@ -159,7 +163,7 @@ function attachProjectId(
   flags: ResolveFlags,
   section: TomlNetworkSection | undefined,
   required: boolean,
-): ProjectIdSource | undefined {
+): { source: ProjectIdSource; env?: string } | undefined {
   if (!usesBlockfrost(endpoints)) return undefined;
   const keys = ["rpc", "rpcWs", "indexerHttp", "indexerWs"] as const;
   const blockfrost = keys.filter((k) => isBlockfrostUrl(endpoints[k]));
@@ -167,20 +171,35 @@ function attachProjectId(
   const fromUrl = blockfrost
     .map((k) => takeProjectId(endpoints[k]!).projectId)
     .find((id) => id !== undefined);
-  const candidates: Array<[ProjectIdSource, string | undefined]> = [
+  // The network Blockfrost serves here, from its host: a config network of any name can point at preprod.
+  const served = blockfrost.map((k) => blockfrostNetwork(endpoints[k])).find((n) => n !== undefined) ?? network;
+  const names = [...new Set([served, network])];
+  // A variable whose ID was made for another network is skipped, since Blockfrost would reject it.
+  let skipped: { env: string; network: string } | undefined;
+  const fromEnv = (env: string): [ProjectIdSource, string | undefined, string] => {
+    const value = process.env[env]?.trim();
+    const madeFor = value ? projectIdNetwork(value) : undefined;
+    if (madeFor && madeFor !== served) {
+      skipped ??= { env, network: madeFor };
+      return ["env", undefined, env];
+    }
+    return ["env", value, env];
+  };
+  const candidates: Array<[ProjectIdSource, string | undefined, string?]> = [
     ["flag", flags.projectId],
     ["config", section?.blockfrost_project_id],
     ["url", fromUrl],
-    ["env", process.env[PLUGIN_PROJECT_ID_ENV]],
-    ["env", process.env[BLOCKFROST_ENV]],
+    ...names.map((n) => fromEnv(pluginProjectIdEnv(n))),
+    ...names.map((n) => fromEnv(networkProjectIdEnv(n))),
+    fromEnv(BLOCKFROST_ENV),
   ];
   const found = candidates.find(([, value]) => value && value.trim() !== "");
   if (!found) {
-    if (required) throw new Error(missingProjectIdError(network));
+    if (required) throw new Error(missingProjectIdError(network, skipped, served));
     return undefined;
   }
 
-  const [source, raw] = found;
+  const [source, raw, env] = found;
   const projectId = raw!.trim();
   registerSecret(projectId);
   for (const k of blockfrost) {
@@ -188,7 +207,7 @@ function attachProjectId(
     // A flag, env or config token overrides one already written into a URL.
     if (source !== "url" || !hasProjectId(url)) endpoints[k] = withProjectId(url, projectId);
   }
-  return source;
+  return { source, ...(env ? { env } : {}) };
 }
 
 export function initConfig(options: {

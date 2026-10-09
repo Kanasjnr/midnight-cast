@@ -37,10 +37,18 @@ describe("decode --raw recognises messages from current tooling", () => {
     expect(result.next).toEqual(["midnight-cast config show --network preprod"]);
   });
 
-  it("a failure from a retired mainnet host", () => {
-    const result = decodeRaw("getaddrinfo ENOTFOUND indexer.mainnet.midnight.network");
-    expect(result.decodings).toEqual([expect.objectContaining({ id: "retired-mainnet-host" })]);
-    expect(result.next).toEqual(["midnight-cast config init --network mainnet"]);
+  it("a failure from a retired mainnet or preprod host", () => {
+    const mainnet = decodeRaw("getaddrinfo ENOTFOUND indexer.mainnet.midnight.network");
+    expect(mainnet.decodings).toEqual([expect.objectContaining({ id: "retired-midnight-host", name: "Retired mainnet endpoint" })]);
+    expect(mainnet.next).toEqual(["midnight-cast config init --network mainnet"]);
+    // What the preprod indexer answers since its shutdown, with HTTP 410.
+    const preprod = decodeRaw(
+      '{"errors":[{"message":"indexer.preprod.midnight.network was decommissioned on 2026-10-09. Use indexer.preprod.shielded.tools, or the Blockfrost-hosted indexer.","extensions":{"code":"ENDPOINT_DECOMMISSIONED"}}],"data":null}',
+    );
+    expect(preprod.decodings).toEqual([
+      expect.objectContaining({ id: "retired-midnight-host", description: expect.stringContaining("retired on 2026-10-09"), fix: expect.stringContaining("Midnight Preprod project ID") }),
+    ]);
+    expect(preprod.next).toEqual(["midnight-cast config init --network preprod"]);
   });
 
   it("output from Compact 0.35, which targets ledger 9", () => {

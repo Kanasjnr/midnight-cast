@@ -33,7 +33,7 @@ export async function gqlPost<T>(
 
   if (!response.ok) {
     throw new NetworkError(
-      (isBlockfrostUrl(target) && blockfrostHttpError("Indexer", response.status)) ||
+      (isBlockfrostUrl(target) && blockfrostHttpError("Indexer", response.status, target)) ||
         `Indexer unreachable (${response.status})`,
       statusKind(response.status),
       "Indexer",
@@ -343,7 +343,7 @@ export function wsFailure(err: unknown, url?: string): NetworkError {
   }
   if (handshakeStatus >= 400) {
     return new NetworkError(
-      (url && isBlockfrostUrl(url) && blockfrostHttpError("Indexer", handshakeStatus)) ||
+      (url && isBlockfrostUrl(url) && blockfrostHttpError("Indexer", handshakeStatus, url)) ||
         `Indexer WS unreachable (${handshakeStatus})`,
       statusKind(handshakeStatus),
       "Indexer",

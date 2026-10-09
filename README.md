@@ -127,14 +127,15 @@ midnight-cast decode 170
 
 **Networks:** `preview`, `preprod`, `mainnet`, `local` — use `--network` or `MN_NETWORK`.
 
-**Mainnet** goes through Blockfrost, since Midnight retired its hosted mainnet endpoints on 30 September 2026. Create a free **Midnight Mainnet** project on [blockfrost.io](https://blockfrost.io), then:
+**Preprod and mainnet** go through Blockfrost, since Midnight retired its hosted preprod and mainnet endpoints (mainnet on 30 September 2026, preprod on 9 October). Blockfrost project IDs are per network: create a free **Midnight Preprod** project, a **Midnight Mainnet** one, or both, on [blockfrost.io](https://blockfrost.io), then:
 
 ```bash
-export BLOCKFROST_PROJECT_ID=nightmainnet...
-npx midnight-cast health mainnet
+export BLOCKFROST_PREPROD_PROJECT_ID=<your Midnight Preprod project ID>
+export BLOCKFROST_MAINNET_PROJECT_ID=nightmainnet...
+npx midnight-cast health preprod
 ```
 
-The project ID is never printed. See [docs/COMMANDS.md](docs/COMMANDS.md#mainnet-and-blockfrost).
+Preview is still hosted by Midnight and needs no project ID. The project IDs are never printed. See [docs/COMMANDS.md](docs/COMMANDS.md#preprod-mainnet-and-blockfrost).
 
 ## Debug ladder
 
@@ -192,14 +193,14 @@ A sandbox or CI image without Node.js can run the same server from the [standalo
 - Every MCP tool only reads, and each is marked read-only to the client. None signs or submits a transaction, and none needs a wallet, a key or a seed. The CLI's `rpc` command, which passes any JSON-RPC method to a node, isn't an MCP tool.
 - `MIDNIGHT_CAST_NETWORKS` limits which networks the model may query, for example `preview,preprod`.
 - Tools that reach a network are rate limited, 30 calls a minute by default (`MIDNIGHT_CAST_MAX_CALLS_PER_MINUTE`), so a looping agent can't exhaust public endpoints or a Blockfrost plan.
-- The only secret it holds is an optional Blockfrost project ID for mainnet. It's sent only to Blockfrost and redacted from every response, so the model never sees it.
+- The only secrets it holds are optional Blockfrost project IDs for preprod and mainnet. They're sent only to Blockfrost and redacted from every response, so the model never sees them.
 - `decode`, `explain` and `examples` work offline from data bundled with the release.
 
 ### Guidance, skill and plugin
 
 To teach a coding agent when and how to use midnight-cast, add the guidance to your project: `midnight-cast agents init --write` appends a marked section to `AGENTS.md` (read by Codex, Cursor, Copilot, Gemini CLI, Windsurf, Aider and others; use `--file CLAUDE.md` for Claude Code), or install the portable skill with `npx skills add Kanasjnr/midnight-cast --skill midnight-cast`. The snippets are in [docs/agents](docs/agents).
 
-In Claude Code, one plugin installs the skill, the MCP server and a `/midnight-cast:diagnose <network> [tx or error]` command. When the plugin is enabled, Claude Code asks for an optional Blockfrost project ID for mainnet and keeps it in secure storage; left empty, an exported `BLOCKFROST_PROJECT_ID` is used. If you added the server with `claude mcp add` before, remove it with `claude mcp remove midnight-cast` so only the plugin's server runs:
+In Claude Code, one plugin installs the skill, the MCP server and a `/midnight-cast:diagnose <network> [tx or error]` command. When the plugin is enabled, Claude Code asks for optional Blockfrost project IDs for preprod and mainnet and keeps them in secure storage; left empty, an exported `BLOCKFROST_PREPROD_PROJECT_ID` or `BLOCKFROST_MAINNET_PROJECT_ID` is used. If you added the server with `claude mcp add` before, remove it with `claude mcp remove midnight-cast` so only the plugin's server runs:
 
 ```bash
 claude plugin marketplace add Kanasjnr/midnight-cast

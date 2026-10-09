@@ -75,7 +75,7 @@ export const INSTRUCTIONS = `midnight-cast reads the public Midnight networks an
 - When a network might be the problem rather than the user's code, call health; ping and tip narrow it down. Its data.examples says whether Midnight's own examples pass on the node that network runs: if they pass and the network is healthy, look at the user's code or setup first.
 - To see what happened to a transaction, call tx with its hash.
 - Every result is an envelope: ok, data, error { message, kind, hint }, warnings and next. Follow next: when a step has a tool field, call that tool with exactly those arguments; otherwise the command is for a terminal.
-- Mainnet goes through Blockfrost and needs a project ID. If a mainnet call says it is missing, pass on the error's instructions to the user: they depend on how this server was installed.`;
+- Preprod and mainnet go through Blockfrost and need a project ID, one per network. If a call says it is missing, pass on the error's instructions to the user: they depend on how this server was installed. Preview needs none.`;
 
 // Tools only read. Those that reach a network say so; decode and explain work from bundled data.
 const LIVE = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: true } as const;

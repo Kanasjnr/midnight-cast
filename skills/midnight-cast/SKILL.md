@@ -21,4 +21,4 @@ midnight-cast is a read-only CLI for the Midnight networks (preview, preprod, ma
 6. Writing Midnight code: `midnight-cast examples "<what it should do>" --json` returns the official examples that show it (midnightntwrk/midnight-examples, compiled and tested in CI), with file paths, line ranges, pinned links and the code. Start from those rather than from memory.
 7. Background on a topic: `midnight-cast explain dust|1010|versions|transcript|sync` (`sync` for a wallet that seems stuck syncing). `midnight-cast explain --json` lists every command, option, exit code and error kind.
 
-Mainnet goes through Blockfrost: set `BLOCKFROST_PROJECT_ID` to a Midnight Mainnet project ID. midnight-cast never prints it.
+Preprod and mainnet go through Blockfrost, with a project ID per network: set `BLOCKFROST_PREPROD_PROJECT_ID` to a Midnight Preprod project ID and `BLOCKFROST_MAINNET_PROJECT_ID` to a Midnight Mainnet one. Preview needs none. midnight-cast never prints them.

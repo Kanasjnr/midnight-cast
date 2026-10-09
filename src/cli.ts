@@ -39,7 +39,7 @@ program
   .option("--offline", "Use the bundled support matrix and examples reports; fetch nothing from GitHub (or set MN_OFFLINE=1)")
   .option(
     "--project-id <id>",
-    "Blockfrost project ID for mainnet (or set BLOCKFROST_PROJECT_ID)",
+    "Blockfrost project ID for preprod or mainnet, one per network (or set BLOCKFROST_PREPROD_PROJECT_ID or BLOCKFROST_MAINNET_PROJECT_ID)",
   );
 
 function commandPath(cmd: Command): string {
@@ -506,7 +506,7 @@ program
 program
   .command("mcp")
   .description(
-    "Run a read-only MCP server on stdio for AI agents (networks from MIDNIGHT_CAST_NETWORKS, Blockfrost ID from BLOCKFROST_PROJECT_ID)",
+    "Run a read-only MCP server on stdio for AI agents (networks from MIDNIGHT_CAST_NETWORKS, Blockfrost IDs from BLOCKFROST_PREPROD_PROJECT_ID and BLOCKFROST_MAINNET_PROJECT_ID)",
   )
   .action(async () => {
     // Loaded here so other commands don't pay for the MCP SDK.

@@ -29,10 +29,11 @@ describe("MCP Registry entry", () => {
     expect(server.packages[0].version).toBe(pkg.version);
   });
 
-  it("starts the server the way the docs do, with the mainnet key as an optional secret", () => {
+  it("starts the server the way the docs do, with a Blockfrost key per network as optional secrets", () => {
     expect(server.packages[0].packageArguments).toEqual([{ type: "positional", value: "mcp" }]);
     expect(server.packages[0].environmentVariables).toEqual([
-      expect.objectContaining({ name: "BLOCKFROST_PROJECT_ID", isRequired: false, isSecret: true }),
+      expect.objectContaining({ name: "BLOCKFROST_PREPROD_PROJECT_ID", isRequired: false, isSecret: true }),
+      expect.objectContaining({ name: "BLOCKFROST_MAINNET_PROJECT_ID", isRequired: false, isSecret: true }),
       expect.objectContaining({ name: "MIDNIGHT_CAST_NETWORKS", isRequired: false }),
     ]);
   });

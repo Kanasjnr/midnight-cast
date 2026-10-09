@@ -73,17 +73,29 @@ jobs:
         if: steps.select.outputs.run == 'true'
         run: npm run build
 
+      # Preprod and mainnet go through Blockfrost, with a project ID each; preview is Midnight's and needs none.
+      # One step per network: an empty secret must stay empty, not fall back to the other network's.
+      - name: Configure preprod (Blockfrost)
+        id: preprod
+        if: steps.select.outputs.run == 'true' && matrix.network == 'preprod'
+        uses: ./.github/actions/blockfrost
+        with:
+          network: preprod
+          project-id: ${{ secrets.BLOCKFROST_PREPROD_PROJECT_ID }}
+          required: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
+
       - name: Configure mainnet (Blockfrost)
         id: mainnet
         if: steps.select.outputs.run == 'true' && matrix.network == 'mainnet'
-        uses: ./.github/actions/blockfrost-mainnet
+        uses: ./.github/actions/blockfrost
         with:
+          network: mainnet
           project-id: ${{ secrets.BLOCKFROST_MAINNET_PROJECT_ID }}
           required: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
 
       - name: Check ${{ matrix.network }}
         id: check
-        if: steps.select.outputs.run == 'true' && (matrix.network != 'mainnet' || steps.mainnet.outputs.configured == 'true')
+        if: steps.select.outputs.run == 'true' && (matrix.network == 'preview' || steps.preprod.outputs.configured == 'true' || steps.mainnet.outputs.configured == 'true')
         run: |
           set +e
           npm run --silent live-check -- "${{ matrix.network }}" --out live-check
@@ -147,9 +159,17 @@ jobs:
 
       - run: npm run build
 
-      - name: Configure mainnet (Blockfrost)
-        uses: ./.github/actions/blockfrost-mainnet
+      - name: Configure preprod (Blockfrost)
+        uses: ./.github/actions/blockfrost
         with:
+          network: preprod
+          project-id: ${{ secrets.BLOCKFROST_PREPROD_PROJECT_ID }}
+          required: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
+
+      - name: Configure mainnet (Blockfrost)
+        uses: ./.github/actions/blockfrost
+        with:
+          network: mainnet
           project-id: ${{ secrets.BLOCKFROST_MAINNET_PROJECT_ID }}
           required: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
 
@@ -231,9 +251,17 @@ jobs:
 
       - run: npm ci
 
-      - name: Configure mainnet (Blockfrost)
-        uses: ./.github/actions/blockfrost-mainnet
+      - name: Configure preprod (Blockfrost)
+        uses: ./.github/actions/blockfrost
         with:
+          network: preprod
+          project-id: ${{ secrets.BLOCKFROST_PREPROD_PROJECT_ID }}
+          required: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
+
+      - name: Configure mainnet (Blockfrost)
+        uses: ./.github/actions/blockfrost
+        with:
+          network: mainnet
           project-id: ${{ secrets.BLOCKFROST_MAINNET_PROJECT_ID }}
           required: ${{ github.event_name == 'pull_request' || github.event_name == 'push' }}
 

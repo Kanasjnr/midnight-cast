@@ -1,10 +1,12 @@
-import { BLOCKFROST_ENV } from "./blockfrost.js";
+import { BLOCKFROST_ENV, networkProjectIdEnv, pluginProjectIdEnv } from "./blockfrost.js";
 
 export function stripControlChars(text: string): string {
   return text.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "");
 }
 
 const secrets = new Set<string>();
+// Redacted even when unused: an ID a custom network resolves is registered with registerSecret instead.
+const PROJECT_ID_ENVS = [BLOCKFROST_ENV, ...["preprod", "mainnet", "preview"].flatMap((n) => [networkProjectIdEnv(n), pluginProjectIdEnv(n)])];
 const PROJECT_ID_PARAM = /(project_id(?:=|%3D))[^&\s"'<>]+/gi;
 const BLOCKFROST_MIDNIGHT_ID = /\bnight(?:mainnet|preprod|preview)[A-Za-z0-9]{8,}/g;
 
@@ -14,8 +16,8 @@ export function registerSecret(value: string | undefined): void {
 
 export function redactSecrets(text: string): string {
   let out = text;
-  const env = process.env[BLOCKFROST_ENV];
-  for (const s of env && env.length >= 8 ? [...secrets, env] : secrets) {
+  const fromEnv = PROJECT_ID_ENVS.map((name) => process.env[name]).filter((value): value is string => !!value && value.length >= 8);
+  for (const s of [...secrets, ...fromEnv]) {
     out = out.split(s).join("***");
   }
   return out.replace(PROJECT_ID_PARAM, "$1***").replace(BLOCKFROST_MIDNIGHT_ID, "***");

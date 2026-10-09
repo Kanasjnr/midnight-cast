@@ -8,7 +8,7 @@ import {
   type ResolveFlags,
 } from "../config.js";
 import { BUILTIN_NETWORKS, NETWORK_NAMES } from "../networks.js";
-import { BLOCKFROST_ENV, PROJECT_ID_SOURCES, isBlockfrostUrl, usesBlockfrost } from "../lib/blockfrost.js";
+import { blockfrostNetwork, blockfrostProject, isBlockfrostUrl, networkProjectIdEnv, projectIdSources, usesBlockfrost } from "../lib/blockfrost.js";
 import type { EmitResult, GlobalOptions } from "../output.js";
 import { fail, success } from "../output.js";
 
@@ -54,7 +54,7 @@ export async function configInitCommand(opts: {
       ...(needsToken
         ? {
             next:
-              `${network} is served by Blockfrost: set ${BLOCKFROST_ENV}=<your Midnight Mainnet project ID> ` +
+              `${network} is served by Blockfrost: set ${networkProjectIdEnv(network)}=<your ${blockfrostProject(blockfrostNetwork(BUILTIN_NETWORKS[network]?.rpc) ?? network)} project ID> ` +
               `(or add blockfrost_project_id under [networks.${network}] in ${path})`,
           }
         : {}),
@@ -82,9 +82,9 @@ export function configShowCommand(
       indexerWs: resolved.indexerWs,
       proofServer: resolved.proofServer,
       ...(resolved.projectIdSource
-        ? { blockfrostProjectId: `set (from ${projectIdSourceLabel(resolved.projectIdSource)})` }
+        ? { blockfrostProjectId: `set (from ${projectIdSourceLabel(resolved.projectIdSource, resolved.projectIdEnv)})` }
         : usesBlockfrost(resolved)
-          ? { blockfrostProjectId: `not set (read from ${PROJECT_ID_SOURCES})` }
+          ? { blockfrostProjectId: `not set (read from ${projectIdSources(resolved.network, blockfrostNetwork(resolved.rpc) ?? blockfrostNetwork(resolved.indexerHttp) ?? resolved.network)})` }
           : {}),
       builtin: BUILTIN_NETWORKS[resolved.network] !== undefined,
     };
@@ -102,8 +102,8 @@ export function configShowCommand(
   }
 }
 
-function projectIdSourceLabel(source: string): string {
+function projectIdSourceLabel(source: string, env?: string): string {
   return (
-    { flag: "--project-id", env: BLOCKFROST_ENV, config: "config file", url: "configured URL" } as Record<string, string>
+    { flag: "--project-id", env: env ?? "the environment", config: "config file", url: "configured URL" } as Record<string, string>
   )[source] ?? source;
 }

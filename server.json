@@ -26,7 +26,13 @@
       ],
       "environmentVariables": [
         {
-          "name": "BLOCKFROST_PROJECT_ID",
+          "name": "BLOCKFROST_PREPROD_PROJECT_ID",
+          "description": "Blockfrost project ID for a Midnight Preprod project, needed only to query preprod. It is never shown to the model.",
+          "isRequired": false,
+          "isSecret": true
+        },
+        {
+          "name": "BLOCKFROST_MAINNET_PROJECT_ID",
           "description": "Blockfrost project ID for a Midnight Mainnet project, needed only to query mainnet. It is never shown to the model.",
           "isRequired": false,
           "isSecret": true
