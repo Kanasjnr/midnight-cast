@@ -7,6 +7,8 @@ export interface KnownMessage {
   description: string;
   fix: string;
   next: NextStep[];
+  /** Declarations in Midnight's examples that show working code for this. */
+  examples?: Array<{ example: string; symbol: string }>;
 }
 
 interface Pattern {
@@ -65,6 +67,27 @@ const PATTERNS: Pattern[] = [
         "rpc.mainnet.midnight.network and indexer.mainnet.midnight.network were retired on 2026-09-30 and can stop answering at any time. Mainnet RPC and indexer are now served by Blockfrost.",
       fix: "Point the app and tools at Blockfrost's mainnet endpoints with a Midnight Mainnet project ID.",
       next: [{ command: "midnight-cast config init --network mainnet", reason: "Write a config with the Blockfrost mainnet endpoints" }],
+    }),
+  },
+  {
+    // The wording Midnight's examples handle in their UI (ui/src/lib/errors.ts).
+    test: /Insufficient Funds:?\s*could not balance dust|Wallet\.InsufficientFunds[^\n]*dust/i,
+    describe: () => ({
+      id: "wallet-insufficient-dust",
+      name: "Wallet.InsufficientFunds: could not balance dust",
+      description:
+        "The wallet couldn't pay the transaction's fee in DUST: it doesn't hold enough, or its DUST state is too stale to balance against the chain.",
+      fix:
+        "Hold NIGHT registered for DUST generation and wait for DUST to accrue, as Midnight's examples advise. Sync the wallet first, since a stale DUST state fails the same way. Another wallet can also pay the fee (DUST sponsorship).",
+      next: [
+        { command: "midnight-cast preflight <network> --address <wallet address>", reason: "Check the wallet holds NIGHT registered for DUST" },
+        { command: "midnight-cast explain dust", reason: "How NIGHT generates DUST" },
+      ],
+      examples: [
+        { example: "hello-world", symbol: "function withHint" },
+        { example: "private-party", symbol: "export async function sponsorAndSubmit" },
+        { example: "hello-world", symbol: "export async function syncWallet" },
+      ],
     }),
   },
   {

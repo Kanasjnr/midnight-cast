@@ -4,3 +4,4 @@ dist/
 .DS_Store
 .notes/
 plugins/midnight-cast/evals/results/
+build/

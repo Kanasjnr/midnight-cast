@@ -80,5 +80,6 @@ export function toolCallFor(command: string): ToolCall | undefined {
     if (/^\d+$/.test(args[0]!)) return { name, arguments: { height: Number(args[0]), network: args[1] } };
   }
   if (name === "decode" && args.length === 1 && /^\d+$/.test(args[0]!)) return { name, arguments: { message: args[0] } };
+  if (name === "examples" && args.length === 0) return { name, arguments: {} };
   return undefined;
 }

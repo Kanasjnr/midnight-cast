@@ -13,6 +13,16 @@ jobs:
     if: github.event.release.target_commitish == 'main'
     uses: ./.github/workflows/tarball.yml
 
+  binaries:
+    if: github.event.release.target_commitish == 'main'
+    uses: ./.github/workflows/binaries.yml
+    with:
+      attest: true
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+
   live-recent:
     name: Networks checked clean in the last 24h
     if: github.event.release.target_commitish == 'main'
@@ -54,7 +64,26 @@ jobs:
             exit 1
           fi
 
+  release-binaries:
+    # Attached only once the gates npm publishing waits for have passed, so install.sh never fetches a release they rejected.
+    needs: [binaries, tarball, live-recent]
+    if: github.event.release.target_commitish == 'main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: midnight-cast-binaries
+          path: build/release
+
+      - name: Attach the binaries to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" build/release/* --clobber --repo "$GITHUB_REPOSITORY"
+
   publish:
+    # npm doesn't wait for the binaries: they're additive, and a failed binary job can be re-run after.
     needs: [tarball, live-recent]
     runs-on: ubuntu-latest
     permissions:

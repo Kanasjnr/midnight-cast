@@ -1,0 +1,697 @@
+{
+  "repo": "midnightntwrk/midnight-examples",
+  "commit": "4056c6cf773596bccc2a15fac32cc817d6143a39",
+  "toolchain": {
+    "Compact language (pragma)": "0.23",
+    "Compact compiler (setup-compact-action)": "0.31.1",
+    "@midnight-ntwrk/midnight-js-*": "4.1.1",
+    "@midnight-ntwrk/testkit-js": "4.1.1",
+    "wallet SDK": "1.2.0",
+    "Node.js": "22",
+    "Yarn": "4.18.0",
+    "Vitest": "4.1.0"
+  },
+  "examples": [
+    {
+      "name": "hello-world",
+      "path": "examples/hello-world",
+      "summary": "The smallest working DApp: a contract that stores a message, its tests against a local network, and a browser UI",
+      "topics": [
+        "getting started",
+        "first contract",
+        "deploy a contract",
+        "store state",
+        "providers",
+        "network config",
+        "wallet sync",
+        "wallet errors"
+      ],
+      "url": "https://github.com/midnightntwrk/midnight-examples/tree/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/hello-world",
+      "files": [
+        {
+          "path": "examples/hello-world/contract/hello-world.compact",
+          "symbol": "export circuit storeMessage",
+          "about": "A circuit that writes a public ledger value",
+          "lines": [
+            5,
+            7
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/hello-world/contract/hello-world.compact#L5-L7",
+          "excerpt": "export circuit storeMessage(newMessage: Opaque<\"string\">): [] {\n  message = disclose(newMessage);\n}"
+        },
+        {
+          "path": "examples/hello-world/src/test/hw.test.ts",
+          "symbol": "it('Deploys the contract'",
+          "about": "Deploying a contract with deployContract",
+          "lines": [
+            175,
+            193
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/hello-world/src/test/hw.test.ts#L175-L193",
+          "excerpt": "  it('Deploys the contract', async () => {\n    logger.info(`Creating private state...`);\n\n    const deployed: DeployedContract<Contract> =\n      await (deployContract<Contract>)(providers, {\n        compiledContract: CompiledHelloWorldContract,\n        privateStateId: PRIVATE_STATE_ID,\n        initialPrivateState: {},\n      });\n\n    logger.info(`Setting the contract address...`);\n    contractAddress = deployed.deployTxData.public.contractAddress;\n    logger.info(`Contract deployed at: ${contractAddress}`);\n    expect(contractAddress).toBeDefined();\n    expect(contractAddress.length).toBeGreaterThan(0);\n\n    const state = await queryLedger(providers);\n    expect(state.message).toEqual('');\n  });"
+        },
+        {
+          "path": "examples/hello-world/src/providers.ts",
+          "symbol": "export function buildProviders",
+          "about": "Wiring up the midnight-js providers a contract needs",
+          "lines": [
+            13,
+            38
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/hello-world/src/providers.ts#L13-L38",
+          "excerpt": "export function buildProviders(\n    wallet: MidnightWalletProvider,\n    zkConfigPath: string,\n    config: NetworkConfig,\n): HelloWorldProviders {\n    const zkConfigProvider = new NodeZkConfigProvider<HelloWorldCircuits>(zkConfigPath);\n\n    return {\n        privateStateProvider: levelPrivateStateProvider({\n            privateStateStoreName: `hello-world-${Date.now()}`,\n            privateStoragePasswordProvider: () => 'Hello-World-Test-Password',\n            accountId: wallet.getCoinPublicKey(),\n        }),\n        publicDataProvider: indexerPublicDataProvider(\n            config.indexer,\n            config.indexerWS,\n        ),\n        zkConfigProvider,\n        proofProvider: httpClientProofProvider(\n            config.proofServer,\n            zkConfigProvider,\n        ),\n        walletProvider: wallet,\n        midnightProvider: wallet,\n  // …"
+        },
+        {
+          "path": "examples/hello-world/src/config.ts",
+          "symbol": "export function getConfig",
+          "about": "Choosing the network's endpoints (local, preview, preprod)",
+          "lines": [
+            39,
+            47
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/hello-world/src/config.ts#L39-L47",
+          "excerpt": "export function getConfig(): NetworkConfig {\n  const network = process.env['MIDNIGHT_NETWORK'] ?? 'local';\n  if (network === 'local') return LOCAL_CONFIG;\n  if (network === 'preview') return PREVIEW_CONFIG;\n  if (network === 'preprod') return preprodConfig();\n  throw new Error(\n    `Unknown network: ${network}. Supported: 'local', 'preview', 'preprod'.`,\n  );\n}"
+        },
+        {
+          "path": "examples/hello-world/src/wallet.ts",
+          "symbol": "export async function syncWallet",
+          "about": "Syncing a wallet and reporting its progress",
+          "lines": [
+            137,
+            185
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/hello-world/src/wallet.ts#L137-L185",
+          "excerpt": "export async function syncWallet(\n  logger: Logger,\n  wallet: WalletFacade,\n  timeout = 300_000,\n): Promise<FacadeState> {\n  logger.info('Syncing wallet...');\n  let emissionCount = 0;\n  return Rx.firstValueFrom(\n    wallet.state().pipe(\n      Rx.tap((state: FacadeState) => {\n        emissionCount++;\n        const shielded = isProgressStrictlyComplete(state.shielded.state.progress);\n        const unshielded = isProgressStrictlyComplete(state.unshielded.progress);\n        const dust = isProgressStrictlyComplete(state.dust.state.progress);\n        logger.info(\n          `Wallet sync [${emissionCount}]: shielded=${formatProgress(state.shielded.state.progress)}, ` +\n            `unshielded=${formatProgress(state.unshielded.progress)}, dust=${formatProgress(state.dust.state.progress)}`,\n        );\n        if (!shielded) {\n          logger.debug(`  shielded.progress: ${JSON.stringify(state.shielded.state.progress)}`);\n        }\n        if (!unshielded) {\n          logger.debug(`  unshielded.progress: ${JSON.stringify(state.unshielded.progress)}`);\n        }\n  // …"
+        },
+        {
+          "path": "examples/hello-world/ui/src/lib/errors.ts",
+          "symbol": "function withHint",
+          "about": "Explaining a wallet's InsufficientFunds error (no DUST for fees) to a user",
+          "lines": [
+            48,
+            53
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/hello-world/ui/src/lib/errors.ts#L48-L53",
+          "excerpt": "function withHint(message: string, tag: unknown): string {\n  if (tag === \"Wallet.InsufficientFunds\" && /dust/i.test(message)) {\n    return `${message}. The wallet needs DUST to pay fees: hold NIGHT registered for DUST generation, then wait for DUST to accrue.`;\n  }\n  return message;\n}"
+        }
+      ]
+    },
+    {
+      "name": "calculator",
+      "path": "examples/calculator",
+      "summary": "A public ledger value, arithmetic circuits, and a witness that computes off-chain what the circuit only checks",
+      "topics": [
+        "witness",
+        "arithmetic",
+        "division",
+        "public ledger",
+        "uint",
+        "off-chain computation"
+      ],
+      "url": "https://github.com/midnightntwrk/midnight-examples/tree/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/calculator",
+      "files": [
+        {
+          "path": "examples/calculator/contract/calculator.compact",
+          "symbol": "witness divMod",
+          "about": "A witness declared in Compact, computed in TypeScript",
+          "lines": [
+            22,
+            22
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/calculator/contract/calculator.compact#L22-L22",
+          "excerpt": "witness divMod(num1: Uint<16>, num2: Uint<16>): [Uint<16>, Uint<16>];"
+        },
+        {
+          "path": "examples/calculator/contract/calculator.compact",
+          "symbol": "export circuit divide",
+          "about": "Checking a witness's answer inside the circuit",
+          "lines": [
+            25,
+            33
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/calculator/contract/calculator.compact#L25-L33",
+          "excerpt": "export circuit divide(num1: Uint<16>, num2: Uint<16>): [] {\n    const [quo, rem] = divMod(num1, num2);\n    assert(rem < num2 && quo * num2 + rem == num1, \"incorrect division\");\n    // `quo` comes from the divMod witness; storing it in the public ledger is a\n    // disclosure that must be declared explicitly. Writing state (rather than\n    // just returning) makes this a proof-generating, on-chain circuit like the\n    // other operations.\n    result = disclose(quo);\n}"
+        }
+      ]
+    },
+    {
+      "name": "private-party",
+      "path": "examples/private-party",
+      "summary": "Private on-chain data, access control, and DUST sponsorship: one wallet pays the fees for another's transaction",
+      "topics": [
+        "dust sponsorship",
+        "sponsor fees",
+        "pay fees for another user",
+        "access control",
+        "commitment",
+        "hashed set membership",
+        "private guest list"
+      ],
+      "url": "https://github.com/midnightntwrk/midnight-examples/tree/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/private-party",
+      "files": [
+        {
+          "path": "examples/private-party/src/sponsor.ts",
+          "symbol": "export async function sponsorAndSubmit",
+          "about": "Having a sponsor wallet pay the DUST fee and submit",
+          "lines": [
+            96,
+            115
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/private-party/src/sponsor.ts#L96-L115",
+          "excerpt": "export async function sponsorAndSubmit(\n  logger: Logger,\n  sponsor: MidnightWalletProvider,\n  userTxHex: string,\n): Promise<string> {\n  // The marker triple matches `FinalizedTransaction = Transaction<SignatureEnabled, Proof, Binding>`.\n  const userTx = Transaction.deserialize<SignatureEnabled, Proof, Binding>(\n    'signature',\n    'proof',\n    'binding',\n    fromHex(userTxHex),\n  );\n\n  logger.info('[sponsor] attaching DUST fee offer...');\n  const sponsored = await sponsor.addDustFeesAndFinalize(userTx);\n\n  const txId = await sponsor.wallet.submitTransaction(sponsored);\n  logger.info(`[sponsor] submitted sponsored tx: ${txId}`);\n  return txId;\n}"
+        },
+        {
+          "path": "examples/private-party/src/sponsor.ts",
+          "symbol": "export async function prepareSponsoredCall",
+          "about": "Building a call that another wallet will pay for",
+          "lines": [
+            65,
+            88
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/private-party/src/sponsor.ts#L65-L88",
+          "excerpt": "export async function prepareSponsoredCall<\n  C extends Contract.Any,\n  PCK extends Contract.ProvableCircuitId<C>,\n>(\n  logger: Logger,\n  user: MidnightWalletProvider,\n  providers: PartyProviders,\n  call: CallTxOptionsWithPrivateStateId<C, PCK>,\n): Promise<string> {\n  logger.info(`[user] building ${String(call.circuitId)}()...`);\n  const unsubmitted = await createUnprovenCallTx<C, PCK>(providers, call);\n\n  // Proving happens here, on the user's side — which is why the secret that\n  // authenticates the caller never reaches the sponsor.\n  logger.info(`[user] proving ${String(call.circuitId)}()...`);\n  const unboundTx = await providers.proofProvider.proveTx(unsubmitted.private.unprovenTx);\n\n  // Where a circuit moves user value — checkIn's entry fee — that value is paid\n  // from the user's own balance, here.\n  logger.info('[user] balancing own value side (no DUST) and binding...');\n  const finalized = await user.balanceOwnValueAndFinalize(unboundTx);\n\n  return toHex(finalized.serialize());\n}"
+        },
+        {
+          "path": "examples/private-party/contract/private-party.compact",
+          "symbol": "export circuit rsvp",
+          "about": "Adding a member to a hashed set without revealing them",
+          "lines": [
+            32,
+            50
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/private-party/contract/private-party.compact#L32-L50",
+          "excerpt": "export circuit rsvp(_address: UserAddress, _secret: Bytes<32>): [] {\n    const pubKey = getDappPublicKey(_secret);\n    // caller authentication check\n    assert(pubKey != organizer, \"Organizer cannot RSVP to the party\");\n\n    // state verification check\n    assert(partyState == PartyState.NOT_STARTED, \"The party has already started\");\n    assert(hashedPartyGoers.size() < maxListSize, \"The list is full\");\n\n    // party goer address remains private\n    const commitHash = commitAddress(_secret, _address.bytes);\n    assert(!hashedPartyGoers.member(commitHash), \"You are already on the list\");\n    hashedPartyGoers.insert(commitHash);// doesn't need disclose bc persistentCommit\n\n    if (hashedPartyGoers.size() == maxListSize) {\n        // @TODO -- In the future, emit an event to the organizer here (MIP-0002)\n        partyState = PartyState.READY;\n    }\n}"
+        },
+        {
+          "path": "examples/private-party/contract/private-party.compact",
+          "symbol": "export circuit checkIn",
+          "about": "Proving membership of the hashed set",
+          "lines": [
+            64,
+            82
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/private-party/contract/private-party.compact#L64-L82",
+          "excerpt": "export circuit checkIn(address: UserAddress, _secret: Bytes<32>): [] {\n    // state verification checks\n    assert(partyState == PartyState.STARTED, \"The party has not been started. Call the party police\");\n    assert(checkedInParty.size() < hashedPartyGoers.size(), \"All guests have already checked in\");\n\n    const commitHash = commitAddress(_secret, address.bytes);\n\n    // caller verification checks\n    assert(hashedPartyGoers.member(commitHash), \"You are not on the list\");\n    assert(!checkedInParty.member(disclose(address)), \"You have already checked in\");\n   \n    // take in unshielded payment, party goers are now public\n    receiveUnshielded(nativeToken(), entryFee as Uint<128>);\n    checkedInParty.insert(disclose(address));\n\n    if(checkedInParty.size() == maxListSize) {\n        partyState = PartyState.DOORS_CLOSED;\n    }\n}"
+        },
+        {
+          "path": "examples/private-party/contract/private-party.compact",
+          "symbol": "circuit commitAddress",
+          "about": "Committing to an address with a secret",
+          "lines": [
+            113,
+            115
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/private-party/contract/private-party.compact#L113-L115",
+          "excerpt": "circuit commitAddress(_address: Bytes<32>, _secret: Bytes<32>): Bytes<32> {\n    return persistentCommit<Bytes<32>>(_address, _secret);\n}"
+        }
+      ]
+    },
+    {
+      "name": "token-transfers",
+      "path": "examples/token-transfers",
+      "summary": "Minting, sending and receiving unshielded tokens, NIGHT and shielded tokens from a contract",
+      "topics": [
+        "mint token",
+        "unshielded token",
+        "send tokens",
+        "receive tokens",
+        "night",
+        "shielded transfer",
+        "shielded mint",
+        "send to user"
+      ],
+      "url": "https://github.com/midnightntwrk/midnight-examples/tree/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/token-transfers",
+      "files": [
+        {
+          "path": "examples/token-transfers/contract/token-transfers.compact",
+          "symbol": "export circuit mintAndReceive",
+          "about": "Minting an unshielded token to the contract",
+          "lines": [
+            6,
+            16
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/token-transfers/contract/token-transfers.compact#L6-L16",
+          "excerpt": "export circuit mintAndReceive(amount: Uint<64>): Bytes<32> {\n    const domain = pad(32, \"simple:receive\");\n\n    const color = mintUnshieldedToken(\n        disclose(domain),\n        disclose(amount),\n        left<ContractAddress, UserAddress>(kernel.self())\n    );\n\n    return color;\n}"
+        },
+        {
+          "path": "examples/token-transfers/contract/token-transfers.compact",
+          "symbol": "export circuit sendToUser",
+          "about": "Sending unshielded tokens to a user",
+          "lines": [
+            19,
+            28
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/token-transfers/contract/token-transfers.compact#L19-L28",
+          "excerpt": "export circuit sendToUser(amount: Uint<64>, user_addr: UserAddress): [] {\n    const domain = pad(32, \"simple:receive\");\n    const color = tokenType(disclose(domain), kernel.self());\n\n    sendUnshielded(\n        color,\n        disclose(amount) as Uint<128>,\n        right<ContractAddress, UserAddress>(disclose(user_addr))\n    );\n}"
+        },
+        {
+          "path": "examples/token-transfers/contract/token-transfers.compact",
+          "symbol": "export circuit receiveNightTokens",
+          "about": "Receiving NIGHT into a contract",
+          "lines": [
+            36,
+            38
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/token-transfers/contract/token-transfers.compact#L36-L38",
+          "excerpt": "export circuit receiveNightTokens(amount: Uint<128>): [] {\n   receiveUnshielded(default<Bytes<32>>, disclose(amount));\n}"
+        },
+        {
+          "path": "examples/token-transfers/contract/token-transfers.compact",
+          "symbol": "export circuit sendNightTokensToUser",
+          "about": "Sending NIGHT from a contract to a user",
+          "lines": [
+            40,
+            46
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/token-transfers/contract/token-transfers.compact#L40-L46",
+          "excerpt": "export circuit sendNightTokensToUser(amount: Uint<64>, user_addr: UserAddress): [] {\n    sendUnshielded(\n        default<Bytes<32>>,\n        disclose(amount) as Uint<128>,\n        right<ContractAddress, UserAddress>(disclose(user_addr))\n    );\n}"
+        },
+        {
+          "path": "examples/token-transfers/contract/token-transfers.compact",
+          "symbol": "export circuit receiveShieldedTokens",
+          "about": "Receiving a shielded coin into a contract, which claims it",
+          "lines": [
+            48,
+            50
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/token-transfers/contract/token-transfers.compact#L48-L50",
+          "excerpt": "export circuit receiveShieldedTokens(coin: ShieldedCoinInfo): [] {\n   receiveShielded(disclose(coin));\n}"
+        },
+        {
+          "path": "examples/token-transfers/contract/token-transfers.compact",
+          "symbol": "export circuit sendShieldedToUser",
+          "about": "Sending shielded tokens to a user",
+          "lines": [
+            52,
+            54
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/token-transfers/contract/token-transfers.compact#L52-L54",
+          "excerpt": "export circuit sendShieldedToUser(input: QualifiedShieldedCoinInfo, publicKey: ZswapCoinPublicKey, value: Uint<128>): ShieldedSendResult {\n  return sendShielded(disclose(input), left<ZswapCoinPublicKey, ContractAddress>(disclose(publicKey)), disclose(value));\n}"
+        },
+        {
+          "path": "examples/token-transfers/contract/token-transfers.compact",
+          "symbol": "export circuit mintAndSendShielded",
+          "about": "Minting a shielded token and sending it in one call",
+          "lines": [
+            60,
+            64
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/token-transfers/contract/token-transfers.compact#L60-L64",
+          "excerpt": "export circuit mintAndSendShielded(domainSep: Bytes<32>, mintValue: Uint<64>, mintNonce: Bytes<32>, publicKey: ZswapCoinPublicKey, sendValue: Uint<128>): ShieldedSendResult {\n  const coin = mintShieldedToken(disclose(domainSep), disclose(mintValue), disclose(mintNonce), right<ZswapCoinPublicKey, ContractAddress>(kernel.self()));\n  const qualified = QualifiedShieldedCoinInfo { nonce: coin.nonce, color: coin.color, value: coin.value, mt_index: 0 as Uint<64> };\n  return sendShielded(qualified, left<ZswapCoinPublicKey, ContractAddress>(disclose(publicKey)), disclose(sendValue));\n}"
+        }
+      ]
+    },
+    {
+      "name": "silent-auction",
+      "path": "examples/silent-auction",
+      "summary": "A sealed reserve price with commit-reveal, and an NFT auction run as a state machine",
+      "topics": [
+        "commit-reveal",
+        "sealed bid",
+        "auction",
+        "salt",
+        "state machine",
+        "nft",
+        "reserve price"
+      ],
+      "url": "https://github.com/midnightntwrk/midnight-examples/tree/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/silent-auction",
+      "files": [
+        {
+          "path": "examples/silent-auction/contract/silent-auction.compact",
+          "symbol": "circuit commitPrice",
+          "about": "Committing to a value with a salt",
+          "lines": [
+            157,
+            159
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/silent-auction/contract/silent-auction.compact#L157-L159",
+          "excerpt": "circuit commitPrice(_minPrice: Uint<16>, _salt: Bytes<32>): Bytes<32> {\n    return persistentCommit<Uint<16>>(_minPrice, _salt);\n}"
+        },
+        {
+          "path": "examples/silent-auction/contract/silent-auction.compact",
+          "symbol": "export circuit revealWin",
+          "about": "Revealing the committed value and checking it",
+          "lines": [
+            105,
+            128
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/silent-auction/contract/silent-auction.compact#L105-L128",
+          "excerpt": "export circuit revealWin(minPrice: Uint<16>): [] {\n    const _sk = localSk();\n    const pubKey = getDappPubKey(_sk);\n    assert(auctionOrganizer == disclose(pubKey), \"You are not the auction organizer\");\n    assert(auctionState == AuctionState.CLOSED, \"The auction is still open\");\n    \n    const _salt = localSalt();\n    const hashedPrice = commitPrice(minPrice, _salt);\n    assert(hashedPrice == hiddenPrice, \"Attempt to change min price detected, shame on you.\");\n    \n    auctionState = AuctionState.CLOSED;\n\n    // all votes are in, public price can be revealed\n    publicPrice = disclose(minPrice);\n\n    // send deposit back to organizer\n    if(highestBid < publicPrice){\n        sendUnshielded(\n            nativeToken(), \n            depositAmount as Uint<128>, \n            right<ContractAddress, UserAddress>(organizerAddress)\n        );\n    }\n}"
+        },
+        {
+          "path": "examples/silent-auction/contract/silent-auction.compact",
+          "symbol": "export circuit bid",
+          "about": "Accepting bids while the auction is open",
+          "lines": [
+            70,
+            93
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/silent-auction/contract/silent-auction.compact#L70-L93",
+          "excerpt": "export circuit bid(bidAmount: Uint<16>): [] {\n    assert(bidders.size() < maxBids, \"Sorry, bids are full\");\n    assert(auctionState == AuctionState.OPEN, \"The auction has ended\");\n    \n    const _sk = localSk();\n    const key = getDappPubKey(_sk);\n    assert(auctionOrganizer != key, \"The auction organizer cannot bid\");\n    const pubKey = disclose(key);\n    const publicBid = disclose(bidAmount);\n\n    if(bidders.member(pubKey)){\n        assert(bidders.lookup(pubKey) < publicBid, \"New bid lower than your previous bid\");\n    }\n    bidders.insert(pubKey, publicBid);\n\n    // update highest bid if this bid is higher\n    if(publicBid > highestBid){\n        highestBid = publicBid;\n    }\n    // if maxBids has been reached, change state to closed\n    if(bidders.size() == maxBids){\n        auctionState = AuctionState.CLOSED;\n    }\n}"
+        }
+      ]
+    },
+    {
+      "name": "election",
+      "path": "examples/election",
+      "summary": "A vote with registration, votes committed in secret and revealed later, and counting",
+      "topics": [
+        "voting",
+        "election",
+        "commit-reveal",
+        "register voters",
+        "counter",
+        "secret ballot"
+      ],
+      "url": "https://github.com/midnightntwrk/midnight-examples/tree/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/election",
+      "files": [
+        {
+          "path": "examples/election/contract/election.compact",
+          "symbol": "export circuit commitVote",
+          "about": "Committing to a vote without revealing it",
+          "lines": [
+            63,
+            76
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/election/contract/election.compact#L63-L76",
+          "excerpt": "export circuit commitVote(): [] {\n    assert(votingState == VotingState.OPEN, \"Voting has not opened yet\");\n    const _sk = localSk();\n    const pubKey = getDappPubKey(_sk);\n    assert(registeredVoters.member(pubKey), \"You are not registered to vote.\");\n    assert(!hashedVoteMap.member(pubKey), \"Attempt to double vote\");\n    const _currentVote = localGetVote();\n    assert(_currentVote == VoteChoice.BAD || _currentVote == VoteChoice.WORSE, \"Please provide a valid vote\");\n\n\n    const hash = commitWithSk(_currentVote as Field as Bytes<32>, _sk);\n    hashedVoteMap.insert(pubKey, hash);\n    totalVoteCount.increment(1);\n}"
+        },
+        {
+          "path": "examples/election/contract/election.compact",
+          "symbol": "export circuit revealVote",
+          "about": "Revealing a committed vote and counting it",
+          "lines": [
+            79,
+            104
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/election/contract/election.compact#L79-L104",
+          "excerpt": "export circuit revealVote(): [] {\n    assert(votingState == VotingState.CLOSED, \"Voting is still open\");\n\n    const _sk = localSk();\n    const pubKey = getDappPubKey(_sk);\n    // we want to check that they have already voted..\n    assert(hashedVoteMap.member(pubKey), \"You have not voted yet\");\n    assert(registeredVoters.member(pubKey), \"You are not a registered voter\");\n    assert(!revealedVoters.member(pubKey), \"You have already revealed your vote\");\n\n    const vote = localGetVote();\n    assert(vote == VoteChoice.BAD || vote == VoteChoice.WORSE, \"Please supply a valid vote\");\n\n    // here is the money\n    const hashedVote = commitWithSk(vote as Field as Bytes<32>, _sk);\n    assert(hashedVoteMap.lookup(pubKey) == hashedVote, \"Attempt to change the vote!\");\n\n    // mark this voter as revealed before counting, so the tally can't be inflated\n    revealedVoters.insert(pubKey);\n\n    if(disclose(vote) == VoteChoice.BAD){\n        candidate0VoteCounter.increment(1);\n    } else if (disclose(vote) == VoteChoice.WORSE) {\n        candidate1VoteCounter.increment(1);\n  // …"
+        },
+        {
+          "path": "examples/election/contract/election.compact",
+          "symbol": "circuit commitWithSk",
+          "about": "A commitment keyed by the voter's secret",
+          "lines": [
+            132,
+            134
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/election/contract/election.compact#L132-L134",
+          "excerpt": "circuit commitWithSk(_vote: Bytes<32>, _sk: Bytes<32>) : Bytes<32> {\n    return disclose(persistentHash<Vector<2, Bytes<32>>>([_vote, _sk]));\n}"
+        }
+      ]
+    },
+    {
+      "name": "secret-message",
+      "path": "examples/secret-message",
+      "summary": "Publishing a hash commitment of a private message instead of the message itself",
+      "topics": [
+        "hash commitment",
+        "persistent hash",
+        "domain separator",
+        "private message",
+        "ownership",
+        "public key from secret"
+      ],
+      "url": "https://github.com/midnightntwrk/midnight-examples/tree/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/secret-message",
+      "files": [
+        {
+          "path": "examples/secret-message/contract/secret-message.compact",
+          "symbol": "export circuit hashMessageWithSeparator",
+          "about": "Hashing with a domain separator",
+          "lines": [
+            50,
+            52
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/secret-message/contract/secret-message.compact#L50-L52",
+          "excerpt": "export circuit hashMessageWithSeparator(_message: Bytes<32>): Bytes<32> {\n  return persistentHash<Vector<2, Bytes<32>>>([pad(32, \"secret-message:msg:\"), _message]);\n}"
+        },
+        {
+          "path": "examples/secret-message/contract/secret-message.compact",
+          "symbol": "export circuit publishMessageHashWithOwner",
+          "about": "Publishing a hash and recording its owner",
+          "lines": [
+            78,
+            84
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/secret-message/contract/secret-message.compact#L78-L84",
+          "excerpt": "export circuit publishMessageHashWithOwner(_ownerSecretKey: Bytes<32>): [] {\n  const secret = secretMessage();\n  const pubKey = getDappPubKey(_ownerSecretKey);\n  assert(messageOwner == default<Bytes<32>> || messageOwner == disclose(pubKey), \"You are not the owner of this message\");\n  messageOwner = disclose(pubKey);\n  messageHash = disclose(hashMessageWithDynamicSeparator(secret));\n}"
+        },
+        {
+          "path": "examples/secret-message/contract/secret-message.compact",
+          "symbol": "export circuit getDappPubKey",
+          "about": "Deriving a public key from a secret inside a circuit",
+          "lines": [
+            86,
+            88
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/secret-message/contract/secret-message.compact#L86-L88",
+          "excerpt": "export circuit getDappPubKey(_ownerSecretKey: Bytes<32>): Bytes<32> {\n  return persistentHash<Vector<2, Bytes<32>>>([pad(32, \"secret-message:pk:\"), _ownerSecretKey]);\n}"
+        }
+      ]
+    },
+    {
+      "name": "zk-loan",
+      "path": "examples/zk-loan",
+      "summary": "Private credit scoring: verifying a signed attestation inside a circuit and disclosing only the outcome",
+      "topics": [
+        "signature verification",
+        "verify a signature in a circuit",
+        "schnorr",
+        "attestation",
+        "credit score",
+        "jubjub",
+        "selective disclosure",
+        "admin role"
+      ],
+      "url": "https://github.com/midnightntwrk/midnight-examples/tree/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/zk-loan",
+      "files": [
+        {
+          "path": "examples/zk-loan/contract/schnorr.compact",
+          "symbol": "export circuit schnorrVerify",
+          "about": "Verifying a Schnorr signature in a circuit",
+          "lines": [
+            58,
+            98
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/zk-loan/contract/schnorr.compact#L58-L98",
+          "excerpt": "  export circuit schnorrVerify<#n>(\n                   msg: Vector<n, Field>,\n                   signature: SchnorrSignature,\n                   pk: JubjubPoint\n                   ): [] {\n    const {announcement, response} = signature;\n    const cFull: Field =\n            transientHash<SchnorrHashInput<n>>(\n              SchnorrHashInput<n> { ann_x: jubjubPointX(announcement),\n                                    ann_y: jubjubPointY(announcement),\n                                    pk_x: jubjubPointX(pk),\n                                    pk_y: jubjubPointY(pk),\n                                    msg: msg }\n              );\n    // Truncate the challenge to 248 bits via witness-assisted division by 2^248.\n    // The witness provides (quotient, remainder) such that cFull == q * 2^248 + r\n    // where r : Uint<248>, guaranteeing r < 2^248 < Jubjub subgroup order.\n    // This is needed because ecMul requires scalars < JUBJUB_ORDER (~2^252.4),\n    // but transientHash returns values in BLS12-381's scalar field (~2^255).\n    const TWO_248: Field =\n            452312848583266388373324160190187140051835877600158453279131187530910662656 as Field;\n    const [q, cTruncated] = getSchnorrReduction(cFull);\n    // Bound the quotient so the reduction equation holds over the integers, not\n    // modulo the field prime. Without this, q : Field is unconstrained and a\n  // …"
+        },
+        {
+          "path": "examples/zk-loan/contract/zk-loan.compact",
+          "symbol": "circuit evaluateApplicant",
+          "about": "Checking an attested score and disclosing only the decision",
+          "lines": [
+            170,
+            207
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/zk-loan/contract/zk-loan.compact#L170-L207",
+          "excerpt": "circuit evaluateApplicant(userPubKeyHash: Field): [Uint<16>, LoanStatus] {\n    const [profile, signature, providerId] = getAttestedScoringWitness();\n\n    // The provider must be registered on-chain by the admin. Disclosing the id\n    // reveals WHICH provider attested, but nothing about the profile.\n    assert(providers.member(disclose(providerId)), \"Attestation provider not registered\");\n    const providerPk = providers.lookup(disclose(providerId));\n\n    // Signed message: [creditScore, monthlyIncome, monthsAsCustomer, userPubKeyHash].\n    // Must match, element for element, what the provider signed off-chain.\n    const msg: Vector<4, Field> = [\n        profile.creditScore as Field,\n        profile.monthlyIncome as Field,\n        profile.monthsAsCustomer as Field,\n        userPubKeyHash\n    ];\n\n    // Fails the whole transaction if the signature is not valid for this\n    // provider over this exact message — so a tampered profile cannot pass.\n    Schnorr_schnorrVerify<4>(msg, signature, providerPk);\n\n    // Tier 1: best applicants, max 10,000\n    if (profile.creditScore >= 700 && profile.monthlyIncome >= 2000 && profile.monthsAsCustomer >= 24) {\n        return [10000, LoanStatus.Approved];\n  // …"
+        },
+        {
+          "path": "examples/zk-loan/contract/zk-loan.compact",
+          "symbol": "export circuit requestLoan",
+          "about": "The entry point that uses the attestation",
+          "lines": [
+            125,
+            142
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/zk-loan/contract/zk-loan.compact#L125-L142",
+          "excerpt": "export circuit requestLoan(amountRequested: Uint<16>, secretPin: Uint<16>): [] {\n    assert(amountRequested > 0, \"Loan amount must be greater than zero\");\n    const requesterPubKey = deriveUserPublicKey(getUserSecret(), secretPin);\n    // The derived key is the public loan-map key, so it must be disclosed. The\n    // PIN and secret stay private: only their hash is revealed.\n    const disclosedRequesterPubKey = disclose(requesterPubKey);\n    assert(!blacklist.member(disclosedRequesterPubKey), \"Requester is blacklisted\");\n    assert(!onGoingPinMigration.member(disclosedRequesterPubKey as Bytes<32>),\n           \"PIN migration is in progress for this user\");\n    // The attestation is signed over this hash, binding it to ONE identity:\n    // a signature issued to someone else fails verification (anti-replay).\n    const userPubKeyHash = transientHash<Bytes<32>>(disclosedRequesterPubKey as Bytes<32>);\n    const [topTierAmount, status] = evaluateApplicant(userPubKeyHash);\n    // Only the tier outcome is disclosed — never the score/income/tenure.\n    const disclosedTopTierAmount = disclose(topTierAmount);\n    const disclosedStatus = disclose(status);\n    createLoan(disclosedRequesterPubKey as Bytes<32>, amountRequested, disclosedTopTierAmount, disclosedStatus);\n}"
+        },
+        {
+          "path": "examples/zk-loan/contract/zk-loan.compact",
+          "symbol": "export circuit rotateAdmin",
+          "about": "Rotating an admin key",
+          "lines": [
+            269,
+            272
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/zk-loan/contract/zk-loan.compact#L269-L272",
+          "excerpt": "export circuit rotateAdmin(newAdmin: AdminPublicKey): [] {\n    assert(contractAdmin == deriveAdminPublicKey(getUserSecret()), \"Only admin can rotate admin role\");\n    contractAdmin = disclose(newAdmin);\n}"
+        }
+      ]
+    },
+    {
+      "name": "shielded-chips",
+      "path": "examples/shielded-chips",
+      "summary": "Shielded tokens: MIP-0011 chips, and a roulette contract that holds and pays out coins privately",
+      "topics": [
+        "shielded token",
+        "mint shielded",
+        "burn",
+        "treasury",
+        "escrow",
+        "contract-held coins",
+        "mip-0011",
+        "payout"
+      ],
+      "url": "https://github.com/midnightntwrk/midnight-examples/tree/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/shielded-chips",
+      "files": [
+        {
+          "path": "examples/shielded-chips/contract/chips.compact",
+          "symbol": "export circuit mint",
+          "about": "Minting a shielded token",
+          "lines": [
+            235,
+            252
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/shielded-chips/contract/chips.compact#L235-L252",
+          "excerpt": "export circuit mint(\n    recipient: ZswapCoinPublicKey,\n    amount: Uint<64>,\n    nonce: Bytes<32>\n): ShieldedCoinInfo {\n    requireHouse();\n    assert(disclose(amount) > 0, \"Mint amount must be positive\");\n\n    const coin = _mint(\n        left<ZswapCoinPublicKey, ContractAddress>(recipient),\n        amount,\n        nonce\n    );\n    // MIP-0011: a consumer composing the supply extension MUST pair every\n    // successful mint with the minted counter.\n    _addMinted(disclose(amount) as Uint<128>);\n    return coin;\n}"
+        },
+        {
+          "path": "examples/shielded-chips/contract/chips.compact",
+          "symbol": "export circuit burn",
+          "about": "Burning a shielded token",
+          "lines": [
+            267,
+            276
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/shielded-chips/contract/chips.compact#L267-L276",
+          "excerpt": "export circuit burn(coin: ShieldedCoinInfo, amount: Uint<128>): Maybe<ShieldedCoinInfo> {\n    requireHouse();\n    const refund = _burn(\n        coin,\n        amount,\n        left<ZswapCoinPublicKey, ContractAddress>(ownPublicKey())\n    );\n    _addBurned(disclose(amount));\n    return refund;\n}"
+        },
+        {
+          "path": "examples/shielded-chips/contract/chips.compact",
+          "symbol": "export circuit mintToTreasury",
+          "about": "Minting into a contract-held treasury",
+          "lines": [
+            282,
+            299
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/shielded-chips/contract/chips.compact#L282-L299",
+          "excerpt": "export circuit mintToTreasury(amount: Uint<64>, nonce: Bytes<32>): [] {\n    requireHouse();\n    assert(disclose(amount) > 0, \"Mint amount must be positive\");\n\n    const coin = _mint(\n        right<ZswapCoinPublicKey, ContractAddress>(kernel.self()),\n        amount,\n        nonce\n    );\n    // insertCoin turns the fresh ShieldedCoinInfo into a spendable\n    // QualifiedShieldedCoinInfo, filling in the mt_index the ledger assigns.\n    _treasury.insertCoin(\n        disclose(coin.nonce),\n        disclose(coin),\n        right<ZswapCoinPublicKey, ContractAddress>(kernel.self())\n    );\n    _addMinted(disclose(amount) as Uint<128>);\n}"
+        },
+        {
+          "path": "examples/shielded-chips/contract/roulette.compact",
+          "symbol": "export circuit betColor",
+          "about": "Taking a shielded coin into escrow",
+          "lines": [
+            157,
+            183
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/shielded-chips/contract/roulette.compact#L157-L183",
+          "excerpt": "export circuit betColor(coin: ShieldedCoinInfo, colorBet: Color): [] {\n    assert(betState == BetState.OPEN, \"Not ready to accept bets yet\");\n    assert(colorBet == Color.RED || colorBet == Color.BLACK, \"Only RED or BLACK bets are allowed\");\n\n    const _sk = localSecretKey();\n    const player = getDappPublicKey(_sk);\n    assert(player != theHouse, \"theHouse cannot make bets\");\n\n    const pubPlayer = disclose(player);\n    assert(!betCommits.member(pubPlayer), \"Already placed a bet this round\");\n    assert(disclose(coin.color) == chipColor, \"Bet must be made with roulette chips\");\n\n    receiveShielded(disclose(coin));\n\n    // The coin is now in the contract's custody, but nothing that identifies\n    // it reaches the chain — only a commitment the player can reopen later.\n    // Note there is no insertCoin call here: that is the fix.\n    const q = QualifiedShieldedCoinInfo {\n        nonce: coin.nonce,\n        color: coin.color,\n        value: coin.value,\n        mt_index: 0 as Uint<64>\n    };\n    betCommits.insert(pubPlayer, disclose(escrowCommit(q, escrowSalt())));\n  // …"
+        },
+        {
+          "path": "examples/shielded-chips/contract/roulette.compact",
+          "symbol": "export circuit claimWinnings",
+          "about": "Paying out shielded coins from the contract",
+          "lines": [
+            203,
+            240
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/shielded-chips/contract/roulette.compact#L203-L240",
+          "excerpt": "export circuit claimWinnings(matchKey: Bytes<32>): [] {\n    assert(betState == BetState.CLOSED, \"Winning number has not been revealed\");\n\n    const _sk = localSecretKey();\n    const player = disclose(getDappPublicKey(_sk));\n\n    assert(bets.member(player), \"You did not place a bet\");\n    assert(bets.lookup(player) == winningColor, \"You did not place a winning bet\");\n    assert(!paidWinners.member(player), \"Already claimed\");\n\n    // Reopen the escrow commitment from private state.\n    const coin = escrowedCoin();\n    assert(betCommits.lookup(player) == disclose(escrowCommit(coin, escrowSalt())),\n           \"Escrowed coin does not match your commitment\");\n\n    assert(houseCoins.member(disclose(matchKey)), \"Match coin not available\");\n    const matchCoin = houseCoins.lookup(disclose(matchKey));\n    assert(matchCoin.value == betValues.lookup(player) as Uint<128>,\n           \"Match coin must equal your bet value\");\n\n    const merged = mergeCoin(disclose(coin), matchCoin);\n    const mergedQ = QualifiedShieldedCoinInfo {\n        nonce: merged.nonce,\n        color: merged.color,\n  // …"
+        }
+      ]
+    },
+    {
+      "name": "private-bid",
+      "path": "examples/private-bid",
+      "summary": "Proving a bid is at least a public minimum, storing only a commitment, and revealing it later",
+      "topics": [
+        "range proof",
+        "prove greater than",
+        "commitment",
+        "private bid",
+        "reveal",
+        "minimum"
+      ],
+      "url": "https://github.com/midnightntwrk/midnight-examples/tree/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/private-bid",
+      "files": [
+        {
+          "path": "examples/private-bid/contract/private-bid.compact",
+          "symbol": "export circuit placeBid",
+          "about": "Proving a hidden amount clears a public minimum",
+          "lines": [
+            76,
+            106
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/private-bid/contract/private-bid.compact#L76-L106",
+          "excerpt": "export circuit placeBid(amount: Uint<64>): [] {\n  const secretKey = localSecretKey();\n\n  // The comparison runs inside the proof. The network learns only that it\n  // held, i.e. that amount >= minimumBid. A failing assert aborts the call on\n  // the bidder's machine, before any proof is generated or anything is sent.\n  assert(amount >= minimumBid, \"Bid is below the minimum\");\n\n  // The bidder key is used as a ledger Map key, so it must be disclosed. We\n  // disclose the hash, never the secret key. disclose() does not publish\n  // anything by itself; it records that this value is allowed to go public.\n  const bidder = disclose(derive(pad(32, \"private-bid:key:\"), secretKey));\n  assert(!bidCommitments.member(bidder), \"This bidder already placed a bid\");\n\n  // Store a commitment, not the amount. persistentCommit(value, rand) hashes\n  // the value together with a hiding randomness, and the compiler treats its\n  // result as safe to put on the ledger without disclose().\n  //\n  // Why not persistentHash(amount)? Bid amounts are guessable: anyone could\n  // hash 1, 2, 3, ... until one matches. The salt makes that impossible\n  // without the secret key.\n  //\n  // The salt is deterministic (derived from the secret key), which is only safe\n  // because each bidder commits exactly once (the member() check above): the\n  // …"
+        },
+        {
+          "path": "examples/private-bid/contract/private-bid.compact",
+          "symbol": "export circuit revealBid",
+          "about": "Revealing the committed amount",
+          "lines": [
+            108,
+            125
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/private-bid/contract/private-bid.compact#L108-L125",
+          "excerpt": "export circuit revealBid(amount: Uint<64>): [] {\n  const secretKey = localSecretKey();\n  // Recomputes the same bidder key and salt as placeBid. Only the holder of the\n  // secret key can do so, which is what authorizes the reveal.\n  const bidder = disclose(derive(pad(32, \"private-bid:key:\"), secretKey));\n  const salt = derive(pad(32, \"private-bid:salt:\"), secretKey);\n\n  assert(bidCommitments.member(bidder), \"This bidder has not placed a bid\");\n  // Opening the commitment: the claimed amount must be the one committed to.\n  assert(bidCommitments.lookup(bidder) == persistentCommit<Uint<64>>(amount, salt),\n    \"Amount does not match the committed bid\");\n\n  // The one place the amount becomes public. Removing this disclose() makes\n  // the compiler reject the program (\"potential witness-value disclosure must\n  // be declared but is not ... ledger operation might disclose the witness\n  // value\"), naming `amount` and the path to this insert.\n  revealedBids.insert(bidder, disclose(amount));\n}"
+        },
+        {
+          "path": "examples/private-bid/contract/private-bid.compact",
+          "symbol": "circuit derive",
+          "about": "Deriving per-purpose keys from one secret",
+          "lines": [
+            72,
+            74
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/private-bid/contract/private-bid.compact#L72-L74",
+          "excerpt": "circuit derive(purpose: Bytes<32>, secretKey: Bytes<32>): Bytes<32> {\n  return persistentHash<Vector<3, Bytes<32>>>([purpose, kernel.self().bytes, secretKey]);\n}"
+        }
+      ]
+    },
+    {
+      "name": "battleship",
+      "path": "examples/battleship",
+      "summary": "A two-player game as a contract state machine, with roles and private state",
+      "topics": [
+        "state machine",
+        "game",
+        "private state",
+        "role-based access",
+        "turn-based",
+        "two players"
+      ],
+      "url": "https://github.com/midnightntwrk/midnight-examples/tree/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/battleship",
+      "files": [
+        {
+          "path": "examples/battleship/contract/battleship.compact",
+          "symbol": "export circuit acceptGame",
+          "about": "Joining as the second player",
+          "lines": [
+            80,
+            112
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/battleship/contract/battleship.compact#L80-L112",
+          "excerpt": "export circuit acceptGame(_x1: Uint<8>, _x2: Uint<8>): [] {\n    // caller verification checks\n    const _sk = localSk();\n    const pubKey = getDappPubKey(_sk);\n    assert(player1 != disclose(pubKey), \"You cannot play against yourself\");\n\n    // state verification check\n    assert(board2State == BoardState.UNSET, \"There is already a player2\");\n\n    // input verification checks\n    assert(_x1 != _x2, \"Cannot use the same number twice\");\n    assert(_x1 > 0 && _x2 > 0, \"No zero index, please keep ships on the board\");\n    assert(_x1 <= 20 && _x2 <= 20, \"Out of bounds, please keep ships on the board\");\n\n    // user assignment\n    player2 = disclose(pubKey);\n\n    // hash inputs and store them to the ledger for comparison later\n    const hash1 = commitBoardSpace(_x1 as Bytes<32>, _sk);\n    board2.insert(hash1);\n    const hash2 = commitBoardSpace(_x2 as Bytes<32>, _sk);\n    board2.insert(hash2);\n\n    // setting the state locally and verifying\n  // …"
+        },
+        {
+          "path": "examples/battleship/contract/battleship.compact",
+          "symbol": "export circuit player1Shoot",
+          "about": "A turn, guarded by role and game state",
+          "lines": [
+            114,
+            135
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/battleship/contract/battleship.compact#L114-L135",
+          "excerpt": "export circuit player1Shoot (x: Uint<8>): [] {\n    // caller verification check\n    const _sk = localSk();\n    const pubKey = getDappPubKey(_sk);\n    assert(player1 == disclose(pubKey), \"You are not player1\");\n\n    // state verification checks\n    assert(board2State == BoardState.SET, \"Player 2 has not yet set their board\");\n    assert(turn == TurnState.PLAYER_1_SHOOT, \"It is not player1 turn to shoot\");\n    assert(winState == WinState.CONTINUE_PLAY, \"A winner has already been declared\");\n\n    // input validation\n    assert(x > 0 && x <= 20, \"Shot out of bounds, please shoot on the board\");\n\n    // shots are public knowledge\n    const currentShot = disclose(x);\n    assert(!board2Hits.member(currentShot), \"Cheat Detected: Player1: Attempt to repeat a previous HIT\");\n\n    // on-chain state updates\n    player1Shot.pushFront(currentShot);\n    turn = TurnState.PLAYER_2_CHECK;\n}"
+        },
+        {
+          "path": "examples/battleship/contract/battleship.compact",
+          "symbol": "export circuit checkBoard1",
+          "about": "Answering against private state held in a witness",
+          "lines": [
+            159,
+            200
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/battleship/contract/battleship.compact#L159-L200",
+          "excerpt": "export circuit checkBoard1(): [] {\n\n    // caller verification check\n    const _sk = localSk();\n    const pubKey = getDappPubKey(_sk);\n    assert(player1 == disclose(pubKey), \"You are not player1\");\n\n    // state verification checks\n    assert(winState == WinState.CONTINUE_PLAY, \"A winner has already been declared\");\n    assert(turn == TurnState.PLAYER_1_CHECK, \"It is not Player 1 turn to CHECK\");\n    assert(!player2Shot.isEmpty(), \"No shot to check\");\n\n    // shot processing\n    const currentShot = player2Shot.head().value;\n    assert(!board1Hits.member(currentShot), \"Cheat Detected: Player2: Attempt to repeat a previous HIT\");\n    player2Shot.popFront();\n\n    // hash for comparision with on-chain hash\n    const honestyCheckHash = commitBoardSpace(currentShot as Bytes<32>, _sk);\n\n    // currentShot has already been exposed, but we need to satisfy the compiler here too\n    const shotState = disclose(localCheckBoard(currentShot));\n    assert(shotState == ShotState.HIT || shotState == ShotState.MISS, \"Please provide a valid state\");\n\n  // …"
+        },
+        {
+          "path": "examples/battleship/contract/battleship.compact",
+          "symbol": "circuit commitBoardSpace",
+          "about": "Committing to hidden board positions",
+          "lines": [
+            246,
+            249
+          ],
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/4056c6cf773596bccc2a15fac32cc817d6143a39/examples/battleship/contract/battleship.compact#L246-L249",
+          "excerpt": "circuit commitBoardSpace(_x: Bytes<32>, _sk: Bytes<32>): Bytes<32> {\n    const hash = persistentHash<Vector<2, Bytes<32>>>([_x, _sk]);\n    return disclose(hash);\n}"
+        }
+      ]
+    }
+  ]
+}

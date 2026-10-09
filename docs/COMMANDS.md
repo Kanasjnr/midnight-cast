@@ -17,6 +17,7 @@ Start here for the shortest path:
 | Inspect a tx | `midnight-cast tx <hash> --network preprod` |
 | Inspect a block | `midnight-cast block latest preprod` or `midnight-cast block <height> preprod` |
 | Inspect DUST events | `midnight-cast dust-events --network preprod` |
+| Working code for a pattern | `midnight-cast examples dust sponsorship` |
 
 ## Global flags
 
@@ -267,6 +268,8 @@ The published matrix updates only what the endpoints can't reveal: the indexer, 
 - It is `unverified`, with a `reason`, when the node version has no report (it is never matched to an older one), when the report ran a different runtime `spec_version` or another network, or when it has no passing tests. The runs are on preprod, so mainnet and preview show the preprod run for context but stay unverified: the same node on another network isn't what the examples tested.
 - The report is fetched for that exact version with a 3-second timeout and cached like the published matrix: six hours, a week as a fallback, and no retry for an hour after a failure. A report that says it's about a different node version is rejected. Offline, or when nothing can be fetched, the summaries bundled with this release are used, and a cached copy older than them is ignored. `source` says which was used, and how old it is. Reading the report never fails `versions` or `health`; a problem shows as `unverified` with the reason.
 
+**Against Midnight's examples:** next to the matrix checks, `versions` compares the project with the toolchain Midnight's examples are pinned to, a set known to compile and pass its tests together (`examplesToolchain` in JSON). It covers the `midnight-js-*` packages, `testkit-js`, the wallet SDK, the `pragma language_version` in the project's `.compact` files (only in a directory with a `package.json`, four levels deep, build output, dot directories and `node_modules` skipped; a constraint such as `>= 0.16 && <= 0.20` must admit the examples' language) and the Node.js version in `.nvmrc` or `engines`. It checks only what the project declares, and it's advice: a difference doesn't change `allOk` or the exit code, since a project can be right on other versions. For example: "wallet-sdk: examples=1.2.0 project=1.0.4 → DIFFERS (the official examples run 1.2.0)".
+
 Example output:
 
 ```text
@@ -413,6 +416,14 @@ Auto-detects and decodes everything it finds in one pasted error:
   - Output from Compact toolchain 0.35 or Compact runtime 0.20 (`--feature-zkir-v3`, ZKIR 3.1, `ContractModuleProvider`, `ledger-v9`), which target ledger 9, not yet on the public networks
 
 Hex codes need the `0x` prefix, "ledger N" counts only as "ledger error N" or "ledger code N", and single-word ledger names such as `Transaction` aren't matched in free text, since they also appear in ordinary error messages ("Invalid Transaction").
+
+Where Midnight's examples show the fix, a decoding links that code, at the examples index's pinned commit (`examples` in JSON, `Code:` lines otherwise):
+- stale-DUST errors (170, 171, 196) link hello-world's wallet sync;
+- a fee beyond the available DUST (138) links private-party's DUST sponsorship;
+- a token balance error (126) links token-transfers' `sendToUser` circuit;
+- a contract-owned output left unclaimed (124) links token-transfers' `receiveShieldedTokens` circuit.
+
+Other codes link nothing, rather than code that only looks related. The wallet's "Insufficient Funds: could not balance dust" (`Wallet.InsufficientFunds`), the failure the examples' UI explains to new users, decodes as a known message that links the UI's explanation, the sponsorship and the wallet sync.
 
 Some ledger codes carry a related hint. `OutOfDustValidityWindow` (171) notes the indexer bug fixed in 4.3.4 and 4.3.5, which rejected the first transaction of a block. `TransactionApplicationError` (182) notes the node 1.0.300 bug that halts a fresh mainnet sync at block #1788979, fixed in node 1.0.400. The deserialization codes (0–11) note that ledger 8.1.2 rejects non-canonical encodings, and that ledger 8.1.3 (node 1.0.400) also rejects contract call transcripts with non-canonical field values or `noop 0`.
 
@@ -570,9 +581,51 @@ MIDNIGHT_CAST_NETWORKS=preview,preprod midnight-cast mcp
 
 ---
 
+## `midnight-cast examples [topic]`
+
+Finds working code in Midnight's official examples ([midnightntwrk/midnight-examples](https://github.com/midnightntwrk/midnight-examples)), each compiled and tested in CI against one pinned toolchain. Give a topic in your own words and it returns the examples that show it: what each one covers, the files and line ranges, links pinned to a commit, and, for the best match, the code itself. Without a topic it lists every example and its topics. It works offline.
+
+```bash
+midnight-cast examples
+midnight-cast examples dust sponsorship
+midnight-cast examples "verify a signature in a circuit" --json
+```
+
+Example output (cut short):
+
+```text
+Midnight's examples for "dust sponsorship" (midnightntwrk/midnight-examples at 4056c6c, pinned to Compact language 0.23, Compact compiler 0.31.1, @midnight-ntwrk/midnight-js-* 4.1.1)
+
+private-party: Private on-chain data, access control, and DUST sponsorship: one wallet pays the fees for another's transaction
+  Having a sponsor wallet pay the DUST fee and submit: examples/private-party/src/sponsor.ts:96-115
+    https://github.com/midnightntwrk/midnight-examples/blob/4056c6c…/examples/private-party/src/sponsor.ts#L96-L115
+
+    export async function sponsorAndSubmit(
+    …
+```
+
+The index covers all eleven examples:
+- hello-world;
+- calculator;
+- private-party;
+- token-transfers;
+- silent-auction;
+- election;
+- secret-message;
+- zk-loan;
+- shielded-chips;
+- private-bid;
+- battleship.
+
+The topics and code locations are chosen by hand. `npm run examples-index` finds each location by its declaration at the pinned commit, so the line ranges and excerpts always match the linked code. The JSON has the toolchain the examples are pinned to (Compact language and compiler, midnight-js, wallet SDK, Node.js), so you can tell when your project is on a different generation. A topic with no match exits `1`; a topic of only filler words, such as "show me code", lists every example. When an example matches as a whole but none of its files does, the JSON says so (`filesMatched: false`) and lists all of its files, and the human output shows no excerpt rather than an unrelated one.
+
+`live.yml` checks the index against its pinned commit and notes when midnight-examples has moved past it, with any toolchain change; moving the pin is a deliberate change to `COMMIT` in `scripts/examples-index.ts`.
+
+---
+
 ## `midnight-cast explain [topic]`
 
-Static help (no network). Topics: `dust`, `1010`, `versions`, `transcript`.
+Static help (no network). Topics: `dust`, `1010`, `versions`, `transcript`, `sync`. `sync` is for a wallet that seems stuck syncing. It quotes the first-sync and pre-seed times from the latest bundled regression report of Midnight's examples that measured them, links their FAST-SYNC notes on where the time goes, and says how to rule out the network and how the examples start wallets from a pre-seeded bundle. `dust` and `sync` end with working code from Midnight's examples (`examples` in JSON).
 
 ```bash
 midnight-cast explain dust

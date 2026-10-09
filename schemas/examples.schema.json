@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/main/schemas/examples.schema.json",
+  "title": "examples data",
+  "description": "Midnight's official examples (midnightntwrk/midnight-examples) at one pinned commit. Without a topic, examples lists them all; with one, matches holds the best few, each with the files and lines that show the topic.",
+  "type": "object",
+  "required": [
+    "repo",
+    "commit",
+    "toolchain"
+  ],
+  "properties": {
+    "repo": {
+      "type": "string"
+    },
+    "commit": {
+      "type": "string"
+    },
+    "toolchain": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "What the examples are pinned to, from their README"
+    },
+    "topic": {
+      "type": "string"
+    },
+    "matches": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "summary",
+          "url",
+          "topics",
+          "files",
+          "filesMatched"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "topics": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "path",
+                "symbol",
+                "about",
+                "lines",
+                "url",
+                "excerpt"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string"
+                },
+                "symbol": {
+                  "type": "string",
+                  "description": "The declaration the lines cover"
+                },
+                "about": {
+                  "type": "string"
+                },
+                "lines": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer"
+                  },
+                  "minItems": 2,
+                  "maxItems": 2
+                },
+                "url": {
+                  "type": "string",
+                  "description": "The lines at the pinned commit"
+                },
+                "excerpt": {
+                  "type": "string",
+                  "description": "The lines themselves, cut after 24"
+                }
+              }
+            }
+          },
+          "filesMatched": {
+            "type": "boolean",
+            "description": "False when the example matched as a whole but none of its files did, so files lists all of them"
+          }
+        }
+      }
+    },
+    "examples": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "summary",
+          "topics",
+          "url"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "topics": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

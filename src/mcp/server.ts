@@ -6,6 +6,8 @@ import { dustEventCommand, dustEventsCommand } from "../commands/dust.js";
 import { TOPICS, explainCommand } from "../commands/explain.js";
 import { healthCommand } from "../commands/health.js";
 import { preflightCommand } from "../commands/preflight.js";
+import { examplesCommand } from "../commands/examples.js";
+import { loadExamplesIndex } from "../lib/examples-index.js";
 import { pingCommand } from "../commands/ping.js";
 import { tipCommand } from "../commands/tip.js";
 import { txCommand } from "../commands/tx.js";
@@ -69,6 +71,7 @@ const envelopeSchema = z.object({
 export const INSTRUCTIONS = `midnight-cast reads the public Midnight networks and explains Midnight errors. Every tool only reads; nothing needs a wallet or keys.
 
 - When the user has an error message, call decode with the whole message first.
+- When the user needs working Midnight code for a pattern, call examples with the topic and start from what it returns.
 - When a network might be the problem rather than the user's code, call health; ping and tip narrow it down. Its data.examples says whether Midnight's own examples pass on the node that network runs: if they pass and the network is healthy, look at the user's code or setup first.
 - To see what happened to a transaction, call tx with its hash.
 - Every result is an envelope: ok, data, error { message, kind, hint }, warnings and next. Follow next: when a step has a tool field, call that tool with exactly those arguments; otherwise the command is for a terminal.
@@ -297,6 +300,14 @@ export function createMcpServer(options: McpOptions): McpServer {
     { topic: z.enum(TOPICS).describe("Topic to explain") },
     ({ topic }) => explainCommand(topic, json, options.catalog),
   );
+  tool(
+    "examples",
+    "examples",
+    "Working code from Midnight's official examples (midnightntwrk/midnight-examples), each compiled and tested in CI. Give a topic such as \"DUST sponsorship\", \"send shielded tokens\" or \"verify a signature in a circuit\" to get the examples that show it, with file paths, line ranges, links pinned to a commit and the code itself. Without a topic, lists every example and what it covers. Prefer these over writing Midnight code from memory.",
+    OFFLINE,
+    { topic: z.string().optional().describe("What the code should show; omit to list every example") },
+    ({ topic }) => examplesCommand(topic, json),
+  );
 
   // Prompts are user-invoked (slash commands in most clients): ready-made investigations over the tools.
   const networkArg = (description: string) =>
@@ -386,6 +397,16 @@ export function createMcpServer(options: McpOptions): McpServer {
     },
   );
 
+  server.registerResource(
+    "examples",
+    "midnight-cast://examples",
+    {
+      title: "Midnight's examples",
+      description: "Every official Midnight example at a pinned commit: what it shows, its topics, and the files and lines that show them",
+      mimeType: "application/json",
+    },
+    (uri) => ({ contents: [{ uri: uri.href, mimeType: "application/json", text: JSON.stringify(loadExamplesIndex(), null, 2) }] }),
+  );
   server.registerResource(
     "catalog",
     "midnight-cast://catalog",

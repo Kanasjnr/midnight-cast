@@ -1,7 +1,4 @@
 #!/usr/bin/env node
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { Command, CommanderError } from "commander";
 import { emit, fail, type GlobalOptions } from "./output.js";
 import { parseIntOrFail } from "./lib/parse-int.js";
@@ -20,22 +17,19 @@ import { contractCommand } from "./commands/contract.js";
 import { agentsInitCommand } from "./commands/agents.js";
 import { dustStatusCommand } from "./commands/dust-status.js";
 import { preflightCommand } from "./commands/preflight.js";
+import { examplesCommand } from "./commands/examples.js";
 import { versionsCommand } from "./commands/versions.js";
 import type { ResolveFlags } from "./config.js";
 import { normalizeArgv } from "./lib/argv.js";
+import { packageVersion } from "./lib/data-path.js";
 import { isNetworkName, splitRpcPositionalArgs } from "./lib/network-arg.js";
 
 const program = new Command().exitOverride();
 
-function cliVersion(): string {
-  const path = join(dirname(fileURLToPath(import.meta.url)), "..", "package.json");
-  return (JSON.parse(readFileSync(path, "utf8")) as { version: string }).version;
-}
-
 program
   .name("midnight-cast")
   .description("Read-only developer CLI for Midnight")
-  .version(cliVersion(), "-V, --version", "Show CLI version")
+  .version(packageVersion(), "-V, --version", "Show CLI version")
   .option("--json", "JSON output")
   .option("--network <name>", "Network (preview|preprod|mainnet|local)")
   .option("--rpc <url>", "Override RPC URL")
@@ -503,6 +497,13 @@ program
   });
 
 program
+  .command("examples [topic...]")
+  .description("Midnight's official examples: list them, or find the code that shows a topic (e.g. examples dust sponsorship)")
+  .action(async (topic: string[], _opts, cmd) => {
+    await run(async () => examplesCommand(topic.join(" "), globalOpts(cmd)), cmd);
+  });
+
+program
   .command("mcp")
   .description(
     "Run a read-only MCP server on stdio for AI agents (networks from MIDNIGHT_CAST_NETWORKS, Blockfrost ID from BLOCKFROST_PROJECT_ID)",
@@ -524,7 +525,7 @@ program
     const { serveStdio } = await import("@modelcontextprotocol/server/stdio");
     // serveStdio answers both the 2025 handshake and the stateless 2026-07-28 protocol.
     serveStdio(() =>
-      createMcpServer({ version: cliVersion(), catalog: () => buildCatalog(program, TOPICS), networks, callsPerMinute: perMinute }),
+      createMcpServer({ version: packageVersion(), catalog: () => buildCatalog(program, TOPICS), networks, callsPerMinute: perMinute }),
     );
     // The client is gone once stdin ends; don't wait for in-flight network calls to time out.
     process.stdin.once("end", () => process.exit(0));
