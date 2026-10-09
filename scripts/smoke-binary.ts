@@ -116,7 +116,7 @@ async function main(): Promise<number> {
   await commandChecks(run, valid, check, startMcp);
 
   // Each reads a different bundled data file, which a binary carries inside it.
-  for (const cliArgs of [["explain", "sync", "--json"], ["examples", "dust", "sponsorship", "--json"], ["versions", "--json"]]) {
+  for (const cliArgs of [["explain", "sync", "--json"], ["examples", "dust", "sponsorship", "--json"]]) {
     const result = await run(cliArgs);
     const ok = result.code === 0 && valid(result.stdout);
     check(ok, `midnight-cast ${cliArgs.join(" ")} (bundled data)`);
@@ -124,15 +124,17 @@ async function main(): Promise<number> {
   }
 
   if (!offline) {
-    // HTTP, then the indexer's WebSocket. The network may be down, so any valid envelope passes, with a warning when it isn't ok.
-    for (const cliArgs of [["tip", "preprod", "--json"], ["dust-events", "preprod", "--limit", "1", "--json"]]) {
+    // HTTP, the indexer's WebSocket, and versions against the bundled support matrix, on preview: Midnight still
+    // hosts it, and preprod and mainnet need a Blockfrost project ID. The network may be down, so any valid
+    // envelope passes, with a warning when it isn't ok.
+    for (const cliArgs of [["tip", "preview", "--json"], ["dust-events", "preview", "--limit", "1", "--json"], ["versions", "preview", "--json"]]) {
       const result = await run(cliArgs);
       check(valid(result.stdout), `midnight-cast ${cliArgs.join(" ")} (exit ${result.code})`);
-      if (result.code !== 0) console.log(`::warning::midnight-cast ${cliArgs.join(" ")} didn't reach preprod; the binary's network client is unconfirmed`);
+      if (result.code !== 0) console.log(`::warning::midnight-cast ${cliArgs.join(" ")} didn't reach preview; the binary's network client is unconfirmed`);
     }
     // The published support matrix, fetched from GitHub; versions falls back to the bundled one if the fetch fails.
-    const fetched = await runWith(["versions", "--refresh-matrix", "--json"], false);
-    check(valid(fetched.stdout), `midnight-cast versions --refresh-matrix --json (exit ${fetched.code})`);
+    const fetched = await runWith(["versions", "preview", "--refresh-matrix", "--json"], false);
+    check(valid(fetched.stdout), `midnight-cast versions preview --refresh-matrix --json (exit ${fetched.code})`);
     const source = (() => {
       try {
         return (JSON.parse(fetched.stdout) as { data?: { matrixSource?: { kind?: string } } }).data?.matrixSource?.kind;
