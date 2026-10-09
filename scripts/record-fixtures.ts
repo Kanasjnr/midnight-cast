@@ -24,7 +24,7 @@ import { contractCommand } from "../src/commands/contract.js";
 import { dustStatusCommand } from "../src/commands/dust-status.js";
 import { versionsCommand } from "../src/commands/versions.js";
 import { resolveNetwork } from "../src/config.js";
-import { takeProjectId } from "../src/lib/blockfrost.js";
+import { networkProjectIdEnv, takeProjectId } from "../src/lib/blockfrost.js";
 import { sanitizeForOutput } from "../src/lib/sanitize.js";
 import { BUILTIN_NETWORKS } from "../src/networks.js";
 import type { EmitResult } from "../src/output.js";
@@ -32,8 +32,8 @@ import { compareShapes, dustExchanges, recordingFetch, type Exchange, type Fixtu
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 export const FIXTURE_NETWORKS = ["preview", "preprod", "mainnet"] as const;
-// Mainnet is served by Blockfrost and needs a project ID to record.
-const NEEDS_PROJECT_ID = new Set(["mainnet"]);
+// Preprod and mainnet are served by Blockfrost and need a project ID to record.
+const NEEDS_PROJECT_ID = new Set(["preprod", "mainnet"]);
 const DUST_PAYLOADS = 3;
 
 export function fixtureDir(network: string): string {
@@ -263,9 +263,11 @@ async function main(): Promise<number> {
   let incomplete = false;
   for (const network of networks.length ? networks : FIXTURE_NETWORKS) {
     if (!BUILTIN_NETWORKS[network]) throw new Error(`Unknown network ${network}`);
-    if (NEEDS_PROJECT_ID.has(network) && !process.env.BLOCKFROST_PROJECT_ID) {
-      if (networks.includes(network)) throw new Error(`${network} needs BLOCKFROST_PROJECT_ID to record`);
-      console.log(`${network}: skipped, BLOCKFROST_PROJECT_ID is not set`);
+    // Resolved the way the CLI does: the network's own variable, then the shared one if its ID is for this network.
+    const projectId = takeProjectId(resolveNetwork(network, {}, { requireProjectId: false }).rpc).projectId;
+    if (NEEDS_PROJECT_ID.has(network) && !projectId) {
+      if (networks.includes(network)) throw new Error(`${network} needs ${networkProjectIdEnv(network)} to record`);
+      console.log(`${network}: skipped, ${networkProjectIdEnv(network)} is not set`);
       continue;
     }
     const committed = readFixture(network);
@@ -288,7 +290,7 @@ async function main(): Promise<number> {
     });
     const dir = fixtureDir(network);
 
-    const secret = process.env.BLOCKFROST_PROJECT_ID;
+    const secret = projectId;
     if (secret && (JSON.stringify(fixture).includes(secret) || schema.includes(secret))) {
       throw new Error(`${network}: the recording contains the Blockfrost project ID; nothing was written`);
     }

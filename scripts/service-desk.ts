@@ -3,7 +3,7 @@
 // Midnight's AI-report policy needs a person to verify the evidence and submit it, and a
 // P1 also needs a page that no bot can make. The live-check issue carries it for review.
 
-import { takeProjectId } from "../src/lib/blockfrost.js";
+import { blockfrostProject, networkProjectIdEnv, takeProjectId } from "../src/lib/blockfrost.js";
 
 export const START = "<!-- service-desk:start -->";
 export const END = "<!-- service-desk:end -->";
@@ -348,7 +348,7 @@ function render(d: Draft, input: ReportInput, window: { firstSeen: string; lastS
     "",
     "### Steps to Reproduce",
     "",
-    "These need only `curl`" + (input.endpoints?.blockfrost ? ", and a Midnight Mainnet project ID from blockfrost.io in `BLOCKFROST_PROJECT_ID`." : ".") +
+    "These need only `curl`" + (input.endpoints?.blockfrost ? `, and a ${blockfrostProject(input.network)} project ID from blockfrost.io in \`BLOCKFROST_PROJECT_ID\`.` : ".") +
       (d.stepsBefore ? ` ${d.stepsBefore}` : ""),
     "",
     "```bash",
@@ -371,7 +371,7 @@ function render(d: Draft, input: ReportInput, window: { firstSeen: string; lastS
     "",
     `First seen ${time(window.firstSeen)}, last seen ${time(window.lastSeen)} (UTC), by ${checker(input).cadence}.${input.runUrl ? ` Latest run: ${input.runUrl}` : ""}`,
     ...(input.endpoints?.blockfrost
-      ? ["", "Mainnet's public RPC and indexer are run by Blockfrost, so Blockfrost may need to hear about this too."]
+      ? ["", `${NETWORK[input.network] ?? input.network}'s public RPC and indexer are run by Blockfrost, so Blockfrost may need to hear about this too.`]
       : []),
     "",
     "### Pre-submission Checklist",
@@ -407,7 +407,7 @@ function render(d: Draft, input: ReportInput, window: { firstSeen: string; lastS
 export function serviceDeskSection(input: ReportInput, history: Record<string, string> = {}): string {
   const { mine } = split(input);
   const ourNote = mine.length
-    ? `Blockfrost refused ${mine.map((s) => SERVICE_NAME[s.service] ?? s.service).join(" and ")} because of our project ID or our plan's limit (${mine.map((s) => s.detail).join("; ")}). That's a problem with the \`BLOCKFROST_MAINNET_PROJECT_ID\` secret or the Blockfrost plan, not Midnight's, so it isn't drafted.`
+    ? `Blockfrost refused ${mine.map((s) => SERVICE_NAME[s.service] ?? s.service).join(" and ")} because of our project ID or our plan's limit (${mine.map((s) => s.detail).join("; ")}). That's a problem with the \`${networkProjectIdEnv(input.network)}\` secret or the Blockfrost plan, not Midnight's, so it isn't drafted.`
     : "";
   const found = problems(input);
   if (!found.length) return ourNote ? [START, "### Service desk", "", ourNote, END].join("\n") : "";

@@ -1,24 +1,28 @@
-name: Blockfrost mainnet config
+name: Blockfrost config
 description: >
-  Exports BLOCKFROST_PROJECT_ID so midnight-cast reaches mainnet through
-  Blockfrost, the way users configure it. When the token is empty it reports
-  configured=false (mainnet skipped, not passed), or fails if `required` is true.
+  Exports BLOCKFROST_<NETWORK>_PROJECT_ID so midnight-cast reaches preprod or
+  mainnet through Blockfrost, the way users configure it. When the token is
+  empty it reports configured=false (the network is skipped, not passed), or
+  fails if `required` is true.
 
 inputs:
+  network:
+    description: preprod or mainnet
+    required: true
   project-id:
-    description: Blockfrost Midnight Mainnet project ID
+    description: The network's Blockfrost project ID (a Midnight Preprod or Midnight Mainnet project)
     required: false
     default: ""
   required:
     description: >
-      'true' to fail when the token is missing. Used where mainnet must be
-      checked (release PRs into main), so a required check can't pass without it.
+      'true' to fail when the token is missing. Used where the network must be
+      checked (pull requests and pushes), so a required check can't pass without it.
     required: false
     default: "false"
 
 outputs:
   configured:
-    description: "'true' when a mainnet config was written"
+    description: "'true' when the network's project ID was exported"
     value: ${{ steps.write.outputs.configured }}
 
 runs:
@@ -27,19 +31,21 @@ runs:
     - id: write
       shell: bash
       env:
+        NETWORK: ${{ inputs.network }}
         PROJECT_ID: ${{ inputs.project-id }}
         REQUIRED: ${{ inputs.required }}
       run: |
+        variable="BLOCKFROST_$(echo "$NETWORK" | tr '[:lower:]' '[:upper:]')_PROJECT_ID"
         if [ -z "$PROJECT_ID" ]; then
           if [ "$REQUIRED" = "true" ]; then
-            echo "::error title=mainnet not checked::Secret BLOCKFROST_MAINNET_PROJECT_ID is not set, so mainnet can't be checked. It is required here."
+            echo "::error title=$NETWORK not checked::Secret $variable is not set, so $NETWORK can't be checked. It is required here."
             exit 1
           fi
-          echo "::notice title=mainnet skipped::No Blockfrost mainnet token (secret BLOCKFROST_MAINNET_PROJECT_ID); mainnet checks are skipped, not passed."
-          echo "### ⏭️ mainnet: skipped (no BLOCKFROST_MAINNET_PROJECT_ID secret)" >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice title=$NETWORK skipped::No Blockfrost $NETWORK token (secret $variable); $NETWORK checks are skipped, not passed."
+          echo "### ⏭️ $NETWORK: skipped (no $variable secret)" >> "$GITHUB_STEP_SUMMARY"
           echo "configured=false" >> "$GITHUB_OUTPUT"
           exit 0
         fi
         echo "::add-mask::$PROJECT_ID"
-        echo "BLOCKFROST_PROJECT_ID=$PROJECT_ID" >> "$GITHUB_ENV"
+        echo "$variable=$PROJECT_ID" >> "$GITHUB_ENV"
         echo "configured=true" >> "$GITHUB_OUTPUT"
