@@ -67,21 +67,22 @@ for (const network of FIXTURE_NETWORKS) {
   describe(`recorded ${network} responses`, () => {
     const realFetch = globalThis.fetch;
     const realConfigHome = process.env.XDG_CONFIG_HOME;
-    const realProjectId = process.env.BLOCKFROST_PROJECT_ID;
+    const projectIdEnv = `BLOCKFROST_${network.toUpperCase()}_PROJECT_ID`;
+    const realProjectId = process.env[projectIdEnv];
     const json = { json: true };
     const { inputs } = fixture;
 
     beforeAll(() => {
       process.env.XDG_CONFIG_HOME = mkdtempSync(join(tmpdir(), "mc-replay-"));
-      // Mainnet goes through Blockfrost, which the CLI won't call without a project ID; replay never sends it.
-      process.env.BLOCKFROST_PROJECT_ID = "nightmainnetREPLAY";
+      // Preprod and mainnet go through Blockfrost, which the CLI won't call without a project ID; replay never sends it.
+      process.env[projectIdEnv] = `night${network}REPLAY`;
       globalThis.fetch = replayFetch(fixture, BUILTIN_NETWORKS[network]!.proofServer);
     });
     afterAll(() => {
       globalThis.fetch = realFetch;
       for (const [name, value] of [
         ["XDG_CONFIG_HOME", realConfigHome],
-        ["BLOCKFROST_PROJECT_ID", realProjectId],
+        [projectIdEnv, realProjectId],
       ] as const) {
         if (value === undefined) delete process.env[name];
         else process.env[name] = value;

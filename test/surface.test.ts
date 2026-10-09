@@ -12,13 +12,14 @@ describe("messages for MCP calls", () => {
   });
 
   it("send Claude Code plugin users to the plugin's option", () => {
-    process.env.MIDNIGHT_CAST_PLUGIN_PROJECT_ID = "";
+    process.env.MIDNIGHT_CAST_PLUGIN_PREPROD_PROJECT_ID = "";
     try {
-      const plugin = runAsMcpCall(() => missingProjectIdError("mainnet"));
+      const plugin = runAsMcpCall(() => missingProjectIdError("preprod"));
       expect(plugin).toContain("Configure options");
-      expect(plugin).toContain("export BLOCKFROST_PROJECT_ID");
+      expect(plugin).toContain("export BLOCKFROST_PREPROD_PROJECT_ID");
+      expect(plugin).toContain("Midnight Preprod project");
     } finally {
-      delete process.env.MIDNIGHT_CAST_PLUGIN_PROJECT_ID;
+      delete process.env.MIDNIGHT_CAST_PLUGIN_PREPROD_PROJECT_ID;
     }
   });
 

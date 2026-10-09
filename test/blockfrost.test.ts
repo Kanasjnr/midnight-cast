@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   blockfrostHttpError,
   isBlockfrostUrl,
+  blockfrostNetwork,
   isRetiredUrl,
   takeProjectId,
   withProjectId,
@@ -49,7 +50,11 @@ describe("Blockfrost URL helpers", () => {
     expect(isBlockfrostUrl("https://blockfrost.io.evil.example")).toBe(false);
     expect(isBlockfrostUrl("https://rpc.preprod.midnight.network")).toBe(false);
     expect(isRetiredUrl("https://indexer.mainnet.midnight.network/api/v4/graphql")).toBe(true);
-    expect(isRetiredUrl("https://indexer.preprod.midnight.network/api/v4/graphql")).toBe(false);
+    expect(isRetiredUrl("https://indexer.preprod.midnight.network/api/v4/graphql")).toBe(true);
+    expect(isRetiredUrl("https://indexer.preview.midnight.network/api/v4/graphql")).toBe(false);
+    expect(blockfrostNetwork("https://rpc.midnight-preprod.blockfrost.io")).toBe("preprod");
+    expect(blockfrostNetwork("wss://midnight-mainnet.blockfrost.io/api/v0/ws")).toBe("mainnet");
+    expect(blockfrostNetwork("https://rpc.preview.midnight.network")).toBeUndefined();
   });
 
   it("adds, replaces and removes the project_id parameter", () => {
@@ -67,6 +72,8 @@ describe("Blockfrost URL helpers", () => {
 
   it("explains 403 and rate limits, and leaves other statuses alone", () => {
     expect(blockfrostHttpError("RPC", 403)).toMatch(/project token is missing, invalid, or for a different network/);
+    expect(blockfrostHttpError("RPC", 403, "https://rpc.midnight-preprod.blockfrost.io")).toMatch(/Preprod needs a Midnight Preprod project ID[\s\S]*BLOCKFROST_PREPROD_PROJECT_ID/);
+    expect(blockfrostHttpError("Indexer", 403, "https://midnight-mainnet.blockfrost.io/api/v0")).toContain('a Midnight Mainnet project ID (it starts with "nightmainnet")');
     expect(blockfrostHttpError("Indexer", 429)).toMatch(/rate-limited/);
     expect(blockfrostHttpError("RPC", 500)).toBeUndefined();
   });
@@ -93,12 +100,78 @@ describe("resolving mainnet", () => {
   it("takes the Claude Code plugin's option, or BLOCKFROST_PROJECT_ID when the option is empty", () => {
     process.env.BLOCKFROST_PROJECT_ID = "nightmainnetFROMENV123456";
     try {
-      process.env.MIDNIGHT_CAST_PLUGIN_PROJECT_ID = "";
+      process.env.MIDNIGHT_CAST_PLUGIN_MAINNET_PROJECT_ID = "";
       expect(resolveNetwork("mainnet").rpc).toContain("project_id=nightmainnetFROMENV123456");
-      process.env.MIDNIGHT_CAST_PLUGIN_PROJECT_ID = "nightmainnetFROMPLUGIN1234";
+      process.env.MIDNIGHT_CAST_PLUGIN_MAINNET_PROJECT_ID = "nightmainnetFROMPLUGIN1234";
       expect(resolveNetwork("mainnet").rpc).toContain("project_id=nightmainnetFROMPLUGIN1234");
     } finally {
-      delete process.env.MIDNIGHT_CAST_PLUGIN_PROJECT_ID;
+      delete process.env.MIDNIGHT_CAST_PLUGIN_MAINNET_PROJECT_ID;
+    }
+  });
+
+  it("takes each network's own ID before the shared one, and names the variable it came from", () => {
+    process.env.BLOCKFROST_PROJECT_ID = "sharedTOKEN1234567";
+    process.env.BLOCKFROST_MAINNET_PROJECT_ID = "nightmainnetOWNENV123456";
+    try {
+      const mainnet = resolveNetwork("mainnet");
+      expect(mainnet.rpc).toContain("project_id=nightmainnetOWNENV123456");
+      expect(mainnet.projectIdEnv).toBe("BLOCKFROST_MAINNET_PROJECT_ID");
+      delete process.env.BLOCKFROST_MAINNET_PROJECT_ID;
+      expect(resolveNetwork("mainnet").projectIdEnv).toBe("BLOCKFROST_PROJECT_ID");
+    } finally {
+      delete process.env.BLOCKFROST_MAINNET_PROJECT_ID;
+    }
+  });
+
+  it("never sends one network's ID to another, and says why there's none", () => {
+    const preprodId = process.env.BLOCKFROST_PREPROD_PROJECT_ID;
+    delete process.env.BLOCKFROST_PREPROD_PROJECT_ID;
+    process.env.BLOCKFROST_PROJECT_ID = "nightmainnetFROMENV123456";
+    try {
+      expect(() => resolveNetwork("preprod")).toThrow(
+        /BLOCKFROST_PROJECT_ID holds a Midnight Mainnet project ID[\s\S]*Midnight Preprod project[\s\S]*BLOCKFROST_PREPROD_PROJECT_ID/,
+      );
+      process.env.BLOCKFROST_PREPROD_PROJECT_ID = "nightpreprodOWNENV123456";
+      expect(resolveNetwork("preprod").indexerWs).toBe("wss://midnight-preprod.blockfrost.io/api/v0/ws?project_id=nightpreprodOWNENV123456");
+    } finally {
+      if (preprodId === undefined) delete process.env.BLOCKFROST_PREPROD_PROJECT_ID;
+      else process.env.BLOCKFROST_PREPROD_PROJECT_ID = preprodId;
+    }
+  });
+
+  it("skips a network's own variable when it holds another network's ID", () => {
+    const preprodId = process.env.BLOCKFROST_PREPROD_PROJECT_ID;
+    process.env.BLOCKFROST_PREPROD_PROJECT_ID = "nightmainnetPASTEDWRONG1234";
+    try {
+      expect(() => resolveNetwork("preprod")).toThrow(/BLOCKFROST_PREPROD_PROJECT_ID holds a Midnight Mainnet project ID/);
+    } finally {
+      if (preprodId === undefined) delete process.env.BLOCKFROST_PREPROD_PROJECT_ID;
+      else process.env.BLOCKFROST_PREPROD_PROJECT_ID = preprodId;
+    }
+  });
+
+  it("checks an ID against the network Blockfrost serves, whatever the config calls it", () => {
+    writeConfig(
+      `[networks.bf]\nnetwork_id = "preprod"\nrpc = "https://rpc.midnight-preprod.blockfrost.io"\n` +
+        `indexer_http = "https://midnight-preprod.blockfrost.io/api/v0"\nindexer_ws = "wss://midnight-preprod.blockfrost.io/api/v0/ws"\n`,
+    );
+    const preprodId = process.env.BLOCKFROST_PREPROD_PROJECT_ID;
+    delete process.env.BLOCKFROST_PREPROD_PROJECT_ID;
+    try {
+      process.env.BLOCKFROST_PROJECT_ID = "nightmainnetFROMENV123456";
+      expect(() => resolveNetwork("bf")).toThrow(/BLOCKFROST_PREPROD_PROJECT_ID/);
+      process.env.BLOCKFROST_PROJECT_ID = "nightpreprodFROMENV123456";
+      expect(resolveNetwork("bf").rpc).toContain("project_id=nightpreprodFROMENV123456");
+      // A config network named after something else still takes the variable of the network it's served by.
+      process.env.BLOCKFROST_PREPROD_PROJECT_ID = "nightpreprodOWNENV1234567";
+      expect(resolveNetwork("bf").rpc).toContain("project_id=nightpreprodOWNENV1234567");
+      delete process.env.BLOCKFROST_PREPROD_PROJECT_ID;
+      delete process.env.BLOCKFROST_PROJECT_ID;
+      // The fix points at the section the config actually reads, and the variable for the network it's served by.
+      expect(() => resolveNetwork("bf")).toThrow(/BLOCKFROST_PREPROD_PROJECT_ID=<project id>[\s\S]*\[networks\.bf\]/);
+    } finally {
+      if (preprodId === undefined) delete process.env.BLOCKFROST_PREPROD_PROJECT_ID;
+      else process.env.BLOCKFROST_PREPROD_PROJECT_ID = preprodId;
     }
   });
 
@@ -152,9 +225,9 @@ describe("resolving mainnet", () => {
   });
 
   it("leaves non-Blockfrost networks untouched", () => {
-    const preprod = resolveNetwork("preprod", { projectId: TOKEN });
-    expect(preprod.projectIdSource).toBeUndefined();
-    expect(preprod.rpc).toBe("https://rpc.preprod.midnight.network");
+    const preview = resolveNetwork("preview", { projectId: TOKEN });
+    expect(preview.projectIdSource).toBeUndefined();
+    expect(preview.rpc).toBe("https://rpc.preview.midnight.network");
   });
 
   it("doesn't need a token for self-hosted mainnet endpoints", () => {
