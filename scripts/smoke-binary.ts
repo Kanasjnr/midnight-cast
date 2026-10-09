@@ -26,10 +26,11 @@ const ARCHIVE_FILES = ["LICENSE", "NOTICE", "README.md", "THIRD-PARTY-LICENSES"]
 function exec(
   command: string,
   args: string[],
-  options: { cwd?: string; env?: NodeJS.ProcessEnv } = {},
+  options: { cwd?: string; env?: NodeJS.ProcessEnv; verbatim?: boolean } = {},
 ): Promise<{ stdout: string; stderr: string; code: number }> {
   return new Promise((done) => {
-    execFile(command, args, { cwd: options.cwd, env: { ...process.env, ...options.env }, maxBuffer: 16 * 1024 * 1024 }, (err, stdout, stderr) => {
+    const settings = { cwd: options.cwd, env: { ...process.env, ...options.env }, maxBuffer: 16 * 1024 * 1024, windowsVerbatimArguments: options.verbatim };
+    execFile(command, args, settings, (err, stdout, stderr) => {
       const code = err ? (typeof (err as { code?: unknown }).code === "number" ? (err as { code: number }).code : 1) : 0;
       done({ stdout, stderr, code });
     });
@@ -175,6 +176,7 @@ async function installerChecks(
       `${windows ? "install.ps1" : "install.sh"} installs midnight-cast and mn ${version}`,
     );
     if (installed.code !== 0) showStderr({ stderr: installed.output });
+    else if (installed.versions.length !== 2) showStderr({ stderr: `installed, but --version printed: ${JSON.stringify(installed.versions)}\n${installed.output}` });
     const tampered = await install(badUrl!, join(work, "not-installed"), docker);
     check(
       tampered.code !== 0 && /doesn't match its checksum/.test(tampered.output) && !tampered.versions.length,
@@ -212,8 +214,10 @@ async function install(
   const binary = join(dir, windows ? "midnight-cast.exe" : "midnight-cast");
   const versions: string[] = [];
   if (existsSync(binary)) versions.push((await exec(binary, ["--version"])).stdout.trim());
-  // mn.cmd is a batch file, which only cmd.exe runs.
-  const mn = windows ? await exec("cmd.exe", ["/d", "/s", "/c", `"${join(dir, "mn.cmd")}" --version`]) : await exec(join(dir, "mn"), ["--version"]);
+  // mn.cmd is a batch file, which only cmd.exe runs. Node would escape the quotes as \", which cmd.exe doesn't read.
+  const mn = windows
+    ? await exec("cmd.exe", ["/d", "/s", "/c", `""${join(dir, "mn.cmd")}" --version"`], { verbatim: true })
+    : await exec(join(dir, "mn"), ["--version"]);
   if (mn.code === 0) versions.push(mn.stdout.trim());
   return { code: result.code, output, versions };
 }
