@@ -160,9 +160,15 @@ jobs:
 
       - run: npm ci
 
+      - name: Bun version
+        id: bun
+        shell: bash
+        run: echo "version=$(cat .bun-version)" >> "$GITHUB_OUTPUT"
+
+      # Bun's baseline build, so it compiles for its own target; downloading the baseline runtime fails to extract on Windows.
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version-file: .bun-version
+          bun-download-url: https://github.com/oven-sh/bun/releases/download/bun-v${{ steps.bun.outputs.version }}/bun-windows-x64-baseline.zip
 
       - name: Build
         run: npm run binaries -- --target windows-x64
