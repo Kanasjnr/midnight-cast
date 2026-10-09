@@ -42,8 +42,10 @@ After the pull request merges, create a GitHub release that targets `main`, tagg
 
 1. runs the tarball smoke test again on the merged code;
 2. confirms that a full live check on `main` (a scheduled run or a push, not a manual run that may cover one network) succeeded within the last 24 hours, and that no `live-check` issue is open, since the live check keeps one open for each network while it reports drift or an outage;
-3. builds the standalone binaries, smokes them, records build provenance and attaches the archives, `SHA256SUMS`, `install.sh` and `install.ps1` to the GitHub release;
-4. builds and publishes to npm with provenance.
+3. builds and publishes to npm with provenance;
+4. separately, builds the standalone binaries, smokes them, records build provenance and, once steps 1 and 2 have passed, attaches the archives, `SHA256SUMS`, `install.sh` and `install.ps1` to the GitHub release.
+
+npm doesn't wait for step 4, since the binaries are an extra channel. If a binary job fails after npm has published, re-run the failed jobs from the workflow run; until it passes, the release has no binaries and the install one-liner returns 404.
 
 If the last full live check is older than 24 hours, wait for the next scheduled run or push to `main`, then re-run the failed job. If a `live-check` issue is open, resolve the drift or wait for the outage to clear; the issue closes itself once the network is clean.
 

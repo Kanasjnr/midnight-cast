@@ -83,7 +83,8 @@ jobs:
         run: gh release upload "${{ github.event.release.tag_name }}" build/release/* --clobber --repo "$GITHUB_REPOSITORY"
 
   publish:
-    needs: [tarball, live-recent, release-binaries]
+    # npm doesn't wait for the binaries: they're additive, and a failed binary job can be re-run after.
+    needs: [tarball, live-recent]
     runs-on: ubuntu-latest
     permissions:
       id-token: write
