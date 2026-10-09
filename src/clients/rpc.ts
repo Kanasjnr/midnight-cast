@@ -40,7 +40,7 @@ export async function jsonRpc<T>(
 
   if (!response.ok) {
     throw new NetworkError(
-      (isBlockfrostUrl(target) && blockfrostHttpError("RPC", response.status)) ||
+      (isBlockfrostUrl(target) && blockfrostHttpError("RPC", response.status, target)) ||
         `RPC unreachable (${response.status})`,
       statusKind(response.status),
       "RPC",

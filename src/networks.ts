@@ -21,12 +21,13 @@ export const BUILTIN_NETWORKS: Record<string, NetworkEndpoints> = {
     indexerWs: indexerWs("preview"),
     proofServer: "https://proof-server.preview.midnight.network",
   },
+  // Midnight's hosted preprod and mainnet RPC and indexer were retired; Blockfrost serves them with a project ID per network.
   preprod: {
     networkId: "preprod",
-    rpc: "https://rpc.preprod.midnight.network",
-    rpcWs: "wss://rpc.preprod.midnight.network",
-    indexerHttp: indexerHttp("preprod"),
-    indexerWs: indexerWs("preprod"),
+    rpc: "https://rpc.midnight-preprod.blockfrost.io",
+    rpcWs: "wss://rpc.midnight-preprod.blockfrost.io",
+    indexerHttp: "https://midnight-preprod.blockfrost.io/api/v0",
+    indexerWs: "wss://midnight-preprod.blockfrost.io/api/v0/ws",
     proofServer: "https://proof-server.preprod.midnight.network",
   },
   mainnet: {
