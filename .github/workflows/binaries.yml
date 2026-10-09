@@ -3,7 +3,8 @@ name: Binaries
 # Builds the standalone binaries and runs each one the way a user gets it, on its own OS and
 # architecture. A release PR into main must pass it, and publish.yml runs it again before
 # publishing, then attaches the archives. PRs into next-release smoke offline, like the other
-# checks there. The macOS binaries are built on macOS, where codesign can sign them.
+# checks there. The macOS binaries are built on macOS, where codesign can sign them, and the
+# Windows one on Windows.
 
 on:
   pull_request:
@@ -24,7 +25,7 @@ env:
 
 jobs:
   linux:
-    name: Build Linux and Windows, smoke Linux x64
+    name: Build Linux, smoke Linux x64
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -41,11 +42,8 @@ jobs:
         with:
           bun-version-file: .bun-version
 
-      # The Windows archive is a zip, and Ubuntu's tar doesn't write one.
-      - run: sudo apt-get update && sudo apt-get install -y zip
-
       - name: Build
-        run: npm run binaries -- --target linux-x64 --target linux-x64-musl --target linux-arm64 --target linux-arm64-musl --target windows-x64
+        run: npm run binaries -- --target linux-x64 --target linux-x64-musl --target linux-arm64 --target linux-arm64-musl
 
       - name: Smoke the glibc binary on the runner
         run: npm run smoke:binary -- build/release/midnight-cast-linux-x64.tar.gz ${{ env.SMOKE_FLAGS }}
@@ -63,7 +61,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: binaries-linux-windows
+          name: binaries-linux
           path: build/release/midnight-cast-*
           if-no-files-found: error
 
@@ -84,7 +82,7 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          name: binaries-linux-windows
+          name: binaries-linux
           path: build/release
 
       - name: Smoke the glibc binary on the runner
@@ -149,10 +147,9 @@ jobs:
         run: npm run smoke:binary -- build/release/midnight-cast-darwin-x64.tar.gz ${{ env.SMOKE_FLAGS }}
 
   windows:
-    name: Smoke Windows
-    needs: linux
+    name: Build and smoke Windows
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -163,13 +160,21 @@ jobs:
 
       - run: npm ci
 
-      - uses: actions/download-artifact@v4
+      - uses: oven-sh/setup-bun@v2
         with:
-          name: binaries-linux-windows
-          path: build/release
+          bun-version-file: .bun-version
+
+      - name: Build
+        run: npm run binaries -- --target windows-x64
 
       - name: Smoke the Windows binary
         run: npm run smoke:binary -- build/release/midnight-cast-windows-x64.zip ${{ env.SMOKE_FLAGS }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: binaries-windows
+          path: build/release/midnight-cast-*
+          if-no-files-found: error
 
   release:
     name: Checksums and provenance
