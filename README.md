@@ -18,7 +18,13 @@ midnight-cast health preprod
 
 Or step by step: `midnight-cast ping preprod && midnight-cast tip preprod && midnight-cast versions preprod`
 
-Requires **Node.js 20+** (22+ recommended).
+Requires **Node.js 20+** (22+ recommended). Without Node.js, the release binaries install the same commands after checking the checksum:
+
+```bash
+curl -fsSL https://github.com/Kanasjnr/midnight-cast/releases/latest/download/install.sh | sh
+```
+
+On Windows, in PowerShell: `irm https://github.com/Kanasjnr/midnight-cast/releases/latest/download/install.ps1 | iex`. Where there's no `curl`, `wget -qO- <same URL> | sh` works too. Alpine needs `libstdc++` and `libgcc` first (`apk add libstdc++ libgcc`). `MIDNIGHT_CAST_VERSION=0.2.0` pins a release and `MIDNIGHT_CAST_INSTALL_DIR` picks the directory (default `~/.local/bin`). Each archive carries build provenance: `gh attestation verify <archive> --repo Kanasjnr/midnight-cast`.
 
 ## Key capabilities
 

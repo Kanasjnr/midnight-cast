@@ -43,7 +43,9 @@
     "examples-index": "tsx scripts/examples-index.ts",
     "fixtures": "tsx scripts/record-fixtures.ts",
     "smoke:tarball": "tsx scripts/smoke-tarball.ts",
-    "agent-files": "tsx scripts/agent-files.ts"
+    "agent-files": "tsx scripts/agent-files.ts",
+    "binaries": "tsx scripts/build-binaries.ts",
+    "smoke:binary": "tsx scripts/smoke-binary.ts"
   },
   "keywords": [
     "midnight",
