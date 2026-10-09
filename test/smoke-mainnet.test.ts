@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { parseEnvelope } from "./schema.js";
 
 const execFileAsync = promisify(execFile);
-const enabled = process.env.INTEGRATION === "1" && Boolean(process.env.BLOCKFROST_PROJECT_ID);
+const enabled = process.env.INTEGRATION === "1" && Boolean(process.env.BLOCKFROST_MAINNET_PROJECT_ID || process.env.BLOCKFROST_PROJECT_ID);
 const cli = join(process.cwd(), "dist", "cli.js");
 
 async function runMn(

@@ -47,15 +47,15 @@ Four resources are available: `midnight-cast://support-matrix`, the versions eac
 
 ## Configuration
 
-The server reads three environment variables:
+The server reads these environment variables:
 
 - `MIDNIGHT_CAST_NETWORKS` limits which networks the model may query, as a comma-separated list such as `preview,preprod`. By default every built-in network is allowed: `preview`, `preprod`, `mainnet` and `local`. A network defined in your `config.toml` can be allowed by naming it here.
-- `BLOCKFROST_PROJECT_ID` is the Blockfrost project ID mainnet needs. It is sent only to Blockfrost and is redacted from every response, so the model never sees it. Without it, mainnet calls fail with a message telling the user to add it to this server's configuration.
+- `BLOCKFROST_PREPROD_PROJECT_ID` and `BLOCKFROST_MAINNET_PROJECT_ID` are the Blockfrost project IDs preprod and mainnet need, one per network; `BLOCKFROST_PROJECT_ID` is the fallback for either. They are sent only to Blockfrost and are redacted from every response, so the model never sees them. Without one, that network's calls fail with a message telling the user to add it to this server's configuration. Preview needs none.
 - `MIDNIGHT_CAST_MAX_CALLS_PER_MINUTE` sets the rate limit on tools that reach a network: 30 a minute by default, in bursts of up to a third of that. A looping agent can't exhaust public endpoints or a Blockfrost plan; over the limit a call returns an error with kind `rate_limited` and how long to wait. `decode` and `explain` work offline and aren't limited.
 
 An invalid value in any of them stops the server at startup with a message on stderr.
 
-The Claude Code plugin passes its Blockfrost option in `MIDNIGHT_CAST_PLUGIN_PROJECT_ID`, which takes precedence over `BLOCKFROST_PROJECT_ID` when it isn't empty. A project ID in the network's `config.toml` section takes precedence over both.
+The Claude Code plugin has a Blockfrost option for each network and passes them in `MIDNIGHT_CAST_PLUGIN_PREPROD_PROJECT_ID` and `MIDNIGHT_CAST_PLUGIN_MAINNET_PROJECT_ID`, which take precedence over the `BLOCKFROST_*` variables when they aren't empty. A project ID in the network's `config.toml` section takes precedence over all of them.
 
 The model chooses a network by name but can't pass endpoint URLs, so it can't point the server at other hosts. Endpoints come from the built-in networks and your `~/.config/midnight-cast/config.toml`, as they do for the CLI.
 
@@ -65,17 +65,17 @@ The server is built on the official MCP TypeScript SDK (v2). It answers both the
 
 ## Installing it in your agent
 
-These snippets follow each client's documentation as of 4 October 2026. They haven't been tested by hand in every client yet; the compatibility table below records the ones that have. Leave out `BLOCKFROST_PROJECT_ID` if you don't need mainnet.
+These snippets follow each client's documentation as of 4 October 2026. They haven't been tested by hand in every client yet; the compatibility table below records the ones that have. Each passes a Blockfrost project ID for preprod and one for mainnet; leave out the one for a network you don't use, or both if you only need preview.
 
 ### Claude Code
 
 ```bash
-claude mcp add --transport stdio --env BLOCKFROST_PROJECT_ID=<project id> midnight-cast -- npx -y midnight-cast mcp
+claude mcp add --transport stdio --env BLOCKFROST_PREPROD_PROJECT_ID=<preprod project id> --env BLOCKFROST_MAINNET_PROJECT_ID=<mainnet project id> midnight-cast -- npx -y midnight-cast mcp
 ```
 
 Add `--scope project` to share it through the project's `.mcp.json`, or `--scope user` for every project.
 
-Or install the midnight-cast plugin, which configures the same server and adds the midnight-cast skill and a `/midnight-cast:diagnose <network> [tx or error]` command. When the plugin is enabled, Claude Code asks for an optional Blockfrost project ID for mainnet and keeps it in secure storage instead of a settings file. To change it later, run `/plugin`, open midnight-cast and choose Configure options. If the option is empty, a `BLOCKFROST_PROJECT_ID` exported before starting Claude Code is used. If you added the server with `claude mcp add` before, remove it with `claude mcp remove midnight-cast` so only the plugin's server runs:
+Or install the midnight-cast plugin, which configures the same server and adds the midnight-cast skill and a `/midnight-cast:diagnose <network> [tx or error]` command. When the plugin is enabled, Claude Code asks for optional Blockfrost project IDs for preprod and mainnet and keeps them in secure storage instead of a settings file. To change them later, run `/plugin`, open midnight-cast and choose Configure options. If an option is empty, a `BLOCKFROST_PREPROD_PROJECT_ID` or `BLOCKFROST_MAINNET_PROJECT_ID` exported before starting Claude Code is used. If you added the server with `claude mcp add` before, remove it with `claude mcp remove midnight-cast` so only the plugin's server runs:
 
 ```bash
 claude plugin marketplace add Kanasjnr/midnight-cast
@@ -85,7 +85,7 @@ claude plugin install midnight-cast@midnight-cast
 ### OpenAI Codex CLI
 
 ```bash
-codex mcp add midnight-cast --env BLOCKFROST_PROJECT_ID=<project id> -- npx -y midnight-cast mcp
+codex mcp add midnight-cast --env BLOCKFROST_PREPROD_PROJECT_ID=<preprod project id> --env BLOCKFROST_MAINNET_PROJECT_ID=<mainnet project id> -- npx -y midnight-cast mcp
 ```
 
 Or in `~/.codex/config.toml` (or a project's `.codex/config.toml`):
@@ -94,18 +94,18 @@ Or in `~/.codex/config.toml` (or a project's `.codex/config.toml`):
 [mcp_servers.midnight-cast]
 command = "npx"
 args = ["-y", "midnight-cast", "mcp"]
-env_vars = ["BLOCKFROST_PROJECT_ID"]
+env_vars = ["BLOCKFROST_PREPROD_PROJECT_ID", "BLOCKFROST_MAINNET_PROJECT_ID"]
 ```
 
-`env_vars` forwards the variable from your shell instead of writing the ID into the file.
+`env_vars` forwards the variables from your shell instead of writing the IDs into the file.
 
 ### Gemini CLI
 
 ```bash
-gemini mcp add -e BLOCKFROST_PROJECT_ID=<project id> midnight-cast npx -y midnight-cast mcp
+gemini mcp add -e BLOCKFROST_PREPROD_PROJECT_ID=<preprod project id> -e BLOCKFROST_MAINNET_PROJECT_ID=<mainnet project id> midnight-cast npx -y midnight-cast mcp
 ```
 
-Or in `~/.gemini/settings.json` (or a project's `.gemini/settings.json`), where `$BLOCKFROST_PROJECT_ID` is read from your environment:
+Or in `~/.gemini/settings.json` (or a project's `.gemini/settings.json`), where the `$BLOCKFROST_…` values are read from your environment:
 
 ```json
 {
@@ -113,7 +113,10 @@ Or in `~/.gemini/settings.json` (or a project's `.gemini/settings.json`), where 
     "midnight-cast": {
       "command": "npx",
       "args": ["-y", "midnight-cast", "mcp"],
-      "env": { "BLOCKFROST_PROJECT_ID": "$BLOCKFROST_PROJECT_ID" }
+      "env": {
+        "BLOCKFROST_PREPROD_PROJECT_ID": "$BLOCKFROST_PREPROD_PROJECT_ID",
+        "BLOCKFROST_MAINNET_PROJECT_ID": "$BLOCKFROST_MAINNET_PROJECT_ID"
+      }
     }
   }
 }
@@ -129,7 +132,10 @@ In `.cursor/mcp.json` for a project, or `~/.cursor/mcp.json` for every project:
     "midnight-cast": {
       "command": "npx",
       "args": ["-y", "midnight-cast", "mcp"],
-      "env": { "BLOCKFROST_PROJECT_ID": "<project id>" }
+      "env": {
+        "BLOCKFROST_PREPROD_PROJECT_ID": "<preprod project id>",
+        "BLOCKFROST_MAINNET_PROJECT_ID": "<mainnet project id>"
+      }
     }
   }
 }
@@ -137,19 +143,23 @@ In `.cursor/mcp.json` for a project, or `~/.cursor/mcp.json` for every project:
 
 ### VS Code (GitHub Copilot)
 
-In `.vscode/mcp.json`, which prompts for the project ID instead of storing it:
+In `.vscode/mcp.json`, which prompts for the project IDs instead of storing them:
 
 ```json
 {
   "inputs": [
-    { "type": "promptString", "id": "blockfrost-project-id", "description": "Blockfrost Midnight Mainnet project ID", "password": true }
+    { "type": "promptString", "id": "blockfrost-preprod", "description": "Blockfrost Midnight Preprod project ID", "password": true },
+    { "type": "promptString", "id": "blockfrost-mainnet", "description": "Blockfrost Midnight Mainnet project ID", "password": true }
   ],
   "servers": {
     "midnight-cast": {
       "type": "stdio",
       "command": "npx",
       "args": ["-y", "midnight-cast", "mcp"],
-      "env": { "BLOCKFROST_PROJECT_ID": "${input:blockfrost-project-id}" }
+      "env": {
+        "BLOCKFROST_PREPROD_PROJECT_ID": "${input:blockfrost-preprod}",
+        "BLOCKFROST_MAINNET_PROJECT_ID": "${input:blockfrost-mainnet}"
+      }
     }
   }
 }
@@ -169,11 +179,18 @@ Most clients accept this `mcpServers` block:
     "midnight-cast": {
       "command": "npx",
       "args": ["-y", "midnight-cast", "mcp"],
-      "env": { "BLOCKFROST_PROJECT_ID": "<project id>" }
+      "env": {
+        "BLOCKFROST_PREPROD_PROJECT_ID": "<preprod project id>",
+        "BLOCKFROST_MAINNET_PROJECT_ID": "<mainnet project id>"
+      }
     }
   }
 }
 ```
+
+### From the MCP Registry
+
+From 0.2.0, midnight-cast is listed in the [MCP Registry](https://registry.modelcontextprotocol.io) as `io.github.Kanasjnr/midnight-cast`. Clients and galleries that install from the registry start it as `npx -y midnight-cast mcp` and can ask for `BLOCKFROST_PREPROD_PROJECT_ID` and `BLOCKFROST_MAINNET_PROJECT_ID` (secrets, each needed only for its network) and `MIDNIGHT_CAST_NETWORKS`, as described in `server.json`.
 
 ## Compatibility
 

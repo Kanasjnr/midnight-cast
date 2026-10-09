@@ -34,7 +34,7 @@ Available on every command:
 | `--project-id <id>` | Blockfrost project ID for mainnet |
 | `--offline` | `versions`, `matrix` and `health` use the bundled support matrix and examples-report summaries instead of fetching from GitHub |
 
-Environment: `MN_NETWORK` sets the default network (same as `--network`). `BLOCKFROST_PROJECT_ID` supplies the Blockfrost project ID for any Blockfrost network that has none in its config section; `--project-id` overrides both. `MN_OFFLINE=1` is the same as `--offline`.
+Environment: `MN_NETWORK` sets the default network (same as `--network`). `BLOCKFROST_PREPROD_PROJECT_ID` and `BLOCKFROST_MAINNET_PROJECT_ID` supply each network's Blockfrost project ID when its config section has none, and `BLOCKFROST_PROJECT_ID` is the fallback for any Blockfrost network; `--project-id` overrides them all. `MN_OFFLINE=1` is the same as `--offline`.
 
 **Version:** `midnight-cast --version` or `midnight-cast -V` prints the CLI package version.
 
@@ -572,7 +572,7 @@ The guidance sits between `<!-- midnight-cast:start -->` and `<!-- midnight-cast
 
 ## `midnight-cast mcp`
 
-Runs a read-only MCP server on stdio, for AI agents. It exposes `health`, `ping`, `tip`, `versions`, `block`, `tx`, `dust_event`, `dust_events`, `decode` and `explain` as tools that return the [JSON envelope](#json-output), prompts for diagnosing an error, checking a network and investigating a transaction, and the support matrix, error codes and command catalog as resources. `MIDNIGHT_CAST_NETWORKS` (for example `preview,preprod`) limits the networks the model may query, `BLOCKFROST_PROJECT_ID` supplies the mainnet project ID, which never appears in a response, and `MIDNIGHT_CAST_MAX_CALLS_PER_MINUTE` sets the rate limit on network tools (30 by default). Setup for each agent is in [MCP.md](./MCP.md).
+Runs a read-only MCP server on stdio, for AI agents. It exposes `health`, `preflight`, `ping`, `tip`, `versions`, `block`, `tx`, `dust_event`, `dust_events`, `contract`, `dust_status`, `decode`, `explain` and `examples` as tools that return the [JSON envelope](#json-output), prompts for diagnosing an error, checking a network and investigating a transaction, and the support matrix, error codes and command catalog as resources. `MIDNIGHT_CAST_NETWORKS` (for example `preview,preprod`) limits the networks the model may query, `BLOCKFROST_PREPROD_PROJECT_ID` and `BLOCKFROST_MAINNET_PROJECT_ID` supply each network's Blockfrost project ID, which never appears in a response, and `MIDNIGHT_CAST_MAX_CALLS_PER_MINUTE` sets the rate limit on network tools (30 by default). Setup for each agent is in [MCP.md](./MCP.md).
 
 ```bash
 midnight-cast mcp
@@ -706,28 +706,35 @@ JSON Schemas (draft 2020-12) for the envelope and for each command's `data` are 
 | Network | Node RPC | Indexer |
 |---------|----------|---------|
 | `preview` | `https://rpc.preview.midnight.network` | `.../api/v4/graphql` |
-| `preprod` | `https://rpc.preprod.midnight.network` | `.../api/v4/graphql` |
+| `preprod` | `https://rpc.midnight-preprod.blockfrost.io` | `https://midnight-preprod.blockfrost.io/api/v0` |
 | `mainnet` | `https://rpc.midnight-mainnet.blockfrost.io` | `https://midnight-mainnet.blockfrost.io/api/v0` |
 | `local` | `http://127.0.0.1:9944` | user-configured |
 
 Built-in proof server URLs: `https://proof-server.<network>.midnight.network` (`GET /` health, `GET /version` for ledger pin). Mainnet has no public proof server; it always runs locally.
 
-### Mainnet and Blockfrost
+### Preprod, mainnet and Blockfrost
 
-Midnight retired its hosted mainnet RPC and indexer on 30 September 2026, and Blockfrost serves them now. Every request needs a project ID from a **Midnight Mainnet** project on [blockfrost.io](https://blockfrost.io) (it starts with `nightmainnet`). Pass it with `--project-id`, set it in the network's config section (as `blockfrost_project_id`, or as `project_id` in its URLs), or export `BLOCKFROST_PROJECT_ID`, in that order of precedence. The environment variable applies to every Blockfrost network, so a network's own config wins over it:
+Midnight retired its hosted RPC and indexer for mainnet on 30 September 2026 and for preprod on 9 October 2026, and Blockfrost serves both now. Preview is still hosted by Midnight and needs nothing. Every preprod or mainnet request needs a project ID from a Blockfrost project for that network: a **Midnight Preprod** project for preprod, a **Midnight Mainnet** project (its ID starts with `nightmainnet`) for mainnet. A project ID for one network is rejected on the other.
+
+For each network, midnight-cast takes the first of `--project-id`, the network's config section (as `blockfrost_project_id`, or as `project_id` in its URLs), `BLOCKFROST_PREPROD_PROJECT_ID` or `BLOCKFROST_MAINNET_PROJECT_ID`, and `BLOCKFROST_PROJECT_ID`, the fallback for any Blockfrost network. A fallback ID whose prefix names another network, such as a `nightmainnet` ID on preprod, isn't sent:
 
 ```bash
-midnight-cast health mainnet --project-id nightmainnet...
-export BLOCKFROST_PROJECT_ID=nightmainnet...   # then: midnight-cast health mainnet
+export BLOCKFROST_PREPROD_PROJECT_ID=<your Midnight Preprod project ID>
+export BLOCKFROST_MAINNET_PROJECT_ID=nightmainnet...
+midnight-cast health preprod
+midnight-cast health mainnet --project-id nightmainnet...   # a flag wins over both
 ```
 
-You can also put it in the config file:
+You can also put them in the config file:
 
 ```toml
+[networks.preprod]
+blockfrost_project_id = "<your Midnight Preprod project ID>"
+
 [networks.mainnet]
 blockfrost_project_id = "nightmainnet..."
 ```
 
-Without a project ID, mainnet commands stop before making any request and say how to get one. midnight-cast sends the ID in Blockfrost's `project_id` header and never prints it: `config show` reports where it came from, and every output is scrubbed of it. A `403` from Blockfrost means the ID is missing, invalid, or for another network. A config file that still points at `rpc.mainnet.midnight.network` or `indexer.mainnet.midnight.network` gets a warning on stderr. Run `midnight-cast config init --network mainnet` to switch it to Blockfrost.
+Without a project ID, preprod and mainnet commands stop before making any request and say how to get one. midnight-cast sends the ID in Blockfrost's `project_id` header and never prints it: `config show` reports which flag, file or variable it came from, and every output is scrubbed of it. A `403` from Blockfrost means the ID is missing, invalid, or for another network, and the message names the project the network needs. A config file that still points at `rpc.<network>.midnight.network` or `indexer.<network>.midnight.network` for preprod or mainnet gets a warning on stderr, and `decode --raw` recognises the retired hosts and the preprod indexer's `410 ENDPOINT_DECOMMISSIONED` answer. Run `midnight-cast config init --network <network>` to switch a config to Blockfrost.
 
 Override any endpoint in config or with flags. See [Midnight network docs](https://docs.midnight.network/relnotes/network).

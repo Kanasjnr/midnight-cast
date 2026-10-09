@@ -15,7 +15,7 @@ import { promisify } from "node:util";
 import { chainGetHeader, parseBlockNumber } from "../src/clients/rpc.js";
 import type { HealthReport, HealthUnreachable } from "../src/commands/health.js";
 import { resolveNetwork } from "../src/config.js";
-import { isBlockfrostUrl, takeProjectId } from "../src/lib/blockfrost.js";
+import { isBlockfrostUrl, isProjectIdEnv, takeProjectId } from "../src/lib/blockfrost.js";
 import {
   UNOBSERVABLE,
   UPSTREAM_MATRIX_URL,
@@ -534,7 +534,7 @@ async function main(): Promise<number> {
     return EXIT.error;
   }
   const network = opts.network;
-  const secrets = [process.env.BLOCKFROST_PROJECT_ID, process.env.BLOCKFROST_MAINNET_PROJECT_ID];
+  const secrets = Object.entries(process.env).filter(([name]) => isProjectIdEnv(name)).map(([, value]) => value);
 
   const matrix = JSON.parse(
     readFileSync(join(root, "src", "data", "support-matrix.json"), "utf8"),

@@ -9,10 +9,10 @@ Bring the data midnight-cast bundles up to date, because it ships with the relea
 ```bash
 npm run build
 npm run live-check -- preview
-npm run live-check -- preprod
-BLOCKFROST_PROJECT_ID=<mainnet project id> npm run live-check -- mainnet
+BLOCKFROST_PREPROD_PROJECT_ID=<preprod project id> npm run live-check -- preprod
+BLOCKFROST_MAINNET_PROJECT_ID=<mainnet project id> npm run live-check -- mainnet
 npm run error-codes
-BLOCKFROST_PROJECT_ID=<mainnet project id> npm run fixtures -- --check
+BLOCKFROST_PREPROD_PROJECT_ID=<preprod project id> BLOCKFROST_MAINNET_PROJECT_ID=<mainnet project id> npm run fixtures -- --check
 ```
 
 The live checks compare each network with `src/data/support-matrix.json` and with the matrix Midnight publishes. Update the bundled matrix for anything they report as drift, and set its `updated` field to the current month. `npm run error-codes` compares `src/data/error-codes.json` with the node source at the release mainnet runs. `npm run fixtures -- --check` compares live responses and the indexer schemas with `test/fixtures/`; if it reports drift, re-record with `npm run fixtures`, review the diff, and fix any parser it affects.
@@ -22,7 +22,7 @@ Then run `midnight-cast versions <network>` against each network as a last look 
 Finally, prepare the version:
 
 - Move the `Unreleased` section of `CHANGELOG.md` under the new version and date, and call out any breaking change, including any change that bumps the JSON `schemaVersion`.
-- Set the version with `npm version <x.y.z> --no-git-tag-version`, which updates `package.json` and `package-lock.json`.
+- Set the version with `npm version <x.y.z> --no-git-tag-version`, which updates `package.json` and `package-lock.json`, and `server.json`, the MCP Registry entry, through the `version` script.
 - Commit both on a branch and merge them into `next-release` through a pull request.
 
 ## The release pull request
@@ -42,7 +42,7 @@ After the pull request merges, create a GitHub release that targets `main`, tagg
 
 1. runs the tarball smoke test again on the merged code;
 2. confirms that a full live check on `main` (a scheduled run or a push, not a manual run that may cover one network) succeeded within the last 24 hours, and that no `live-check` issue is open, since the live check keeps one open for each network while it reports drift or an outage;
-3. builds and publishes to npm with provenance;
+3. builds and publishes to npm with provenance, then lists that version in the MCP Registry: it waits until npm serves the version, then runs `mcp-publisher publish` with GitHub's OIDC login, which needs no secret. The registry checks that the package's `mcpName` matches `server.json`, so if that job fails, re-run it once npm has the version;
 4. separately, builds the standalone binaries, smokes them, records build provenance and, once steps 1 and 2 have passed, attaches the archives, `SHA256SUMS`, `install.sh` and `install.ps1` to the GitHub release.
 
 npm doesn't wait for step 4, since the binaries are an extra channel. If a binary job fails after npm has published, re-run the failed jobs from the workflow run; until it passes, the release has no binaries and the install one-liner returns 404.
