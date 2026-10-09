@@ -32,7 +32,7 @@ Open a pull request from `next-release` into `main`. Its required checks are:
 - the unit tests on Linux, macOS and Windows with Node 20, 22 and 24 (`test.yml`);
 - the live checks for preview, preprod and mainnet, the live smoke tests, the error code check and the response shape check (`live.yml`);
 - the packed tarball, installed and run on Node 20, 22 and 24 and on Windows (`tarball.yml`, which also runs offline on pull requests into `next-release`);
-- the standalone binaries (`binaries.yml`): Linux builds the Linux and Windows binaries, and macOS builds and signs the macOS ones, since Apple silicon won't run a binary whose signature doesn't verify. Each binary is then run and installed from a local release on its own OS and architecture: Linux x64 and arm64 (glibc on the runner, musl in Alpine, and x64 glibc again in Debian), macOS arm64 and x64, and Windows x64. Pull requests into `next-release` smoke them offline.
+- the standalone binaries (`binaries.yml`): Linux builds the Linux binaries, macOS builds and signs the macOS ones, since Apple silicon won't run a binary whose signature doesn't verify, and Windows builds its own, since one cross-compiled on Linux crashed there. Each binary is then run and installed from a local release on its own OS and architecture: Linux x64 and arm64 (glibc on the runner, musl in Alpine, and x64 glibc again in Debian), macOS arm64 and x64, and Windows x64. Pull requests into `next-release` smoke them offline.
 
 The live checks fail during a network outage. Report the outage to Midnight's service desk and re-run them once the network recovers; see [LIVE-CHECKS.md](./LIVE-CHECKS.md).
 
