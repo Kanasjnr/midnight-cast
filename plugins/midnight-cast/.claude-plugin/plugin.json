@@ -19,10 +19,17 @@
     "mcp"
   ],
   "userConfig": {
+    "blockfrost_preprod_project_id": {
+      "type": "string",
+      "title": "Blockfrost project ID (preprod)",
+      "description": "A Midnight Preprod project ID from blockfrost.io, needed only for preprod. Leave empty for preview.",
+      "sensitive": true,
+      "default": ""
+    },
     "blockfrost_project_id": {
       "type": "string",
       "title": "Blockfrost project ID (mainnet)",
-      "description": "A Midnight Mainnet project ID from blockfrost.io, needed only for mainnet. Leave empty for preview and preprod.",
+      "description": "A Midnight Mainnet project ID from blockfrost.io, needed only for mainnet. Leave empty for preview.",
       "sensitive": true,
       "default": ""
     }

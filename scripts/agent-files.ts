@@ -10,7 +10,7 @@ import { dirname, join, posix } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { Client, InMemoryTransport } from "@modelcontextprotocol/client";
 import { AGENT_FILES, SKILL_NAME, agentSnippet, skillFile } from "../src/agents/guide.js";
-import { PLUGIN_PROJECT_ID_ENV } from "../src/lib/blockfrost.js";
+import { pluginProjectIdEnv } from "../src/lib/blockfrost.js";
 import { createMcpServer } from "../src/mcp/server.js";
 import { NETWORK_NAMES } from "../src/networks.js";
 
@@ -45,11 +45,19 @@ function pluginFiles(): Array<{ path: string; content: string }> {
     repository: REPOSITORY,
     license,
     keywords: ["midnight", "blockchain", "indexer", "dust", "errors", "mcp"],
+    // The mainnet option keeps its original key, so an ID users already saved still applies.
     userConfig: {
+      blockfrost_preprod_project_id: {
+        type: "string",
+        title: "Blockfrost project ID (preprod)",
+        description: "A Midnight Preprod project ID from blockfrost.io, needed only for preprod. Leave empty for preview.",
+        sensitive: true,
+        default: "",
+      },
       blockfrost_project_id: {
         type: "string",
         title: "Blockfrost project ID (mainnet)",
-        description: "A Midnight Mainnet project ID from blockfrost.io, needed only for mainnet. Leave empty for preview and preprod.",
+        description: "A Midnight Mainnet project ID from blockfrost.io, needed only for mainnet. Leave empty for preview.",
         sensitive: true,
         default: "",
       },
@@ -60,7 +68,10 @@ function pluginFiles(): Array<{ path: string; content: string }> {
       "midnight-cast": {
         command: "npx",
         args: ["-y", `midnight-cast@${version}`, "mcp"],
-        env: { [PLUGIN_PROJECT_ID_ENV]: "${user_config.blockfrost_project_id}" },
+        env: {
+          [pluginProjectIdEnv("preprod")]: "${user_config.blockfrost_preprod_project_id}",
+          [pluginProjectIdEnv("mainnet")]: "${user_config.blockfrost_project_id}",
+        },
       },
     },
   };

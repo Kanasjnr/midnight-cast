@@ -27,7 +27,7 @@ const GUIDE = `midnight-cast is a read-only CLI for the Midnight networks (previ
 6. Writing Midnight code: \`midnight-cast examples "<what it should do>" --json\` returns the official examples that show it (midnightntwrk/midnight-examples, compiled and tested in CI), with file paths, line ranges, pinned links and the code. Start from those rather than from memory.
 7. Background on a topic: \`midnight-cast explain dust|1010|versions|transcript|sync\` (\`sync\` for a wallet that seems stuck syncing). \`midnight-cast explain --json\` lists every command, option, exit code and error kind.
 
-Mainnet goes through Blockfrost: set \`BLOCKFROST_PROJECT_ID\` to a Midnight Mainnet project ID. midnight-cast never prints it.`;
+Preprod and mainnet go through Blockfrost, with a project ID per network: set \`BLOCKFROST_PREPROD_PROJECT_ID\` to a Midnight Preprod project ID and \`BLOCKFROST_MAINNET_PROJECT_ID\` to a Midnight Mainnet one. Preview needs none. midnight-cast never prints them.`;
 
 export function agentSnippet(file: AgentFile): string {
   return `${START_MARKER}
@@ -43,7 +43,7 @@ ${END_MARKER}
 export const SKILL_NAME = "midnight-cast";
 
 // The Claude Code plugin's copy of the skill, whose tools are already connected.
-const IN_PLUGIN = `**In this plugin.** The plugin runs the midnight-cast MCP server, so call its tools instead of the shell. Each command above is a tool of the same name, with \`dust_event\`, \`dust_events\` and \`dust_status\` for the hyphenated ones; they take the same arguments and return the same envelope. For mainnet the user enters a Blockfrost project ID in the plugin's options (\`/plugin\`, then midnight-cast, then Configure options), or exports \`BLOCKFROST_PROJECT_ID\` before starting Claude Code.`;
+const IN_PLUGIN = `**In this plugin.** The plugin runs the midnight-cast MCP server, so call its tools instead of the shell. Each command above is a tool of the same name, with \`dust_event\`, \`dust_events\` and \`dust_status\` for the hyphenated ones; they take the same arguments and return the same envelope. For preprod and mainnet the user enters a Blockfrost project ID for each in the plugin's options (\`/plugin\`, then midnight-cast, then Configure options), or exports \`BLOCKFROST_PREPROD_PROJECT_ID\` or \`BLOCKFROST_MAINNET_PROJECT_ID\` before starting Claude Code.`;
 
 export function skillFile(forPlugin = false): string {
   return `---
