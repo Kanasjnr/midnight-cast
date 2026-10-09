@@ -305,7 +305,7 @@ Use `--network` to target preview / preprod / mainnet.
 ```bash
 midnight-cast tip preview
 midnight-cast tip preprod
-midnight-cast tip mainnet   # needs BLOCKFROST_PROJECT_ID
+midnight-cast tip mainnet   # needs BLOCKFROST_MAINNET_PROJECT_ID
 ```
 
 Or set once:
