@@ -165,6 +165,25 @@ In `.vscode/mcp.json`, which prompts for the project IDs instead of storing them
 }
 ```
 
+### Google Antigravity
+
+In `~/.gemini/config/mcp_config.json`, which Antigravity's MCP server settings open as the raw config:
+
+```json
+{
+  "mcpServers": {
+    "midnight-cast": {
+      "command": "npx",
+      "args": ["-y", "midnight-cast", "mcp"],
+      "env": {
+        "BLOCKFROST_PREPROD_PROJECT_ID": "<preprod project id>",
+        "BLOCKFROST_MAINNET_PROJECT_ID": "<mainnet project id>"
+      }
+    }
+  }
+}
+```
+
 ### Windsurf
 
 Windsurf's MCP documentation now lives at docs.devin.ai and describes the Cascade agent reading `~/.config/devin/mcp_config.json` (`%APPDATA%\devin\mcp_config.json` on Windows), in the `mcpServers` format below. Check your version's documentation for the file it uses.
@@ -202,5 +221,6 @@ From 0.2.0, midnight-cast is listed in the [MCP Registry](https://registry.model
 | Gemini CLI | not yet | | |
 | Cursor (agent CLI) | 2026.10.01 | 10 October 2026 | Pass. Ready with all 14 tools; an agent called `decode`, `tip` (preprod) and `examples` and answered correctly. In non-interactive runs each call needs approval: allow them with `{ "permissions": { "allow": ["Mcp(midnight-cast:*)"] } }` in `.cursor/cli.json` |
 | Cursor (editor) | not yet | | |
-| VS Code (GitHub Copilot) | not yet | | |
+| Google Antigravity | 1.3.3, macOS 14.7 | 10 October 2026 | Pass. Listed all 14 tools; its agent used `decode`, `health` (preview), `examples` (with links to the code) and `tip` (preprod) and answered all five test prompts correctly |
+| VS Code (GitHub Copilot) | not yet | | Not tested: GitHub Copilot wasn't installed on the test machine |
 | Windsurf | not yet | | |
