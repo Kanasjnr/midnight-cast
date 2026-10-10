@@ -2,8 +2,8 @@
 
 ## Unreleased
 
-### Release
-- `publish.yml` publishes to npm through npm trusted publishing, with GitHub's OIDC token instead of the `NPM_TOKEN` secret, so the npm step can't fail on an expired token as it did for 0.2.0, and every version gets npm provenance again. The job runs on Node 24 and checks its npm can publish this way. `docs/RELEASING.md` describes the one-time setting on npmjs.com
+### Tests & CI
+- The DUST test for a timeout during a reconnect wait times the CLI after it has started, measured once per run, instead of including Node's startup, which made it fail on slow macOS runners at just over its limit
 
 ## 0.2.0 (10 October 2026)
 
