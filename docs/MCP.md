@@ -4,7 +4,7 @@
 
 Nothing it does needs a wallet, keys or approval: every tool only reads, and the server holds no secret except an optional Blockfrost project ID for mainnet.
 
-The server ships with midnight-cast 0.2.0. Until that is on npm, build from source and use `node /path/to/midnight-cast/dist/cli.js mcp` wherever the snippets below say `npx -y midnight-cast mcp`.
+The server ships with midnight-cast 0.2.0 and later.
 
 ## Tools
 
