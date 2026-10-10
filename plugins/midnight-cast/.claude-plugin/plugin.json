@@ -1,7 +1,7 @@
 {
   "name": "midnight-cast",
   "displayName": "midnight-cast",
-  "version": "0.1.6",
+  "version": "0.2.0",
   "description": "Diagnose Midnight networks, transactions, contracts, DUST and errors with the read-only midnight-cast CLI and MCP server",
   "author": {
     "name": "Kanasjnr",

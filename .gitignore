@@ -5,3 +5,4 @@ dist/
 .notes/
 plugins/midnight-cast/evals/results/
 build/
+live-check/

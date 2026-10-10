@@ -4,7 +4,7 @@
 
 Nothing it does needs a wallet, keys or approval: every tool only reads, and the server holds no secret except an optional Blockfrost project ID for mainnet.
 
-The server ships with midnight-cast 0.2.0. Until that is on npm, build from source and use `node /path/to/midnight-cast/dist/cli.js mcp` wherever the snippets below say `npx -y midnight-cast mcp`.
+The server ships with midnight-cast 0.2.0 and later.
 
 ## Tools
 
@@ -65,7 +65,7 @@ The server is built on the official MCP TypeScript SDK (v2). It answers both the
 
 ## Installing it in your agent
 
-These snippets follow each client's documentation as of 4 October 2026. They haven't been tested by hand in every client yet; the compatibility table below records the ones that have. Each passes a Blockfrost project ID for preprod and one for mainnet; leave out the one for a network you don't use, or both if you only need preview.
+These snippets follow each client's documentation as of 4 October 2026. They haven't all been tested by hand yet; the compatibility table below records the clients that have, with the local build of 0.2.0. Each passes a Blockfrost project ID for preprod and one for mainnet; leave out the one for a network you don't use, or both if you only need preview.
 
 ### Claude Code
 
@@ -165,6 +165,25 @@ In `.vscode/mcp.json`, which prompts for the project IDs instead of storing them
 }
 ```
 
+### Google Antigravity
+
+In `~/.gemini/config/mcp_config.json`, which Antigravity's MCP server settings open as the raw config:
+
+```json
+{
+  "mcpServers": {
+    "midnight-cast": {
+      "command": "npx",
+      "args": ["-y", "midnight-cast", "mcp"],
+      "env": {
+        "BLOCKFROST_PREPROD_PROJECT_ID": "<preprod project id>",
+        "BLOCKFROST_MAINNET_PROJECT_ID": "<mainnet project id>"
+      }
+    }
+  }
+}
+```
+
 ### Windsurf
 
 Windsurf's MCP documentation now lives at docs.devin.ai and describes the Cascade agent reading `~/.config/devin/mcp_config.json` (`%APPDATA%\devin\mcp_config.json` on Windows), in the `mcpServers` format below. Check your version's documentation for the file it uses.
@@ -197,9 +216,11 @@ From 0.2.0, midnight-cast is listed in the [MCP Registry](https://registry.model
 | Client | Version tested | Date | Result |
 | --- | --- | --- | --- |
 | MCP TypeScript SDK client (automated tests) | `@modelcontextprotocol/client` 2.3.0 | 4 October 2026 | Every tool and resource, against recorded preprod and mainnet responses |
-| Claude Code | not yet | | |
-| OpenAI Codex CLI | not yet | | |
+| Claude Code | 2.1.296 | 10 October 2026 | Pass. Connected and offered all 14 tools; an agent called `decode`, `tip` (preprod, through Blockfrost) and `examples` with the right arguments and answered correctly |
+| OpenAI Codex CLI | 0.162.1, macOS 14.7 | 10 October 2026 | Pass. `/mcp` shows midnight-cast connected with 14 tools; in a fresh session the agent called `health` (preview) and `decode` on its own and answered both correctly. (0.149.0-alpha.4 earlier passed the tool calls through Codex's MCP client, but its agent session timed out.) |
 | Gemini CLI | not yet | | |
-| Cursor | not yet | | |
-| VS Code (GitHub Copilot) | not yet | | |
+| Cursor (agent CLI) | 2026.10.01 | 10 October 2026 | Pass. Ready with all 14 tools; an agent called `decode`, `tip` (preprod) and `examples` and answered correctly. In non-interactive runs each call needs approval: allow them with `{ "permissions": { "allow": ["Mcp(midnight-cast:*)"] } }` in `.cursor/cli.json` |
+| Cursor (editor) | not yet | | |
+| Google Antigravity | 1.3.3, macOS 14.7 | 10 October 2026 | Pass. Listed all 14 tools; its agent used `decode`, `health` (preview), `examples` (with links to the code) and `tip` (preprod) and answered all five test prompts correctly |
+| GitHub Copilot (CLI, and VS Code) | Copilot CLI 1.0.95, macOS 14.7 | 10 October 2026 | Pass. Added as a local server with `/mcp add`, enabled with all 14 tools; Copilot's agent called `health` (preview) and `decode` and answered both correctly. Copilot in VS Code takes the same server through `.vscode/mcp.json`; it wasn't run separately in the VS Code app |
 | Windsurf | not yet | | |

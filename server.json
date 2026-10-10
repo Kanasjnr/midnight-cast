@@ -8,13 +8,13 @@
     "url": "https://github.com/Kanasjnr/midnight-cast",
     "source": "github"
   },
-  "version": "0.1.6",
+  "version": "0.2.0",
   "packages": [
     {
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "midnight-cast",
-      "version": "0.1.6",
+      "version": "0.2.0",
       "transport": {
         "type": "stdio"
       },
