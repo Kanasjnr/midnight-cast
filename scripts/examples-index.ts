@@ -17,7 +17,7 @@ import type { ExampleFile, ExamplesIndex } from "../src/lib/examples-index.js";
 import { fetchGitHub, notice } from "./github.js";
 
 const REPO = "midnightntwrk/midnight-examples";
-export const COMMIT = "4056c6cf773596bccc2a15fac32cc817d6143a39";
+export const COMMIT = "95d4f5006f042db08cef301df68ca260a9e6be7b";
 const MAX_EXCERPT_LINES = 24;
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -152,6 +152,19 @@ const EXAMPLES: Source[] = [
       { path: "contract/battleship.compact", symbol: "export circuit player1Shoot", about: "A turn, guarded by role and game state" },
       { path: "contract/battleship.compact", symbol: "export circuit checkBoard1", about: "Answering against private state held in a witness" },
       { path: "contract/battleship.compact", symbol: "circuit commitBoardSpace", about: "Committing to hidden board positions" },
+    ],
+  },
+  {
+    name: "private-tip-jar",
+    summary: "An anonymous tip jar: anyone drops a shielded coin into a contract-held pot without saying who they are, and only the owner can withdraw",
+    topics: ["anonymous tip", "anonymous payment", "donation", "contract-held pot", "re-nonce a coin", "owner-only withdrawal", "secret key witness"],
+    files: [
+      { path: "contract/private-tip-jar.compact", symbol: "export circuit tip", about: "Taking a tipper's shielded coin without their identity" },
+      { path: "contract/private-tip-jar.compact", symbol: "circuit reNonceToSelf", about: "Re-sending a coin to the contract so its nonce doesn't point back at the tipper" },
+      { path: "contract/private-tip-jar.compact", symbol: "export circuit withdraw", about: "Paying a pot coin to the owner, checked against a hash of their secret key" },
+      { path: "contract/private-tip-jar.compact", symbol: "export pure circuit ownerKey", about: "Deriving the owner's key from the secret a witness supplies" },
+      { path: "contract/witnesses.ts", symbol: "export const witnesses", about: "The witness that supplies the owner's secret key" },
+      { path: "contract/tip-token.compact", symbol: "export circuit mint", about: "Minting a demo shielded token to tip with on a fresh devnet" },
     ],
   },
 ];

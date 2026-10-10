@@ -24,7 +24,7 @@ const top = (query: string) => findExamples(index, query)[0];
 describe("Midnight's examples", () => {
   it("is pinned to one commit, and every link points at it and at the lines it names", () => {
     expect(index.commit).toBe(COMMIT);
-    expect(index.examples.length).toBe(11);
+    expect(index.examples.length).toBe(12);
     for (const example of index.examples) {
       expect(example.url).toContain(`/tree/${COMMIT}/examples/${example.name}`);
       for (const file of example.files) {
