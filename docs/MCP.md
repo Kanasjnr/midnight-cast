@@ -65,7 +65,7 @@ The server is built on the official MCP TypeScript SDK (v2). It answers both the
 
 ## Installing it in your agent
 
-These snippets follow each client's documentation as of 4 October 2026. They haven't been tested by hand in every client yet; the compatibility table below records the ones that have. Each passes a Blockfrost project ID for preprod and one for mainnet; leave out the one for a network you don't use, or both if you only need preview.
+These snippets follow each client's documentation as of 4 October 2026. They haven't all been tested by hand yet; the compatibility table below records the clients that have, with the local build of 0.2.0. Each passes a Blockfrost project ID for preprod and one for mainnet; leave out the one for a network you don't use, or both if you only need preview.
 
 ### Claude Code
 
@@ -197,9 +197,10 @@ From 0.2.0, midnight-cast is listed in the [MCP Registry](https://registry.model
 | Client | Version tested | Date | Result |
 | --- | --- | --- | --- |
 | MCP TypeScript SDK client (automated tests) | `@modelcontextprotocol/client` 2.3.0 | 4 October 2026 | Every tool and resource, against recorded preprod and mainnet responses |
-| Claude Code | not yet | | |
-| OpenAI Codex CLI | not yet | | |
+| Claude Code | 2.1.296 | 10 October 2026 | Pass. Connected and offered all 14 tools; an agent called `decode`, `tip` (preprod, through Blockfrost) and `examples` with the right arguments and answered correctly |
+| OpenAI Codex CLI | 0.149.0-alpha.4, macOS 14.7 | 10 October 2026 | Partial. Registered and enabled; Codex's MCP client listed the 14 tools, and `decode`, `explain`, `health` (preview), `examples` and `tip` (preprod) returned correct results with no schema or validation errors. The agent session itself didn't run (Codex backend timeout), so an agent choosing the tools is still to check |
 | Gemini CLI | not yet | | |
-| Cursor | not yet | | |
+| Cursor (agent CLI) | 2026.10.01 | 10 October 2026 | Pass. Ready with all 14 tools; an agent called `decode`, `tip` (preprod) and `examples` and answered correctly. In non-interactive runs each call needs approval: allow them with `{ "permissions": { "allow": ["Mcp(midnight-cast:*)"] } }` in `.cursor/cli.json` |
+| Cursor (editor) | not yet | | |
 | VS Code (GitHub Copilot) | not yet | | |
 | Windsurf | not yet | | |
