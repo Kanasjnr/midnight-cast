@@ -217,7 +217,7 @@ From 0.2.0, midnight-cast is listed in the [MCP Registry](https://registry.model
 | --- | --- | --- | --- |
 | MCP TypeScript SDK client (automated tests) | `@modelcontextprotocol/client` 2.3.0 | 4 October 2026 | Every tool and resource, against recorded preprod and mainnet responses |
 | Claude Code | 2.1.296 | 10 October 2026 | Pass. Connected and offered all 14 tools; an agent called `decode`, `tip` (preprod, through Blockfrost) and `examples` with the right arguments and answered correctly |
-| OpenAI Codex CLI | 0.149.0-alpha.4, macOS 14.7 | 10 October 2026 | Partial. Registered and enabled; Codex's MCP client listed the 14 tools, and `decode`, `explain`, `health` (preview), `examples` and `tip` (preprod) returned correct results with no schema or validation errors. The agent session itself didn't run (Codex backend timeout), so an agent choosing the tools is still to check |
+| OpenAI Codex CLI | 0.162.1, macOS 14.7 | 10 October 2026 | Pass. `/mcp` shows midnight-cast connected with 14 tools; in a fresh session the agent called `health` (preview) and `decode` on its own and answered both correctly. (0.149.0-alpha.4 earlier passed the tool calls through Codex's MCP client, but its agent session timed out.) |
 | Gemini CLI | not yet | | |
 | Cursor (agent CLI) | 2026.10.01 | 10 October 2026 | Pass. Ready with all 14 tools; an agent called `decode`, `tip` (preprod) and `examples` and answered correctly. In non-interactive runs each call needs approval: allow them with `{ "permissions": { "allow": ["Mcp(midnight-cast:*)"] } }` in `.cursor/cli.json` |
 | Cursor (editor) | not yet | | |
