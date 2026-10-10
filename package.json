@@ -1,7 +1,7 @@
 {
   "name": "midnight-cast",
   "version": "0.2.0",
-  "description": "Read-only developer CLI for Midnight: network health, indexer queries, error decoding",
+  "description": "Read-only CLI and MCP server for the Midnight networks: health, error decoding, transactions, DUST and working example code",
   "mcpName": "io.github.Kanasjnr/midnight-cast",
   "author": "Kanasjnr",
   "type": "module",
