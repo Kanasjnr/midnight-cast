@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Release
+- `publish.yml` publishes to npm through npm trusted publishing, with GitHub's OIDC token instead of the `NPM_TOKEN` secret, so the npm step can't fail on an expired token as it did for 0.2.0, and every version gets npm provenance again. The job runs on Node 24 and checks its npm can publish this way. `docs/RELEASING.md` describes the one-time setting on npmjs.com
+
 ## 0.2.0 (10 October 2026)
 
 midnight-cast 0.2.0 matches the October 2026 networks and is ready for AI agents. Preprod and mainnet go through Blockfrost, with a project ID per network. There's a read-only MCP server, agent guidance and a Claude Code plugin; working code from Midnight's official examples; a preflight check; contract and DUST lookups; and standalone binaries that need no Node.js.
