@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Tests & CI
+- The DUST test for a timeout during a reconnect wait times the CLI after it has started, measured once per run, instead of including Node's startup, which made it fail on slow macOS runners at just over its limit
+
 ## 0.2.0 (10 October 2026)
 
 midnight-cast 0.2.0 matches the October 2026 networks and is ready for AI agents. Preprod and mainnet go through Blockfrost, with a project ID per network. There's a read-only MCP server, agent guidance and a Claude Code plugin; working code from Midnight's official examples; a preflight check; contract and DUST lookups; and standalone binaries that need no Node.js.
