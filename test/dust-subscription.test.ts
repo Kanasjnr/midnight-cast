@@ -73,17 +73,18 @@ describe("dust subscription cleanup", () => {
 
   it("exits promptly when the timeout lands during a reconnect wait", async () => {
     const indexer = await silentIndexer({ dropConnections: true });
-    try {
-      const started = Date.now();
-      const stdout = await new Promise<string>((resolve) => {
-        execFile(
-          "node",
-          [join(process.cwd(), "dist", "cli.js"), "dust-events", "--from", "1", "--network", "preprod", "--indexer-ws", indexer.url, "--timeout", "1500", "--json"],
-          { timeout: 15000 },
-          (_err, out) => resolve(String(out)),
-        );
+    const cli = (args: string[]) =>
+      new Promise<string>((resolve) => {
+        execFile("node", [join(process.cwd(), "dist", "cli.js"), ...args], { timeout: 15000 }, (_err, out) => resolve(String(out)));
       });
-      expect(Date.now() - started).toBeLessThan(5000);
+    try {
+      // Starting node and loading the CLI takes seconds on some CI runners, so only the time after that counts.
+      const startupStarted = Date.now();
+      await cli(["--version"]);
+      const startup = Date.now() - startupStarted;
+      const started = Date.now();
+      const stdout = await cli(["dust-events", "--from", "1", "--network", "preprod", "--indexer-ws", indexer.url, "--timeout", "1500", "--json"]);
+      expect(Date.now() - started - startup).toBeLessThan(4500);
       expect(JSON.parse(stdout)).toMatchObject({ ok: false, error: { message: "Indexer WS closed (1006)", kind: "network" } });
     } finally {
       indexer.stop();
