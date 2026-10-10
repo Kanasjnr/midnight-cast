@@ -20,10 +20,12 @@ These tasks check that a coding agent, given only the midnight-cast guidance (th
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Claude Code (`CLAUDE.md` snippet and a shell) | Claude Code 2.1.296, its default model | 10 October 2026 | pass | pass | pass | pass | pass |
 | Claude Code plugin (`claude plugin eval`, mocked tools, three runs each) | Claude Code 2.1.296, its default model | 10 October 2026 | pass (3/3) | pass (3/3) | pass (3/3) | pass (3/3) | pass (3/3) |
-| OpenAI Codex CLI | not yet run | | | | | | |
+| OpenAI Codex CLI (`AGENTS.md` snippet and a shell) | Codex CLI 0.162.1, its default model | 10 October 2026 | pass (2 of 3 runs) | pass | pass | pass | pass |
 | Gemini CLI | not yet run | | | | | | |
 
 The Claude Code row ran each task with `claude -p` in an empty directory holding only the `CLAUDE.md` snippet, with `--setting-sources project,local` so no user plugins or skills (such as Midnight Expert) were loaded, and only `midnight-cast` commands allowed. Until 0.2.0 is on npm, `midnight-cast` and `npx -y midnight-cast@latest` ran the local build. Task 2 ran with no mainnet project ID anywhere, and task 3 with a preprod one, as a user would have.
+
+The Codex row ran the same way with `codex exec --ignore-user-config`, so none of the user's MCP servers loaded, in Codex's workspace sandbox with network access. On one of three runs of task 1 the agent replied without running a command and only suggested `versions`; on the other two it ran `decode` and gave the 1.0.400 upgrade.
 
 ## Claude Code plugin evals
 
