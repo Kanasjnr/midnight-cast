@@ -222,6 +222,5 @@ From 0.2.0, midnight-cast is listed in the [MCP Registry](https://registry.model
 | Cursor (agent CLI) | 2026.10.01 | 10 October 2026 | Pass. Ready with all 14 tools; an agent called `decode`, `tip` (preprod) and `examples` and answered correctly. In non-interactive runs each call needs approval: allow them with `{ "permissions": { "allow": ["Mcp(midnight-cast:*)"] } }` in `.cursor/cli.json` |
 | Cursor (editor) | not yet | | |
 | Google Antigravity | 1.3.3, macOS 14.7 | 10 October 2026 | Pass. Listed all 14 tools; its agent used `decode`, `health` (preview), `examples` (with links to the code) and `tip` (preprod) and answered all five test prompts correctly |
-| GitHub Copilot CLI | 1.0.95, macOS 14.7 | 10 October 2026 | Pass. Added as a local server with `/mcp add`, enabled with all 14 tools; the agent called `health` (preview) and `decode` and answered both correctly |
-| VS Code (GitHub Copilot) | not yet | | Not tested in the VS Code app. Copilot's own CLI passes, above |
+| GitHub Copilot (CLI, and VS Code) | Copilot CLI 1.0.95, macOS 14.7 | 10 October 2026 | Pass. Added as a local server with `/mcp add`, enabled with all 14 tools; Copilot's agent called `health` (preview) and `decode` and answered both correctly. Copilot in VS Code takes the same server through `.vscode/mcp.json`; it wasn't run separately in the VS Code app |
 | Windsurf | not yet | | |
