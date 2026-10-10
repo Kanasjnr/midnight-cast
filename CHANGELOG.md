@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.2.0 (10 October 2026)
+
+midnight-cast 0.2.0 matches the October 2026 networks and is ready for AI agents. Preprod and mainnet go through Blockfrost, with a project ID per network. There's a read-only MCP server, agent guidance and a Claude Code plugin; working code from Midnight's official examples; a preflight check; contract and DUST lookups; and standalone binaries that need no Node.js.
+
+Breaking changes, below: `--json` output is a versioned envelope (`schemaVersion` 1), usage errors exit `2`, and preprod now needs a Blockfrost project ID.
+
 ### New commands
 - `examples [topic]` finds working code in Midnight's official examples (`midnightntwrk/midnight-examples`) for a topic in your own words, such as "DUST sponsorship", "send shielded tokens" or "verify a signature in a circuit". It returns the examples that show it, with files, line ranges, links pinned to a commit and the code, or lists every example without a topic. It works offline from an index pinned to one commit, which `live.yml` checks and notes when the repository moves on. Agents get it as the `examples` MCP tool and the `midnight-cast://examples` resource, and the guidance tells them to start from these examples rather than writing Midnight code from memory
 - `preflight [network] [--address <address>]` checks you can send a first transaction: the network answers and is in sync, the proof server answers at the version the matrix expects, and the wallet holds NIGHT registered for DUST generation. Unshielded addresses (`mn_addr_…`) are read from the indexer's per-address UTXO history; Cardano reward addresses use the `dust-status` query. When Midnight's examples have run on the network, it quotes how long a first wallet sync and a pre-seed restore took, and the faucet. It reads only, and the MCP server has it as the `preflight` tool
@@ -51,6 +57,7 @@
 - Unit tests run on Linux, macOS and Windows × Node 20/22/24, plus a typecheck of `src/` and `scripts/`
 
 ### Changes
+- The examples index is pinned to midnightntwrk/midnight-examples at 95d4f50, with the same toolchain, and covers twelve examples, adding private-tip-jar: anonymous shielded tips into a contract-held pot that only the owner can withdraw
 - Network failures are classified. With `--json`, a failed RPC or indexer request reports a `kind` (`dns`, `refused`, `timeout`, `tls`, `network`, `http_4xx`, `http_5xx`, `rpc_error`, `graphql_error`, `invalid_response`) and a `hint` in `error`. Human mode prints the hint under the error, and `ping`/`health` rows carry the kind as `errorKind`
 - `versions` reads Midnight packages under both npm scopes (`@midnight-ntwrk` and the new `@midnightntwrk`) and takes installed versions from `package-lock.json`. Matrix pins apply whichever scope is used. Installing one package under both scopes, directly or through a dependency, fails a `scope:` check, and old-scope packages that have a stable new-scope release get a rename hint
 - Mainnet works again, through Blockfrost. Midnight retired `rpc.mainnet.midnight.network` and `indexer.mainnet.midnight.network` on 2026-09-30, so the built-in mainnet endpoints are now Blockfrost's. The project ID comes from `--project-id`, the network's config section (`blockfrost_project_id`, or `project_id` in its URLs), or `BLOCKFROST_PROJECT_ID`, in that order. It is sent in the `project_id` header (in the URL only for WebSockets) and redacted from all output. Without one, mainnet commands stop before any request and explain how to get one
@@ -111,7 +118,7 @@
 - Config path test passes on Windows
 
 ### Docs
-- `docs/MCP.md` records the first hand tests of the MCP server with the 0.2.0 build: Claude Code 2.1.296, Cursor's agent CLI 2026.10.01 and Google Antigravity 1.3.3 pass, Codex CLI 0.149.0-alpha.4's MCP client passes with its agent run still to check, and VS Code with Copilot isn't tested yet. It adds Antigravity's setup and the `.cursor/cli.json` permission Cursor's agent needs to call the tools in a non-interactive run. `docs/agents/EVALS.md` records Claude Code passing all five tasks with the `CLAUDE.md` snippet alone and in the plugin suite
+- `docs/MCP.md` records the first hand tests of the MCP server with the 0.2.0 build: Claude Code 2.1.296, Cursor's agent CLI 2026.10.01, Google Antigravity 1.3.3, Codex CLI 0.162.1 and GitHub Copilot (CLI 1.0.95; not run separately in the VS Code app) pass. It adds Antigravity's setup and the `.cursor/cli.json` permission Cursor's agent needs to call the tools in a non-interactive run. `docs/agents/EVALS.md` records Claude Code passing all five tasks with the `CLAUDE.md` snippet alone and in the plugin suite, and Codex CLI 0.162.1 passing all five with the `AGENTS.md` snippet (task 1 on two of three runs)
 - `docs/LIVE-CHECKS.md`: how CI tests live networks and how to enable mainnet
 - The README's "Using with AI agents" section, formerly "For agents and scripts", says what midnight-cast adds next to the Kapa answer engine and Midnight Expert, lists all 14 MCP tools, and spells out what an agent can and can't do with the server: every tool reads only, the networks can be limited, network calls are rate limited, and the Blockfrost project ID never reaches the model
 
