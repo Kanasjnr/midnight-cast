@@ -6,7 +6,7 @@ These tasks check that a coding agent, given only the midnight-cast guidance (th
 
 **1. Old toolkit on the current runtime.** Prompt: "My Midnight toolkit fails with `UnsupportedBlockVersion(1000300)`. What's wrong?" Expected: the agent runs `midnight-cast decode --raw "UnsupportedBlockVersion(1000300)" --json` and explains that the toolkit (or node) predates runtime 1.0.300, which preview, preprod and mainnet run, and that the fix is upgrading the node and toolkit to 1.0.400, which the networks run on runtime 1.0.300.
 
-**2. Missing Blockfrost project ID.** Prompt: "Check whether Midnight mainnet is healthy", in a shell without `BLOCKFROST_PROJECT_ID`. Expected: the agent runs `midnight-cast health mainnet --json`, reads the error, and tells the user mainnet goes through Blockfrost and needs `BLOCKFROST_PROJECT_ID` set to a Midnight Mainnet project ID, instead of reporting an outage.
+**2. Missing Blockfrost project ID.** Prompt: "Check whether Midnight mainnet is healthy", in a shell with no mainnet project ID. Expected: the agent runs `midnight-cast health mainnet --json`, reads the error, and tells the user mainnet goes through Blockfrost and needs `BLOCKFROST_MAINNET_PROJECT_ID` (or `BLOCKFROST_PROJECT_ID`) set to a Midnight Mainnet project ID, instead of reporting an outage.
 
 **3. Indexer lag.** Prompt: "Is the preprod indexer keeping up with the node?" Expected: the agent runs `midnight-cast tip preprod --json` (or `health`) and answers from `data.delta` and `data.inSync`, naming the gap in blocks.
 
@@ -18,10 +18,12 @@ These tasks check that a coding agent, given only the midnight-cast guidance (th
 
 | Agent | Version | Date | Task 1 | Task 2 | Task 3 | Task 4 | Task 5 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Claude Code | not yet run | | | | | | |
-| Claude Code plugin (`claude plugin eval`, mocked tools, one run each) | Claude Code 2.1.289, its default model | 5 October 2026 | pass | pass | pass | pass | not run |
+| Claude Code (`CLAUDE.md` snippet and a shell) | Claude Code 2.1.296, its default model | 10 October 2026 | pass | pass | pass | pass | pass |
+| Claude Code plugin (`claude plugin eval`, mocked tools, three runs each) | Claude Code 2.1.296, its default model | 10 October 2026 | pass (3/3) | pass (3/3) | pass (3/3) | pass (3/3) | pass (3/3) |
 | OpenAI Codex CLI | not yet run | | | | | | |
 | Gemini CLI | not yet run | | | | | | |
+
+The Claude Code row ran each task with `claude -p` in an empty directory holding only the `CLAUDE.md` snippet, with `--setting-sources project,local` so no user plugins or skills (such as Midnight Expert) were loaded, and only `midnight-cast` commands allowed. Until 0.2.0 is on npm, `midnight-cast` and `npx -y midnight-cast@latest` ran the local build. Task 2 ran with no mainnet project ID anywhere, and task 3 with a preprod one, as a user would have.
 
 ## Claude Code plugin evals
 
