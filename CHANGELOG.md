@@ -118,6 +118,7 @@ Breaking changes, below: `--json` output is a versioned envelope (`schemaVersion
 - Config path test passes on Windows
 
 ### Docs
+- The README starts with `health preview`, which needs no project ID, and says preprod and mainnet need one; its capabilities, command table, quick start and one-liners cover `examples`, `preflight`, `contract`, `dust-status`, `explain`, the MCP server, `agents init` and the binaries. The package description names the MCP server and the example code
 - `docs/MCP.md` records the first hand tests of the MCP server with the 0.2.0 build: Claude Code 2.1.296, Cursor's agent CLI 2026.10.01, Google Antigravity 1.3.3, Codex CLI 0.162.1 and GitHub Copilot (CLI 1.0.95; not run separately in the VS Code app) pass. It adds Antigravity's setup and the `.cursor/cli.json` permission Cursor's agent needs to call the tools in a non-interactive run. `docs/agents/EVALS.md` records Claude Code passing all five tasks with the `CLAUDE.md` snippet alone and in the plugin suite, and Codex CLI 0.162.1 passing all five with the `AGENTS.md` snippet (task 1 on two of three runs)
 - `docs/LIVE-CHECKS.md`: how CI tests live networks and how to enable mainnet
 - The README's "Using with AI agents" section, formerly "For agents and scripts", says what midnight-cast adds next to the Kapa answer engine and Midnight Expert, lists all 14 MCP tools, and spells out what an agent can and can't do with the server: every tool reads only, the networks can be limited, network calls are rate limited, and the Blockfrost project ID never reaches the model

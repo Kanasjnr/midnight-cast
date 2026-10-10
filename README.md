@@ -3,20 +3,22 @@
 > [!NOTE]
 > This project extends the Midnight Network with additional developer tooling.
 
-Read-only CLI for Midnight network health, indexer queries, and error decoding. Think **Foundry `cast`** for Midnight, not a wallet or app scaffold.
+Read-only CLI and MCP server for the Midnight networks: network health, error decoding, transactions, contracts, DUST, and working code from Midnight's official examples. Think **Foundry `cast`** for Midnight, not a wallet or app scaffold.
 
 ```bash
-npx midnight-cast@latest health preprod
-# or: npm i -g midnight-cast@latest && midnight-cast health preprod
+npx midnight-cast@latest health preview
+# or: npm i -g midnight-cast@latest && midnight-cast health preview
 ```
+
+Preview needs nothing else. Preprod and mainnet go through Blockfrost and need a free project ID for each; see [Quick start](#quick-start).
 
 > **Note:** midnight-cast also installs a short alias, `mn`, which runs the same commands. Other global CLIs (e.g. `@mermaid-js/mermaid-cli`, `midnight-wallet-cli`) install an `mn` too, so these docs, the hints and the JSON output always say `midnight-cast`.
 
 ```bash
-midnight-cast health preprod
+midnight-cast health preview
 ```
 
-Or step by step: `midnight-cast ping preprod && midnight-cast tip preprod && midnight-cast versions preprod`
+Or step by step: `midnight-cast ping preview && midnight-cast tip preview && midnight-cast versions preview`
 
 Requires **Node.js 20+** (22+ recommended). Without Node.js, the release binaries install the same commands after checking the checksum:
 
@@ -28,20 +30,26 @@ On Windows, in PowerShell: `irm https://github.com/Kanasjnr/midnight-cast/releas
 
 ## Key capabilities
 
-- Read RPC, indexer, and proof-server health
-- Compare live stack signals to the Midnight support matrix
-- Decode ledger, pallet, Substrate 1010, and JSON-RPC errors
-- Inspect transactions and DUST event streams
+- Read RPC, indexer, and proof-server health, and whether Midnight's own examples pass on the node a network runs
+- Compare live stack signals and a project's Midnight packages with the support matrix
+- Decode ledger, pallet, Substrate 1010, and JSON-RPC errors, and messages from current tooling and Blockfrost
+- Check a network, proof server and wallet are ready before the first transaction (`preflight`)
+- Inspect transactions, deployed contracts, DUST generation and DUST event streams
+- Find working code in Midnight's official examples for a topic in your own words (`examples`)
+- Serve all of it to AI agents as a read-only MCP server, with guidance for Claude Code, Codex, Gemini CLI, Cursor and others
 - Query block headers and raw JSON-RPC without writing scripts
+- Run without Node.js from a standalone binary
 
 ## What it does
 
 | Area | Commands |
 |------|----------|
-| Health | `health`, `ping`, `tip`, `versions` |
+| Health | `health`, `ping`, `tip`, `versions`, `preflight` |
 | Chain | `block latest`, `block <height>`, `rpc` |
 | Errors | `decode` (ledger, pallet, 1010, jsonrpc, `--raw`) |
-| Indexer | `tx`, `dust-event`, `dust-events` |
+| Indexer | `tx`, `contract`, `dust-status`, `dust-event`, `dust-events` |
+| Working code and background | `examples`, `explain` (`dust`, `1010`, `versions`, `transcript`, `sync`) |
+| Agents | `mcp`, `agents init` |
 | Config | `config init`, `config show` |
 
 No wallet keys. No signing or proving.
@@ -121,8 +129,9 @@ Summary: live stack matches matrix checks ✓
 ```bash
 npm i -g midnight-cast          # or: npx midnight-cast …
 midnight-cast config init                  # ~/.config/midnight-cast/config.toml
-midnight-cast health preprod
+midnight-cast health preview
 midnight-cast decode 170
+midnight-cast examples "dust sponsorship"
 ```
 
 **Networks:** `preview`, `preprod`, `mainnet`, `local` — use `--network` or `MN_NETWORK`.
@@ -161,6 +170,10 @@ midnight-cast block 909000 preprod                  # header at height (+ hash)
 midnight-cast dust-events --from 565900 --limit 10 --network preprod
 midnight-cast rpc chain_getHeader --json
 midnight-cast versions preprod --fail-on-mismatch   # CI; local Midnight packages (either npm scope) vs matrix pins
+midnight-cast preflight preprod --address mn_addr_preprod1…   # ready for a first transaction?
+midnight-cast contract <address> preprod            # latest action, circuit, deploy block, balances
+midnight-cast examples "send shielded tokens"       # working code from Midnight's official examples
+midnight-cast explain sync                          # why a first wallet sync takes so long
 ```
 
 ## Using with AI agents
@@ -244,7 +257,7 @@ cd midnight-cast && npm install && npm run build
 npm link                        # global midnight-cast
 npm run cli -- decode 170       # without link
 npm test
-INTEGRATION=1 npm run test:integration
+BLOCKFROST_PREPROD_PROJECT_ID=<id> INTEGRATION=1 npm run test:integration   # live tests; mainnet ones also need BLOCKFROST_MAINNET_PROJECT_ID
 ```
 
 ## License
