@@ -2,7 +2,7 @@
 name: midnight-cast
 description: Diagnose Midnight blockchain problems with the read-only midnight-cast CLI. Decodes Midnight errors (1010 rejections, Custom(N) ledger codes, pallet and JSON-RPC errors, toolkit and Blockfrost messages), checks network health and versions on preview, preprod and mainnet, and looks up transactions, contracts, DUST registration and DUST events. Use when a Midnight error, transaction, contract or network is involved.
 license: Apache-2.0
-compatibility: Needs Node.js 20 or later and network access; mainnet needs a Blockfrost project ID.
+compatibility: Needs Node.js 20 or later and network access; preprod and mainnet each need a Blockfrost project ID.
 ---
 
 # midnight-cast

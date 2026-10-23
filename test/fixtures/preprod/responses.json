@@ -1,6 +1,6 @@
 {
   "network": "preprod",
-  "recordedAt": "2026-10-09T22:34:41.512Z",
+  "recordedAt": "2026-10-23T08:15:52.113Z",
   "inputs": {
     "txHash": "96b96bf72d45ea4132745b76f77b632730e22d8c9f89689530042007f473f395",
     "blockHeight": 2911031,
@@ -13,7 +13,7 @@
       "key": "indexer query { block { height } } {}",
       "status": 200,
       "contentType": "application/graphql-response+json",
-      "body": "{\"data\":{\"block\":{\"height\":2911238}}}"
+      "body": "{\"data\":{\"block\":{\"height\":3101386}}}"
     },
     {
       "key": "indexer query { block { protocolVersion } } {}",
@@ -34,16 +34,16 @@
       "body": "{\"data\":{\"dustGenerationStatus\":[{\"cardanoRewardAddress\":\"stake_test1uqfu74w3wh4gfzu8m6e7j987h4lq9r3t7ef5gaw497uu85qsqfy27\",\"dustAddress\":null,\"registered\":false,\"nightBalance\":\"0\",\"generationRate\":\"0\",\"currentCapacity\":\"0\",\"maxCapacity\":\"0\",\"utxoTxHash\":null,\"utxoOutputIndex\":null}]}}"
     },
     {
-      "key": "indexer query TransactionLookup($offset: TransactionOffset!) { transactions(offset: $offset) { __typename id hash protocolVersion ... on RegularTransaction { transactionResult { status segments { id success } } fees { paidFees estimatedFees } identifiers startIndex endIndex } block { height hash } dustLedgerEvents { id __typename } zswapLedgerEvents { id __typename } contractActions { __typename } } } {\"offset\":{\"hash\":\"0x96b96bf72d45ea4132745b76f77b632730e22d8c9f89689530042007f473f395\"}}",
+      "key": "indexer query TransactionLookup($offset: TransactionOffset!) { transactions(offset: $offset) { __typename id hash protocolVersion ... on RegularTransaction { transactionResult { status segments { id success } } fee identifiers zswapStartIndex zswapEndIndex } block { height hash } dustLedgerEvents { id __typename } zswapLedgerEvents { id __typename } contractActions { __typename } } } {\"offset\":{\"hash\":\"0x96b96bf72d45ea4132745b76f77b632730e22d8c9f89689530042007f473f395\"}}",
       "status": 200,
       "contentType": "application/graphql-response+json",
-      "body": "{\"data\":{\"transactions\":[{\"__typename\":\"RegularTransaction\",\"id\":664621,\"hash\":\"96b96bf72d45ea4132745b76f77b632730e22d8c9f89689530042007f473f395\",\"protocolVersion\":1000300,\"transactionResult\":{\"status\":\"SUCCESS\",\"segments\":null},\"fees\":{\"paidFees\":\"1\",\"estimatedFees\":\"1\"},\"identifiers\":[\"00574cd3ac431af5f7f22c824cfc740bf4c748cfd920d9dc3f64319d1b0b7f9528\",\"0041bf501bc1ba6fc2de22bcae83b807f6e16f5cfd8703869a1e779b56f53240a9\"],\"startIndex\":26024,\"endIndex\":26024,\"zswapLedgerEvents\":[],\"dustLedgerEvents\":[{\"id\":1647575,\"__typename\":\"DustSpendProcessed\"},{\"id\":1647576,\"__typename\":\"DustGenerationDtimeUpdate\"},{\"id\":1647577,\"__typename\":\"DustGenerationDtimeUpdate\"},{\"id\":1647578,\"__typename\":\"DustInitialUtxo\"},{\"id\":1647579,\"__typename\":\"DustInitialUtxo\"}],\"contractActions\":[],\"block\":{\"height\":2911031,\"hash\":\"5c901dee9df0db6c383aa32be7d3d39bb9bbeca2828ac86402633ebee69db468\"}}]}}"
+      "body": "{\"data\":{\"transactions\":[{\"__typename\":\"RegularTransaction\",\"id\":664621,\"hash\":\"96b96bf72d45ea4132745b76f77b632730e22d8c9f89689530042007f473f395\",\"protocolVersion\":1000300,\"transactionResult\":{\"status\":\"SUCCESS\",\"segments\":null},\"fee\":\"1\",\"identifiers\":[\"00574cd3ac431af5f7f22c824cfc740bf4c748cfd920d9dc3f64319d1b0b7f9528\",\"0041bf501bc1ba6fc2de22bcae83b807f6e16f5cfd8703869a1e779b56f53240a9\"],\"zswapStartIndex\":26024,\"zswapEndIndex\":26024,\"zswapLedgerEvents\":[],\"dustLedgerEvents\":[{\"id\":1647575,\"__typename\":\"DustSpendProcessed\"},{\"id\":1647576,\"__typename\":\"DustGenerationDtimeUpdate\"},{\"id\":1647577,\"__typename\":\"DustGenerationDtimeUpdate\"},{\"id\":1647578,\"__typename\":\"DustInitialUtxo\"},{\"id\":1647579,\"__typename\":\"DustInitialUtxo\"}],\"contractActions\":[],\"block\":{\"height\":2911031,\"hash\":\"5c901dee9df0db6c383aa32be7d3d39bb9bbeca2828ac86402633ebee69db468\"}}]}}"
     },
     {
       "key": "proof-server GET /",
       "status": 200,
       "contentType": "application/json",
-      "body": "{\"status\":\"ok\",\"timestamp\":\"2026-10-09 22:34:34.08493275 +00:00:00\"}"
+      "body": "{\"status\":\"ok\",\"timestamp\":\"2026-10-23 08:15:47.810778911 +00:00:00\"}"
     },
     {
       "key": "proof-server GET /version",
@@ -61,7 +61,7 @@
       "key": "rpc chain_getBlockHash []",
       "status": 200,
       "contentType": "application/json; charset=utf-8",
-      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":\"0x97489921feb03bae9ae6f192fd2ed70811c2539e99bafcd7b2c5d53c5c8d2b84\"}"
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":\"0x1e4f40b1464b564062125477c3f09b1d3abad1817941a142e93c5b42689da14a\"}"
     },
     {
       "key": "rpc chain_getHeader [\"0x5c901dee9df0db6c383aa32be7d3d39bb9bbeca2828ac86402633ebee69db468\"]",
@@ -73,7 +73,7 @@
       "key": "rpc chain_getHeader []",
       "status": 200,
       "contentType": "application/json; charset=utf-8",
-      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"parentHash\":\"0x9eca970386fffc3ad567cca736304824bdf21bbbeacf4131441b42a48bd2c883\",\"number\":\"0x2c6c09\",\"stateRoot\":\"0x6e9d713ccb33ea29d69d8b901f64fe16a2f5e41177446c13a8b3540ebbafad6f\",\"extrinsicsRoot\":\"0x127bb5093ec95838f192cec19d39fda6b0ee59a3baa799a3bdef8aee5f0bb9ff\",\"digest\":{\"logs\":[\"0x066175726120aa3ccc1100000000\",\"0x066d63736880ec960da0acd1c248bd830941481dba83ef7885ea5df880ab4dffe34ff67173cf\",\"0x044d4e5356106c430f00\",\"0x0442454546840376d230f8611c68f009a2810ee3f94c90becbecd639d44988a5982193e984cfeb\",\"0x0561757261010102694a504660c20532665f814cea0da47652fd628c17727f072b33759452fd7eb3a6a17c1c6a04eb75ddeca374bbdfd03e3c52958b15b669ae70c5d4d1988780\"]}}}"
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"parentHash\":\"0x6ec928232de4e6fdb0aa707b1313933726fa376c6a3a8dbf00297f0b4eb18702\",\"number\":\"0x2f52cd\",\"stateRoot\":\"0x97fa74092509f89bf967f1f7aeba7d44c1f93c90e53b630fb7f65eb8a1578aa2\",\"extrinsicsRoot\":\"0x0536b50ea2e24a9378bc40d05b84eafe109802ed251a2c75baeba99c9707823d\",\"digest\":{\"logs\":[\"0x0661757261209e2ecf1100000000\",\"0x066d637368802354eb390c0bf4c2b6715af267b2a046b64b3197c699ae85e91e36f7d68ae7f1\",\"0x044d4e5356106c430f00\",\"0x044245454684030ca640141fbbbf2042467094ae3b5f6d68a754260fa685519ac9c85eea8dfa37\",\"0x056175726101014a90803c36fa6d19140530a10adcc89911a9501aff6f0194cf0ca6fc9f0a7429a23655fe493f626a08abec108f4aa1389ddd7c87345d98561d11918212b2898a\"]}}}"
     },
     {
       "key": "rpc chain_getRuntimeVersion []",
@@ -85,7 +85,7 @@
       "key": "rpc system_health []",
       "status": 200,
       "contentType": "application/json; charset=utf-8",
-      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"peers\":28,\"isSyncing\":false,\"shouldHavePeers\":true}}"
+      "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"peers\":13,\"isSyncing\":false,\"shouldHavePeers\":true}}"
     },
     {
       "key": "rpc system_version []",
@@ -106,7 +106,7 @@
             "id": 1647575,
             "protocolVersion": 1000300,
             "raw": "6d69646e696768743a6576656e745b76395d3a0400f50196b96bf72d45ea4132745b76f77b632730e22d8c9f89689530042007f473f3950000020007730826ce2fdfa3e46daf1505ae4fbd417f0d00b653596e6995185ab788ef65e25d9ab54a0073dbb774248232444b6f638a525acdfc8f7206d7e17627b26c36570cfa8957ff460f01c06e31d9100103f866c96a031067c96a",
-            "maxId": 1647579
+            "maxId": 1716592
           }
         }
       },
@@ -117,7 +117,7 @@
             "id": 1647576,
             "protocolVersion": 1000300,
             "raw": "6d69646e696768743a6576656e745b76395d3a0400d91396b96bf72d45ea4132745b76f77b632730e22d8c9f89689530042007f473f3950000010006e7fa5b04b6256eb76586a6f03e5a1d2ff66d577f96ccfd712d9eb074fe39eb00070088526a74736ee220600953815b74d66c941b6ff88e995855e41f50249250f2baa28705483270c39109b2564bf2f732cd4475c6fe5f3ef386dc2c36d7703dce919b2bd9c4bb031067c96a800173f4458d60f93720436e03acff7194011589541315c8952b841b6cd517366afb20000173a103ce427f4f415531ad040ddb4eaff6f840d9458969eb9fb556d49953a55733000173e4f7df12d38859e8bc9460059a6a5ecd2a137ac2254c401110d3e10b8850cd5c000173d26c395b2b90c33dd939d0e18fc6c1dbd2ce1570aa7f7f83f6cf5a059d5551600101730be932a2f3cde9cb62ae6e678754af1ccbb90663c4c33510713c19dc0e06d62901017396b5e08ed96e51437a0cf15ba3ee27c337d79d74081895f3d24ea64a9f466b59000173b24f2ca78c19d41d22f8741030330b6d8b2202e790352f1be2fddc3e5fd8ae06010173bf9b616788d5b15fd15ce9094343ac2efdf7275808e43dd66e536b7e7235c56d000173ff5c552d6bd6c0d465da2d48f17d64e2cf7f8bf14f0a4f7c5d5766a137092f04010173e557b2f119b3538b5cb25a30855e65e8af25b1b2b4b92b257ef56afee6449a240101739a5e251fffc6f151585fdd10bfafcb519fc509af9a118a2146c0e40fc3b74f07010173d8fcdddbe624c7e5c31ff7eecbe13853bdf3d4b8047eb80ec020f6e10e2a4c69000173c2fbc979f2f46fe18fe8b31bebce5afdf2a88d1678921e55e79cfaf7eb2c0206000173e1d5c467c6238e60ebe7a006aaae685b44b17d289d55aed4810d54b9510e0264010173a03997a4c856d4158be9576d233ad1fe496fe4232bf09f126957dcfb71681d0f00017382d353da86eea23d75fa469ff9366d9efd30ec147ec60fee18bddc351756ca2301017336ef1dc658697aab89bcf01950b577dd0a3a5a56ccc83293f63977186a09d44c0101734430b9f5fe2d39f2f349b202112c88142d26f94b396f7be7e44dce22dd4d3f5f000173992b49f818f4462beed10d613b52ed0243a0d5bc87c3162e5e9aaef2968a2341000173fc2728d3f21bc66a3a6a88ba3632ad0ef7433f09232a3fb5b23762b1058c9b5f0101733e00a85a41f8229b7d09f5c178662d9a7921a233cef7d66b8cbd29c357421d44010173bc8d7c9b6eb2362e3812087388006a86be7f820a9493701480e8452f80f5f52d010173398bc9818cbf5a64474b19c7a342172927e3c8d97cd619067efa2518af9b440a010173c58650a3f50eb84065a789fe5ec443626a61c5841bc6873562a4ec288bebb36f010173d98359f001921278cdccf4021e9f1322c4348b98f174c1970ecbf5aba38a5235010173385e3f6c0e8133864d63dd0b384f10a27bc60ea86a1617fd25d6731c779d7f290101734480578005c6a17723122086cb6437db7772080e6fbabde9c2db07f658993644010173ee5fda99d2b1eeba56857d35a81cbacf69969b91dfce863a113c6fd7218bf2560101731c426d142d409188877610773c388ed7ccc47fe965dc9f19ddd074f3ace22f1101016f1e5efe120cc8391629a6bed6de5f857a2746bec95280cceac803e58c9c39d2010173b5ec13192b7b35d7db66ca653698e10cbd29afa738b9e6e51b620e7230387464010173cb1ddd68affd6c3b3d495df59bbae339e19cf1e332f18abf8b6de6f9f3e9701601031067c96a",
-            "maxId": 1647579
+            "maxId": 1716592
           }
         }
       },
@@ -128,29 +128,7 @@
             "id": 1647577,
             "protocolVersion": 1000300,
             "raw": "6d69646e696768743a6576656e745b76395d3a0400e11396b96bf72d45ea4132745b76f77b632730e22d8c9f89689530042007f473f3950000010006093916a0071f35f28e1c81742089d3aa9094184df6ac5e31aeb0bcf21ab068000b3f9d5c492b24736ee220600953815b74d66c941b6ff88e995855e41f50249250f2baa287054832b6e46a82f78962290fa90d3804f9090c6b81740f88a6e29ed4ea59188f814dc7031067c96a8001730d9a68d71e6cc1454174e43aaf590f30c683a89a1e2c86adfd96e7bacf23a027010173d309acdfdbd3b41ef1fc56ba739e2c2342b1c7ac0af75f5c789a02f0f2778f32010173e232cab70ea08d4c5b2cfb4db4450c11ef2c5dab6702226070ce545550cff73601017359d4e12b05bf4da3b6ba26b30d0de79e4aa5a412e996ac96936887878108f65600017300f91df031b37896d7fc09c58532ec8fbbc9bbf95ec948d7fd561fd950d570410101733db6da87a7ea4b2a1cc5b24da1f168a3b9e830858d7b089b8e078996332810330001731829785f33976db01fb6151d1838368d971c6ee76aa562799c8b1098a0e63462010173da16b3b8ca7908f7b3b618751c266a7dc14004b7bb7d949311ab3b7a1d3e1c07000173fd512f91cc1090773b6c17ee9ee64bdc2834ac4d1ee3f9d270dd8e269ea2bc5e01017332acf21c6b19b305866f9c4b5ff5a5959e44fc461c79d2ef7cd2e891bfdc723f01017313e39fc2daf1eabcf43583254d42da9b866eb238b2d78063962dac7a3e800b4c010173180cea5f22d07015fa6fca92dd33e0480f9920e0123d3c9cf4bd3af1b176fc2e00017394c1feb23adee536d7cac55037f495a877f849c4117791b121a8923ee066122a000173bb051aa374504b8ffa03d02f4d1a343ae9dc75da14f72813cd9eac7f525e1c6f0101734f8bf324ff3f63d2d0d2e246dd1e6f817730c98406e4d9574539a3b0cc96842e000173b07db6bdb198f010c80c05c145f96878fbd616e1db45155655b031009af36869010173f0e7d1a5337705b3a5ff7f575d96e7cb30dc8be7465d0ad1f43bb567f3205a4d010173a37a097514affbc483203251a1482ac23fe804d25e829e2b2873c5cfed2f2632000173e5fb68a620800182474d697b719720d6c0ce402dda438c686dde340dcfc9af14000173fbac5cf60060ba9d0d655e92f207a2a93a1c93de91ec8e882c7156fc19df353a010173105c28ecc5ed537b387d4fa4c14e2582f6380998e8ee990fbe06c2e17b00a151010173de1eded0c9c3b1e67e9daafb5a507024c1da7b7c52a3959cf3cba3693a08d417010173520d7d27c54a02c81031ca9a1f94fa9e9ea4c2c63d37cf670f6109ef9b65bd0f0101730d85c947a3a2629fb40f5b6fa1dac61a1658026d8e06fd1ca3821c07468b5a2301017340138ffb2e7f49bdd29c851d064a3020509e088edb3f9f68b88abb84d993d02c0101735cf6a2e618f1889aa9c9d247f89a09c01eb6e1015f47714ad1c5a34b6bab9326010173dee2ea7a73d4a03a6249d4cc999cc08def83c97467a43cd7f24ad3670503bf13010173e00f6fb40182d6d3e501f94e75efee632b4212319f23bffcb1d52ad891be5130010173346ab377b0368885f361d96868f0fd313db83fd6186be5a1586a98dbe953bf5c01017344382b703d30fb6c21b7a5b01b1216afaaf06af722a2d4de8a8a2532ff5aca2e010173ff71578855fa84e384055df1d935286edfa04203f6499ccd1eac546f97f7a4300101737ee4b36401dce4f583c2da106e9e3ed123064a2df989fbf609d545d921def04101031067c96a",
-            "maxId": 1647579
-          }
-        }
-      },
-      {
-        "data": {
-          "dustLedgerEvents": {
-            "__typename": "DustInitialUtxo",
-            "id": 1647578,
-            "protocolVersion": 1000300,
-            "raw": "6d69646e696768743a6576656e745b76395d3a0400ad0396b96bf72d45ea4132745b76f77b632730e22d8c9f89689530042007f473f395000001000500736ee220600953815b74d66c941b6ff88e995855e41f50249250f2baa28705483273ee3520da806b1228ec61034a546dd5f66e5317216a2d4dea2b63771e136fb37200031067c96acfd82f9b87fbcc791243659ce1a5a48f278db7c8cba71cb4e35bc9619795090a9eb54a00070088526a74736ee220600953815b74d66c941b6ff88e995855e41f50249250f2baa287054832cfd82f9b87fbcc791243659ce1a5a48f278db7c8cba71cb4e35bc9619795090a13ffffffffffffffffae621900031067c96a",
-            "maxId": 1647579
-          }
-        }
-      },
-      {
-        "data": {
-          "dustLedgerEvents": {
-            "__typename": "DustInitialUtxo",
-            "id": 1647579,
-            "protocolVersion": 1000300,
-            "raw": "6d69646e696768743a6576656e745b76395d3a0400b10396b96bf72d45ea4132745b76f77b632730e22d8c9f89689530042007f473f395000001000500736ee220600953815b74d66c941b6ff88e995855e41f50249250f2baa287054832735e96b8c539c84746d580d42e1db4ecca6eeea01af547921670dd5d28fd3c111900031067c96aa532a1eddd557ae10d78e2e1ece659d8b52cc97b7ed81e62a5d944bfce5032e0a2b54a000b3fab561f2a24736ee220600953815b74d66c941b6ff88e995855e41f50249250f2baa287054832a532a1eddd557ae10d78e2e1ece659d8b52cc97b7ed81e62a5d944bfce5032e013ffffffffffffffffb2621900031067c96a",
-            "maxId": 1647579
+            "maxId": 1716592
           }
         }
       }

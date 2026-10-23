@@ -3,10 +3,9 @@ import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { buildSchema, parse, validate } from "graphql";
+import { buildClientSchema, buildSchema, graphqlSync, parse, printSchema, validate, type IntrospectionQuery } from "graphql";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { WebSocketServer } from "ws";
-import { DUST_SUBSCRIPTION } from "../src/clients/indexer.js";
 import { blockAtHeightCommand, blockLatestCommand } from "../src/commands/block.js";
 import { dustEventCommand, dustEventsCommand } from "../src/commands/dust.js";
 import { healthCommand } from "../src/commands/health.js";
@@ -20,16 +19,17 @@ import { BUILTIN_NETWORKS } from "../src/networks.js";
 import { toEnvelope, type EmitResult } from "../src/output.js";
 import {
   compareShapes,
+  deprecatedUses,
   dustExchanges,
   exchangeKey,
-  indexerQuery,
+  indexerDocuments,
   recordingFetch,
   replayFetch,
   shapeOf,
   type Exchange,
   type FixtureFile,
 } from "../scripts/fixtures.js";
-import { FIXTURE_NETWORKS, fixtureDir, readFixture } from "../scripts/record-fixtures.js";
+import { FIXTURE_NETWORKS, fixtureDir, introspectionQuery, readFixture } from "../scripts/record-fixtures.js";
 import { schemaErrors } from "./schema.js";
 
 // Replays a recorded subscription the way a Midnight indexer speaks graphql-transport-ws.
@@ -112,6 +112,12 @@ for (const network of FIXTURE_NETWORKS) {
       expectValid("tx", tx);
       expect((tx.data as { hash: string }).hash).toBe(inputs.txHash);
       expect(tx.next?.map((s) => s.command)).toContain(`midnight-cast dust-event ${inputs.dustEventId} ${network}`);
+      const recorded = JSON.parse(fixture.exchanges.find((e) => e.key.includes("TransactionLookup"))!.body).data.transactions[0];
+      expect(tx.data).toMatchObject({
+        fees: { paidFees: recorded.fee, estimatedFees: recorded.fee },
+        startIndex: recorded.zswapStartIndex,
+        endIndex: recorded.zswapEndIndex,
+      });
     });
 
     it("read the recorded DUST subscription", async () => {
@@ -132,14 +138,14 @@ for (const network of FIXTURE_NETWORKS) {
       }
     });
 
-    it("send only queries the indexer's schema accepts", () => {
-      const schema = buildSchema(readFileSync(join(fixtureDir(network), "indexer-schema.graphql"), "utf8"));
-      const queries = fixture.exchanges
-        .filter((e) => e.key.startsWith("indexer "))
-        .map((e) => indexerQuery(e.key));
-      for (const query of [...queries, DUST_SUBSCRIPTION]) {
-        expect(validate(schema, parse(query)).map((e) => e.message), query).toEqual([]);
+    it("send only queries the indexer's schema accepts, without deprecated fields", () => {
+      const schemaText = readFileSync(join(fixtureDir(network), "indexer-schema.graphql"), "utf8");
+      const schema = buildSchema(schemaText);
+      const documents = indexerDocuments(fixture.exchanges);
+      for (const document of documents) {
+        expect(validate(schema, parse(document)).map((e) => e.message), document).toEqual([]);
       }
+      expect(deprecatedUses(schemaText, documents)).toEqual([]);
     });
   });
 }
@@ -203,5 +209,27 @@ describe("fixture shapes", () => {
     const committed = dustExchanges({ payloads: [{ data: { dustLedgerEvents: { id: 1, raw: "0x" } } }] });
     const renamed = dustExchanges({ payloads: [{ data: { dustLedgerEvents: { id: 1, bytes: "0x" } } }] });
     expect(compareShapes(committed, renamed).drift[0]?.change).toBe("shape");
+  });
+});
+
+describe("the deprecation check", () => {
+  const schemaText = `
+    type Query { item(offset: Offset, id: Int @deprecated(reason: "Use offset instead")): Int }
+    input Offset { hash: String, height: Int @deprecated(reason: "Use hash instead") }
+  `;
+
+  it("names deprecated arguments and input fields, not only fields", () => {
+    const queries = ["{ item(id: 1) }", "{ item(offset: { height: 1 }) }", '{ item(offset: { hash: "a" }) }'];
+    expect(deprecatedUses(schemaText, queries)).toEqual([
+      'Field "Query.item" argument "id" is deprecated. Use offset instead',
+      "The input field Offset.height is deprecated. Use hash instead",
+    ]);
+  });
+
+  it("gets them into the recorded schema through the introspection the recorder sends", () => {
+    const result = graphqlSync({ schema: buildSchema(schemaText), source: introspectionQuery() });
+    const recorded = printSchema(buildClientSchema(result.data as unknown as IntrospectionQuery));
+    expect(recorded).toContain('id: Int @deprecated(reason: "Use offset instead")');
+    expect(recorded).toContain('height: Int @deprecated(reason: "Use hash instead")');
   });
 });

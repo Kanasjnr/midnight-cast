@@ -49,9 +49,7 @@ jobs:
         run: npm run smoke:binary -- build/release/midnight-cast-linux-x64.tar.gz ${{ env.SMOKE_FLAGS }}
 
       - name: Images for the container smokes
-        run: |
-          docker build -t midnight-cast-alpine -f .github/smoke/alpine.Dockerfile .github/smoke
-          docker build -t midnight-cast-debian -f .github/smoke/debian.Dockerfile .github/smoke
+        run: npm run smoke:images -- alpine debian
 
       - name: Smoke the musl binary in Alpine
         run: npm run smoke:binary -- build/release/midnight-cast-linux-x64-musl.tar.gz --docker midnight-cast-alpine ${{ env.SMOKE_FLAGS }}
@@ -90,7 +88,7 @@ jobs:
 
       - name: Smoke the musl binary in Alpine
         run: |
-          docker build -t midnight-cast-alpine -f .github/smoke/alpine.Dockerfile .github/smoke
+          npm run smoke:images -- alpine
           npm run smoke:binary -- build/release/midnight-cast-linux-arm64-musl.tar.gz --docker midnight-cast-alpine ${{ env.SMOKE_FLAGS }}
 
   macos:
