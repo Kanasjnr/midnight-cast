@@ -1,12 +1,17 @@
 # Changelog
 
-## Unreleased
+## 0.2.1 (23 October 2026)
+
+A patch release. `tx` stops asking the indexer for fields it deprecates, the agent skill gets preprod's Blockfrost project ID and the MCP tools' parameter names right, and releases publish to npm through trusted publishing. Nothing breaks: the JSON stays at `schemaVersion` 1, and `tx` keeps its shape.
 
 ### Agents
 - The skill says preprod needs a Blockfrost project ID as well as mainnet, and the Claude Code plugin's copy names the parameters the MCP tools take (`message` for `--raw`, `projectDir` for `--project-dir`, and so on) instead of saying they take the CLI's arguments. An agent that followed the old wording called `decode` with `raw`, which fails. A test checks every parameter the guidance names against the tools' input schemas. Found in the review of midnightntwrk/midnight-expert#280
 
 ### Changes
 - `tx` asks the indexer for `fee`, `zswapStartIndex` and `zswapEndIndex` instead of `fees`, `startIndex` and `endIndex`, which the v4 schema deprecates on all three networks, so it keeps working when they're removed. The JSON keeps its shape, but `fees.estimatedFees`, which the indexer deprecates in favour of the fee paid, now repeats `fees.paidFees` instead of the indexer's estimate, and is marked deprecated in `schemas/tx.schema.json`; it will be removed in `schemaVersion` 2. The human output shows only the fee paid. Found in the review of midnightntwrk/midnight-expert#280
+
+### Release
+- `publish.yml` publishes to npm through trusted publishing, with GitHub's OIDC token instead of an `NPM_TOKEN` secret, so there's no token to expire, and npm adds provenance to every version published this way. It runs on Node 24 for npm 11.5.1 or later. A maintainer sets up the trusted publisher once on npmjs.com; `docs/RELEASING.md` has the steps. 0.2.0 was published by hand, without provenance, after the old token lost its publish rights
 
 ### Tests & CI
 - The DUST test for a timeout during a reconnect wait times the CLI after it has started, measured once per run, instead of including Node's startup, which made it fail on slow macOS runners at just over its limit
