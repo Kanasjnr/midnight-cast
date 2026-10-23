@@ -68,7 +68,9 @@
           "type": "string"
         },
         "estimatedFees": {
-          "type": "string"
+          "type": "string",
+          "description": "The same as paidFees, since the indexer deprecates its estimate in favour of the fee paid. It will be removed in schemaVersion 2.",
+          "deprecated": true
         }
       }
     },
