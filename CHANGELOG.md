@@ -7,6 +7,7 @@
 
 ### Tests & CI
 - The DUST test for a timeout during a reconnect wait times the CLI after it has started, measured once per run, instead of including Node's startup, which made it fail on slow macOS runners at just over its limit
+- The container smokes build their Alpine and Debian images from AWS's mirror of Docker's official images and, when that fails, from Google's (`mirror.gcr.io`). AWS's mirror rate-limited the runner three times running on 23 October, which failed the Linux binary job. `npm run smoke:images` builds them, and the smoke Dockerfiles take the registry as a build argument
 
 ## 0.2.0 (10 October 2026)
 
