@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Agents
+- The skill says preprod needs a Blockfrost project ID as well as mainnet, and the Claude Code plugin's copy names the parameters the MCP tools take (`message` for `--raw`, `projectDir` for `--project-dir`, and so on) instead of saying they take the CLI's arguments. An agent that followed the old wording called `decode` with `raw`, which fails. A test checks every parameter the guidance names against the tools' input schemas. Found in the review of midnightntwrk/midnight-expert#280
+
 ### Tests & CI
 - The DUST test for a timeout during a reconnect wait times the CLI after it has started, measured once per run, instead of including Node's startup, which made it fail on slow macOS runners at just over its limit
 

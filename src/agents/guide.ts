@@ -43,14 +43,14 @@ ${END_MARKER}
 export const SKILL_NAME = "midnight-cast";
 
 // The Claude Code plugin's copy of the skill, whose tools are already connected.
-const IN_PLUGIN = `**In this plugin.** The plugin runs the midnight-cast MCP server, so call its tools instead of the shell. Each command above is a tool of the same name, with \`dust_event\`, \`dust_events\` and \`dust_status\` for the hyphenated ones; they take the same arguments and return the same envelope. For preprod and mainnet the user enters a Blockfrost project ID for each in the plugin's options (\`/plugin\`, then midnight-cast, then Configure options), or exports \`BLOCKFROST_PREPROD_PROJECT_ID\` or \`BLOCKFROST_MAINNET_PROJECT_ID\` before starting Claude Code.`;
+const IN_PLUGIN = `**In this plugin.** The plugin runs the midnight-cast MCP server, so call its tools instead of the shell. Each command above is a tool of the same name, with \`dust_event\`, \`dust_events\` and \`dust_status\` for the hyphenated ones. The tools take the same inputs as named parameters rather than flags (\`message\` for \`--raw\`, \`projectDir\` for \`--project-dir\`, \`address\` for \`--address\`, \`addresses\` for \`dust-status\`, \`hash\` for \`tx\`, \`id\` for \`dust-event\`, and \`network\`) and return the same envelope. For preprod and mainnet the user enters a Blockfrost project ID for each in the plugin's options (\`/plugin\`, then midnight-cast, then Configure options), or exports \`BLOCKFROST_PREPROD_PROJECT_ID\` or \`BLOCKFROST_MAINNET_PROJECT_ID\` before starting Claude Code.`;
 
 export function skillFile(forPlugin = false): string {
   return `---
 name: ${SKILL_NAME}
 description: Diagnose Midnight blockchain problems with the read-only midnight-cast CLI. Decodes Midnight errors (1010 rejections, Custom(N) ledger codes, pallet and JSON-RPC errors, toolkit and Blockfrost messages), checks network health and versions on preview, preprod and mainnet, and looks up transactions, contracts, DUST registration and DUST events. Use when a Midnight error, transaction, contract or network is involved.
 license: Apache-2.0
-compatibility: Needs Node.js 20 or later and network access; mainnet needs a Blockfrost project ID.
+compatibility: Needs Node.js 20 or later and network access; preprod and mainnet each need a Blockfrost project ID.
 ---
 
 # midnight-cast

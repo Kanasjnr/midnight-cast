@@ -76,6 +76,27 @@ describe("the Claude Code plugin", () => {
       }
     }
   });
+
+  it("names the parameters the MCP tools declare", () => {
+    const tools = json(join(evals, "mocks", "midnight-cast", "_tools.json")).tools as Array<{ name: string; inputSchema: { properties?: object } }>;
+    const commands = JSON.parse(execFileSync("node", ["dist/cli.js", "explain", "--json"], { encoding: "utf8" })).data.commands as Array<{
+      name: string;
+      options: Array<{ flags: string }>;
+    }>;
+    const toolFor = (command: string) => tools.find((t) => t.name === command.replace(/-/g, "_"));
+    const named = [...skillFile(true).matchAll(/`(\w+)` for `([^`]+)`/g)].map((m) => ({ parameter: m[1]!, cli: m[2]! }));
+    expect(named.length).toBeGreaterThan(5);
+    for (const { parameter, cli } of named) {
+      // Commands without a tool, such as matrix, share some flags with ones that have one.
+      const owners = (
+        cli.startsWith("--")
+          ? commands.filter((c) => c.options.some((o) => o.flags.split(" ")[0] === cli)).map((c) => toolFor(c.name))
+          : [toolFor(cli)]
+      ).filter((tool) => tool !== undefined);
+      expect(owners.length, cli).toBeGreaterThan(0);
+      for (const tool of owners) expect(tool.inputSchema.properties ?? {}, `${parameter} for ${cli}`).toHaveProperty(parameter);
+    }
+  });
 });
 
 describe("adding the snippet to a file", () => {
