@@ -51,14 +51,14 @@ interface GqlTransaction {
     status: string;
     segments?: TransactionSegment[];
   };
-  fees?: TransactionFees;
+  fee?: string;
   block: { height: number; hash: string };
   dustLedgerEvents: Array<{ id: number; __typename: string }>;
   zswapLedgerEvents: Array<{ id: number; __typename: string }>;
   contractActions: Array<{ __typename: string }>;
   identifiers?: string[];
-  startIndex?: number;
-  endIndex?: number;
+  zswapStartIndex?: number;
+  zswapEndIndex?: number;
 }
 
 const TX_QUERY = `
@@ -76,13 +76,10 @@ const TX_QUERY = `
             success
           }
         }
-        fees {
-          paidFees
-          estimatedFees
-        }
+        fee
         identifiers
-        startIndex
-        endIndex
+        zswapStartIndex
+        zswapEndIndex
       }
       block {
         height
@@ -122,7 +119,8 @@ function mapTransaction(tx: GqlTransaction): TransactionSummary {
     status: tx.transactionResult?.status,
     // The indexer returns null rather than an empty list when a transaction has no segment results.
     ...(tx.transactionResult?.segments ? { segments: tx.transactionResult.segments } : {}),
-    fees: tx.fees,
+    // The indexer deprecates estimatedFees for the fee paid, so it repeats that fee until schemaVersion 2.
+    ...(tx.fee != null ? { fees: { paidFees: tx.fee, estimatedFees: tx.fee } } : {}),
     dustLedgerEvents: tx.dustLedgerEvents.map((e) => ({
       id: e.id,
       typename: e.__typename,
@@ -135,8 +133,8 @@ function mapTransaction(tx: GqlTransaction): TransactionSummary {
       typename: a.__typename,
     })),
     identifiers: tx.identifiers,
-    startIndex: tx.startIndex,
-    endIndex: tx.endIndex,
+    startIndex: tx.zswapStartIndex,
+    endIndex: tx.zswapEndIndex,
   };
 }
 
@@ -180,9 +178,7 @@ export function formatTransactionHuman(tx: TransactionSummary): string {
   }
 
   if (tx.fees) {
-    lines.push(
-      `Fees:     paid=${tx.fees.paidFees} estimated=${tx.fees.estimatedFees}`,
-    );
+    lines.push(`Fees:     paid=${tx.fees.paidFees}`);
   }
 
   if (tx.segments?.length) {

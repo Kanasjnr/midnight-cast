@@ -379,7 +379,7 @@ Hash:     e5c86fcd43eb9707e8f23d940e59a6c12ca7ad3ca7e9d2f1232843cc62de1b8c
 Block:    909000 (428660a6154a27cee57af3527cb3370ad3bbce94f461f433533b1413e24b71f4)
 Protocol: 22000
 Status:   PARTIAL_SUCCESS
-Fees:     paid=1 estimated=1
+Fees:     paid=1
 Segments: 0:ok, 20003:ok, 35012:fail
 Failure:  indexer v4 exposes segment success only (no failure reason)
 Hint:     paste wallet/node error → midnight-cast decode --raw "<error>"

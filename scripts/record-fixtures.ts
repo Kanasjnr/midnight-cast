@@ -28,7 +28,7 @@ import { networkProjectIdEnv, takeProjectId } from "../src/lib/blockfrost.js";
 import { sanitizeForOutput } from "../src/lib/sanitize.js";
 import { BUILTIN_NETWORKS } from "../src/networks.js";
 import type { EmitResult } from "../src/output.js";
-import { compareShapes, dustExchanges, recordingFetch, type Exchange, type FixtureFile } from "./fixtures.js";
+import { compareShapes, deprecatedUses, dustExchanges, indexerDocuments, recordingFetch, type Exchange, type FixtureFile } from "./fixtures.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 export const FIXTURE_NETWORKS = ["preview", "preprod", "mainnet"] as const;
@@ -312,13 +312,22 @@ async function main(): Promise<number> {
     const drift = all.filter((d) => d.change !== "unavailable");
     const committedSchema = readFileSync(join(dir, "indexer-schema.graphql"), "utf8");
     const schemaChanged = committedSchema !== schema;
-    console.log(`${network}: ${drift.length || schemaChanged ? "schema drift" : "responses and indexer schema match the fixtures"}`);
+    // A field midnight-cast still asks for that the indexer deprecates will be removed some day.
+    const deprecated = deprecatedUses(schema, indexerDocuments(fixture.exchanges));
+    const summary =
+      drift.length || schemaChanged
+        ? "schema drift"
+        : deprecated.length
+          ? "asks for fields the indexer deprecates"
+          : "responses and indexer schema match the fixtures";
+    console.log(`${network}: ${summary}`);
     for (const d of [...drift, ...outages]) {
       console.log(`  ${d.change}: ${d.key}${d.recorded ? `\n    recorded ${d.recorded}\n    live     ${d.live}` : ""}`);
     }
+    for (const message of deprecated) console.log(`  deprecated: ${message}`);
     if (schemaChanged) console.log("  indexer GraphQL schema changed; run npm run fixtures and review the diff");
     if (unverified.length) console.log(`  not compared this run (null or empty on one side): ${unverified.join("; ")}`);
-    drifted ||= drift.length > 0 || schemaChanged;
+    drifted ||= drift.length > 0 || schemaChanged || deprecated.length > 0;
     incomplete ||= outages.length > 0;
   }
   if (drifted) return 1;

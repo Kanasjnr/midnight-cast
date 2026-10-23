@@ -5,9 +5,13 @@
 ### Agents
 - The skill says preprod needs a Blockfrost project ID as well as mainnet, and the Claude Code plugin's copy names the parameters the MCP tools take (`message` for `--raw`, `projectDir` for `--project-dir`, and so on) instead of saying they take the CLI's arguments. An agent that followed the old wording called `decode` with `raw`, which fails. A test checks every parameter the guidance names against the tools' input schemas. Found in the review of midnightntwrk/midnight-expert#280
 
+### Changes
+- `tx` asks the indexer for `fee`, `zswapStartIndex` and `zswapEndIndex` instead of `fees`, `startIndex` and `endIndex`, which the v4 schema deprecates on all three networks, so it keeps working when they're removed. The JSON keeps its shape, but `fees.estimatedFees`, which the indexer deprecates in favour of the fee paid, now repeats `fees.paidFees` instead of the indexer's estimate, and is marked deprecated in `schemas/tx.schema.json`; it will be removed in `schemaVersion` 2. The human output shows only the fee paid. Found in the review of midnightntwrk/midnight-expert#280
+
 ### Tests & CI
 - The DUST test for a timeout during a reconnect wait times the CLI after it has started, measured once per run, instead of including Node's startup, which made it fail on slow macOS runners at just over its limit
 - The container smokes build their Alpine and Debian images from AWS's mirror of Docker's official images and, when that fails, from Google's (`mirror.gcr.io`). AWS's mirror rate-limited the runner three times running on 23 October, which failed the Linux binary job. `npm run smoke:images` builds them, and the smoke Dockerfiles take the registry as a build argument
+- The unit tests and `npm run fixtures -- --check` report any indexer field midnight-cast asks for that the recorded or live schema marks deprecated, with the indexer's reason, and the check counts it as drift, so a deprecation shows up before the field is removed. Both cover every query and both subscriptions, including the unshielded one `preflight` uses, which wasn't checked against the schema before. The fixtures are re-recorded with the new `tx` query. Blockfrost's preprod and mainnet indexer schemas have since gained `protocolVersion` on the wallet subscriptions' progress types, and now document that `UnshieldedUtxo.registeredForDustGeneration`, which `preflight` reads, follows the current DUST epoch, so a ledger 8 to 9 fork turns it false for the UTXOs it strands. No field midnight-cast uses was removed or changed type
 
 ## 0.2.0 (10 October 2026)
 
