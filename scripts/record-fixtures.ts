@@ -220,8 +220,9 @@ async function recordDust(indexerWs: string, fromId: number): Promise<FixtureFil
 
 // Midnight indexers cap query depth at 15, and the standard introspection query nests
 // type references eight deep. Six levels still covers types such as [[T!]!]!.
-function introspectionQuery(typeRefDepth = 6): string {
-  const standard = getIntrospectionQuery();
+// Deprecated arguments and input fields are included, so the deprecation check sees them.
+export function introspectionQuery(typeRefDepth = 6): string {
+  const standard = getIntrospectionQuery({ inputValueDeprecation: true });
   const typeRef =
     "fragment TypeRef on __Type { kind name " + "ofType { kind name ".repeat(typeRefDepth) + "}".repeat(typeRefDepth) + " }";
   return standard.slice(0, standard.indexOf("fragment TypeRef")) + typeRef;
