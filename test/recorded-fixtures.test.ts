@@ -6,7 +6,6 @@ import { join } from "node:path";
 import { buildSchema, parse, validate } from "graphql";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { WebSocketServer } from "ws";
-import { DUST_SUBSCRIPTION } from "../src/clients/indexer.js";
 import { blockAtHeightCommand, blockLatestCommand } from "../src/commands/block.js";
 import { dustEventCommand, dustEventsCommand } from "../src/commands/dust.js";
 import { healthCommand } from "../src/commands/health.js";
@@ -23,7 +22,7 @@ import {
   deprecatedUses,
   dustExchanges,
   exchangeKey,
-  indexerQuery,
+  indexerDocuments,
   recordingFetch,
   replayFetch,
   shapeOf,
@@ -113,6 +112,12 @@ for (const network of FIXTURE_NETWORKS) {
       expectValid("tx", tx);
       expect((tx.data as { hash: string }).hash).toBe(inputs.txHash);
       expect(tx.next?.map((s) => s.command)).toContain(`midnight-cast dust-event ${inputs.dustEventId} ${network}`);
+      const recorded = JSON.parse(fixture.exchanges.find((e) => e.key.includes("TransactionLookup"))!.body).data.transactions[0];
+      expect(tx.data).toMatchObject({
+        fees: { paidFees: recorded.fee, estimatedFees: recorded.fee },
+        startIndex: recorded.zswapStartIndex,
+        endIndex: recorded.zswapEndIndex,
+      });
     });
 
     it("read the recorded DUST subscription", async () => {
@@ -136,13 +141,11 @@ for (const network of FIXTURE_NETWORKS) {
     it("send only queries the indexer's schema accepts, without deprecated fields", () => {
       const schemaText = readFileSync(join(fixtureDir(network), "indexer-schema.graphql"), "utf8");
       const schema = buildSchema(schemaText);
-      const queries = fixture.exchanges
-        .filter((e) => e.key.startsWith("indexer "))
-        .map((e) => indexerQuery(e.key));
-      for (const query of [...queries, DUST_SUBSCRIPTION]) {
-        expect(validate(schema, parse(query)).map((e) => e.message), query).toEqual([]);
+      const documents = indexerDocuments(fixture.exchanges);
+      for (const document of documents) {
+        expect(validate(schema, parse(document)).map((e) => e.message), document).toEqual([]);
       }
-      expect(deprecatedUses(schemaText, [...queries, DUST_SUBSCRIPTION])).toEqual([]);
+      expect(deprecatedUses(schemaText, documents)).toEqual([]);
     });
   });
 }
