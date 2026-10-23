@@ -1,6 +1,8 @@
 // Recorded RPC, indexer and proof-server responses: how requests are keyed,
 // replayed and compared by shape.
 
+import { NoDeprecatedCustomRule, buildSchema, parse, validate } from "graphql";
+
 export interface Exchange {
   key: string;
   status: number;
@@ -188,6 +190,13 @@ export function compareShapes(recorded: Exchange[], live: Exchange[]): ShapeComp
     if (!recordedKeys.has(requestKind(after.key))) drift.push({ key: after.key, change: "new" });
   }
   return { drift, unverified };
+}
+
+/** What the queries use that the schema marks deprecated, with the schema's reason, once each. */
+export function deprecatedUses(schemaText: string, queries: string[]): string[] {
+  const schema = buildSchema(schemaText);
+  const messages = queries.flatMap((query) => validate(schema, parse(query), [NoDeprecatedCustomRule]).map((e) => e.message));
+  return [...new Set(messages)];
 }
 
 /** DUST subscription payloads as exchanges, so they're compared like any response. */

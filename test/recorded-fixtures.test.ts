@@ -20,6 +20,7 @@ import { BUILTIN_NETWORKS } from "../src/networks.js";
 import { toEnvelope, type EmitResult } from "../src/output.js";
 import {
   compareShapes,
+  deprecatedUses,
   dustExchanges,
   exchangeKey,
   indexerQuery,
@@ -132,14 +133,16 @@ for (const network of FIXTURE_NETWORKS) {
       }
     });
 
-    it("send only queries the indexer's schema accepts", () => {
-      const schema = buildSchema(readFileSync(join(fixtureDir(network), "indexer-schema.graphql"), "utf8"));
+    it("send only queries the indexer's schema accepts, without deprecated fields", () => {
+      const schemaText = readFileSync(join(fixtureDir(network), "indexer-schema.graphql"), "utf8");
+      const schema = buildSchema(schemaText);
       const queries = fixture.exchanges
         .filter((e) => e.key.startsWith("indexer "))
         .map((e) => indexerQuery(e.key));
       for (const query of [...queries, DUST_SUBSCRIPTION]) {
         expect(validate(schema, parse(query)).map((e) => e.message), query).toEqual([]);
       }
+      expect(deprecatedUses(schemaText, [...queries, DUST_SUBSCRIPTION])).toEqual([]);
     });
   });
 }
