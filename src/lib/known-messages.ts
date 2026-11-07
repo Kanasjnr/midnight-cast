@@ -18,9 +18,9 @@ interface Pattern {
   describe: (match: RegExpMatchArray, network?: string) => KnownMessage | undefined;
 }
 
-// Networks the advice speaks about: the public ones, and any other network a user's matrix override gives a row.
+// The public networks the general advice speaks about; a network named with --network may also come from a user's override.
 const PUBLIC_NETWORKS = ["preview", "preprod", "mainnet"];
-const matrixNetworks = (matrix: Record<string, unknown>) => [...PUBLIC_NETWORKS.filter((name) => name in matrix), ...Object.keys(matrix).filter((name) => !PUBLIC_NETWORKS.includes(name))];
+const publicNetworks = (matrix: Record<string, unknown>) => PUBLIC_NETWORKS.filter((name) => name in matrix);
 
 function names(networks: string[]): string {
   const titled = networks.map(title);
@@ -38,11 +38,14 @@ const ledgerMajor = (ledger: string | undefined) => {
 /** Each version with the networks that run it, so networks that differ aren't given one network's version. */
 function byVersion(networks: string[], versionOf: (network: string) => string | undefined): string {
   const groups = new Map<string, string[]>();
+  const unknown: string[] = [];
   for (const network of networks) {
     const version = versionOf(network);
     if (version) groups.set(version, [...(groups.get(version) ?? []), network]);
+    else unknown.push(network);
   }
-  return [...groups].map(([version, on]) => `${version} or later, which ${runs(on)}`).join("; ");
+  const known = [...groups].map(([version, on]) => `${version} or later, which ${runs(on)}`).join("; ");
+  return known && unknown.length ? `${known} (the support matrix gives no version for ${names(unknown)})` : known;
 }
 
 function compactRuntimePin(packages: Record<string, string> | undefined): string | undefined {
@@ -57,7 +60,7 @@ const PATTERNS: Pattern[] = [
       const spec = Number(match[1] ?? match[2]);
       const fromIndexer = match[2] !== undefined;
       const matrix = loadSupportMatrix().networks;
-      const on = matrixNetworks(matrix).filter((network) => matrix[network]?.runtimeSpec === spec);
+      const on = publicNetworks(matrix).filter((network) => matrix[network]?.runtimeSpec === spec);
       const component = fromIndexer ? "indexer" : "node and toolkit";
       const versions = byVersion(on, (network) => (fromIndexer ? matrix[network]?.indexer : (matrix[network]?.minNode ?? matrix[network]?.node)));
       const reader = fromIndexer ? "indexer" : "tool reading the chain";
@@ -131,15 +134,14 @@ const PATTERNS: Pattern[] = [
     }),
   },
   {
-    test: /--feature-zkir-v3|\bZKIR 3\.1\b|ContractModuleProvider|ModuleThunk|declaredInterfaces|circuitSignatures|\bledger-v9\b|compact-runtime["']?\s*[:@]?\s*["']?[\^~]?((?:0\.[2-9]\d|[1-9]\d*\.\d+)\.\d+)/i,
-    describe: (match, network) => {
-      const runtimeInMessage = match[1];
+    test: /--feature-zkir-v3|\bZKIR 3\.1\b|ContractModuleProvider|ModuleThunk|declaredInterfaces|circuitSignatures|\bledger-v9\b|compact-runtime["']?\s*[:@]?\s*["']?[\^~]?(?:0\.[2-9]\d|[1-9]\d*\.\d+)\./i,
+    describe: (_match, network) => {
       const matrix = loadSupportMatrix().networks;
       const pin = (name: string) => {
         const version = compactRuntimePin(matrix[name]?.packages);
         return version ? ` to ${version}` : "";
       };
-      const known = matrixNetworks(matrix).filter((name) => ledgerMajor(matrix[name]?.ledger) !== undefined);
+      const known = publicNetworks(matrix).filter((name) => ledgerMajor(matrix[name]?.ledger) !== undefined);
       const onNine = known.filter((name) => ledgerMajor(matrix[name]?.ledger)! >= 9);
       const onEight = known.filter((name) => !onNine.includes(name));
       const message = (description: string, fix: string): KnownMessage => ({
@@ -149,20 +151,10 @@ const PATTERNS: Pattern[] = [
         fix,
         next: [{ command: "midnight-cast versions <network>", reason: "Which ledger and versions the network runs" }],
       });
-      if (network && known.includes(network)) {
-        if (onNine.includes(network)) {
-          const pinned = compactRuntimePin(matrix[network]?.packages);
-          const minor = (version: string) => version.split(".").slice(0, 2).join(".");
-          // A Ledger 9 build is right here, unless it names a different Compact runtime than the network pins.
-          if (runtimeInMessage && pinned && minor(runtimeInMessage) !== minor(pinned)) {
-            return message(
-              `${title(network)} runs Ledger 9 (ledger ${matrix[network]!.ledger}), but pins Compact runtime ${pinned}, and this names ${runtimeInMessage}.`,
-              `Pin the Compact runtime to ${pinned}, as the support matrix lists for ${title(network)}, and rebuild with the Compact toolchain that matches it.`,
-            );
-          }
-          // Otherwise these are the normal packages on this network, so the real error is something else.
-          return undefined;
-        }
+      if (network && ledgerMajor(matrix[network]?.ledger) !== undefined) {
+        // These are the normal packages on a Ledger 9 network, so the real error is something else.
+        // Whether the project's pins match the network is what versions --project-dir checks.
+        if (ledgerMajor(matrix[network]?.ledger)! >= 9) return undefined;
         return message(
           `${title(network)} still runs Ledger 8 (ledger ${matrix[network]!.ledger}), so a contract built for Ledger 9 doesn't run there.`,
           `For ${title(network)}, run compact update 0.31 and pin the Compact runtime${pin(network)} from the support matrix, then rebuild.`,

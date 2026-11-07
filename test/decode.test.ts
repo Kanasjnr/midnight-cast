@@ -87,15 +87,24 @@ describe("decodeCommand", () => {
       const unparsable = JSON.parse(readFileSync(join(dir, "midnight-cast", "support-matrix.json"), "utf8"));
       unparsable.networks.mainnet = { ...row, node: "2.1.300", runtimeSpec: 2001100, ledger: "v9" };
       writeFileSync(join(dir, "midnight-cast", "support-matrix.json"), JSON.stringify(unparsable));
+      unparsable.networks.local = { ...row, node: "1.0.0", runtimeSpec: 2001100, ledger: "8.0.0" };
+      unparsable.networks.preview.minNode = undefined;
+      unparsable.networks.preview.node = undefined;
+      writeFileSync(join(dir, "midnight-cast", "support-matrix.json"), JSON.stringify(unparsable));
       const runtime = decodeCommand([], { json: true, raw: "UnsupportedBlockVersion(2001100)" });
       expect((runtime.data as { decodings: Array<{ fix: string }> }).decodings[0]!.fix).toBe(
-        "Upgrade the node and toolkit to 2.1.101 or later, which Preview runs; 2.1.300 or later, which Mainnet runs on this runtime.",
+        "Upgrade the node and toolkit to 2.1.300 or later, which Mainnet runs (the support matrix gives no version for Preview) on this runtime.",
       );
       const compact = decodeCommand([], { json: true, raw: "ContractModuleProvider", network: "preview" });
       const [message] = (compact.data as { decodings: Array<{ description: string; fix: string }> }).decodings;
       expect(message!.description).toContain("The support matrix doesn't say which ledger Preview runs.");
       expect(message!.description).not.toContain("undefined");
       expect(message!.fix).toMatch(/^Check it with midnight-cast versions preview before changing the Compact toolchain/);
+      // A row the override adds for local doesn't change the advice about the public networks, but is used when named.
+      const general = decodeCommand([], { json: true, raw: "ContractModuleProvider" });
+      expect(JSON.stringify(general.data)).not.toContain("Local");
+      const named = decodeCommand([], { json: true, raw: "ContractModuleProvider", network: "local" });
+      expect((named.data as { decodings: Array<{ description: string }> }).decodings[0]!.description).toContain("Local still runs Ledger 8");
       const mainnet = decodeCommand([], { json: true, raw: "ContractModuleProvider", network: "mainnet" });
       expect((mainnet.data as { decodings: Array<{ description: string }> }).decodings[0]!.description).toContain(
         "The support matrix doesn't say which ledger Mainnet runs.",

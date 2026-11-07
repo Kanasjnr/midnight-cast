@@ -167,13 +167,18 @@ async function fetchText(url: string, attempts = 3): Promise<string | undefined>
   }
 }
 
-async function fetchNodeTable(release: NodeRelease): Promise<CodeTable> {
+/** undefined when the release publishes none of the files the table can live in, as before its source is public. */
+async function fetchNodeTable(release: NodeRelease): Promise<CodeTable | undefined> {
+  let fileWithoutTable: string | undefined;
   for (const path of codeTablePaths(release.ledger)) {
     const source = await fetchText(`${NODE_RAW}/${release.tag}/${path}`);
     if (source === undefined) continue;
-    return requireCodeTable(source, `${release.tag}/${path}`);
+    const table = parseCodeTable(source);
+    if (table.size) return table;
+    fileWithoutTable ??= `${release.tag}/${path}`;
   }
-  throw new Error(`No ledger error table found in midnight-node ${release.tag}`);
+  if (fileWithoutTable) throw new Error(`${fileWithoutTable} has no ledger error table, nor does any later path; the parser needs updating`);
+  return undefined;
 }
 
 async function main(): Promise<number> {
@@ -182,15 +187,13 @@ async function main(): Promise<number> {
   const ours = map.codes;
   const { reference, others } = deployedNodeReleases(matrix, map.ledger);
   const [node, expertText, ...otherTables] = await Promise.all([
-    fetchNodeTable(reference),
+    fetchNodeTable(reference).then((table) => {
+      if (!table) throw new Error(`No ledger error table found in midnight-node ${reference.tag}`);
+      return table;
+    }),
     fetchText(MIDNIGHT_EXPERT_CODES),
     // A release that isn't public yet, such as one still under embargo, can't be compared, but it doesn't make the map wrong.
-    ...others.map((release) =>
-      fetchNodeTable(release).catch((err: unknown) => {
-        if (err instanceof Error && err.message.startsWith("No ledger error table found")) return undefined;
-        throw err;
-      }),
-    ),
+    ...others.map(fetchNodeTable),
   ]);
   if (!expertText) throw new Error("Midnight Expert catalog not found at the pinned ref");
   const report = compare(ours, node, JSON.parse(expertText).entries, reference.tag);

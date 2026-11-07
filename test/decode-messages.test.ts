@@ -78,14 +78,8 @@ describe("decode --raw recognises messages from current tooling", () => {
     const raw = '"@midnight-ntwrk/compact-runtime": "^0.21.0"';
     // On preview and mainnet these are the normal packages, so decode doesn't claim the message.
     for (const network of ["preview", "mainnet"]) expect(decodeRaw(raw, network).decodings, network).toEqual([]);
-    // Unless the message names a different Compact runtime than the network pins.
-    expect(decodeRaw('"@midnight-ntwrk/compact-runtime": "^0.20.0"', "preview").decodings).toEqual([
-      expect.objectContaining({
-        id: "compact-ledger-9",
-        description: expect.stringContaining("pins Compact runtime 0.21.0, and this names 0.20.0"),
-        fix: expect.stringContaining("Pin the Compact runtime to 0.21.0"),
-      }),
-    ]);
+    // Whatever Compact runtime it names: checking a project's pins against the network is versions --project-dir's job.
+    expect(decodeRaw('"@midnight-ntwrk/compact-runtime": "^0.20.0" and @midnight-ntwrk/ledger-v9', "preview").decodings).toEqual([]);
     expect(decodeRaw("Error: proof failed at node_modules/@midnight-ntwrk/ledger-v9/dist/index.js:12", "preview").ok).toBe(false);
     const [preprod] = decodeRaw(raw, "preprod").decodings;
     expect(preprod).toMatchObject({ description: expect.stringContaining("still runs Ledger 8"), fix: expect.stringContaining("compact update 0.31") });
@@ -104,6 +98,7 @@ describe("decode --raw recognises messages from current tooling", () => {
     }
     expect(decodeRaw('"@midnight-ntwrk/compact-runtime": "0.16.0"', "preprod").ok).toBe(false);
     expect(decodeRaw("compact-runtime 0.16.0", "preprod").ok).toBe(false);
+    expect(decodeRaw('"@midnight-ntwrk/compact-runtime": "0.20.x"', "preprod").decodings).toEqual([expect.objectContaining({ id: "compact-ledger-9" })]);
   });
 
   it("tells the indexer, not the node, to upgrade when the indexer reports the runtime", () => {
