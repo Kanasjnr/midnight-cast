@@ -12,6 +12,9 @@
 ### Fixes
 - The published support matrix is read from each entry's `version`, falling back to its tag. The on-chain runtime's tag is now `ledger-9.1.0.0`, which was read as 1.0.0, and the Compact runtime has no tag at all, so it wasn't read
 
+### Tests & CI
+- The recorded responses and indexer schemas are re-recorded for all three networks after Ledger 9. Preview was reset with the upgrade, so it has a fresh transaction, block, DUST event and, for the first time, a contract. The schemas gain a `BlockReference` type and `stateAt` fields, and preprod's Blockfrost indexer now has the same schema as mainnet's. No field midnight-cast uses was removed or deprecated
+
 ## 0.2.1 (23 October 2026)
 
 A patch release. `tx` stops asking the indexer for fields it deprecates, the agent skill gets preprod's Blockfrost project ID and the MCP tools' parameter names right, and releases publish to npm through trusted publishing. Nothing breaks: the JSON stays at `schemaVersion` 1, and `tx` keeps its shape.
