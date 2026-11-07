@@ -81,6 +81,12 @@ describe("decode --raw recognises messages from current tooling", () => {
     // Whatever Compact runtime it names: checking a project's pins against the network is versions --project-dir's job.
     expect(decodeRaw('"@midnight-ntwrk/compact-runtime": "^0.20.0" and @midnight-ntwrk/ledger-v9', "preview").decodings).toEqual([]);
     expect(decodeRaw("Error: proof failed at node_modules/@midnight-ntwrk/ledger-v9/dist/index.js:12", "preview").ok).toBe(false);
+    // A paste that is only a marker says it's normal there, rather than failing as an unknown ledger name.
+    for (const marker of ["ContractModuleProvider", "--feature-zkir-v3"]) {
+      const result = decodeCommand([], { json: true, raw: marker, network: "preview" });
+      expect(result.ok, marker).toBe(false);
+      expect(result.error, marker).toContain("normal on Preview: it runs Ledger 9");
+    }
     const [preprod] = decodeRaw(raw, "preprod").decodings;
     expect(preprod).toMatchObject({ description: expect.stringContaining("still runs Ledger 8"), fix: expect.stringContaining("compact update 0.31") });
     expect(preprod!.fix).toContain("0.16.0");
@@ -99,6 +105,30 @@ describe("decode --raw recognises messages from current tooling", () => {
     expect(decodeRaw('"@midnight-ntwrk/compact-runtime": "0.16.0"', "preprod").ok).toBe(false);
     expect(decodeRaw("compact-runtime 0.16.0", "preprod").ok).toBe(false);
     expect(decodeRaw('"@midnight-ntwrk/compact-runtime": "0.20.x"', "preprod").decodings).toEqual([expect.objectContaining({ id: "compact-ledger-9" })]);
+  });
+
+  it("gives each network its own version when they differ", async () => {
+    const { mkdirSync, mkdtempSync, rmSync, writeFileSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+    const dir = mkdtempSync(join(tmpdir(), "midnight-cast-decode-"));
+    const previous = process.env.XDG_CONFIG_HOME;
+    try {
+      mkdirSync(join(dir, "midnight-cast"), { recursive: true });
+      const row = { node: "2.1.101", runtimeSpec: 2001100, ledger: "9.1.0.0", indexerApi: "v4", proofServer: "9.0.0", onChainRuntime: "4.0.0" };
+      writeFileSync(
+        join(dir, "midnight-cast", "support-matrix.json"),
+        JSON.stringify({ docUrl: "x", updated: "2026-11", networks: { preview: { ...row, indexer: "4.4.200" }, mainnet: { ...row, indexer: "4.4.101" } } }),
+      );
+      process.env.XDG_CONFIG_HOME = dir;
+      expect(decodeRaw("Unsupported node version 2001100").decodings[0]).toMatchObject({
+        fix: "Upgrade the indexer to the version the network runs on this runtime: 4.4.200 or later for Preview, 4.4.101 or later for Mainnet.",
+      });
+    } finally {
+      if (previous === undefined) delete process.env.XDG_CONFIG_HOME;
+      else process.env.XDG_CONFIG_HOME = previous;
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it("tells the indexer, not the node, to upgrade when the indexer reports the runtime", () => {

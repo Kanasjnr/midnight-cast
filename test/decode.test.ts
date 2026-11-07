@@ -93,7 +93,7 @@ describe("decodeCommand", () => {
       writeFileSync(join(dir, "midnight-cast", "support-matrix.json"), JSON.stringify(unparsable));
       const runtime = decodeCommand([], { json: true, raw: "UnsupportedBlockVersion(2001100)" });
       expect((runtime.data as { decodings: Array<{ fix: string }> }).decodings[0]!.fix).toBe(
-        "Upgrade the node and toolkit to 2.1.300 or later, which Mainnet runs (the support matrix gives no version for Preview) on this runtime.",
+        "Upgrade the node and toolkit to 2.1.300 or later, which Mainnet runs on this runtime. The support matrix gives no version for Preview.",
       );
       const compact = decodeCommand([], { json: true, raw: "ContractModuleProvider", network: "preview" });
       const [message] = (compact.data as { decodings: Array<{ description: string; fix: string }> }).decodings;

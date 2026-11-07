@@ -141,7 +141,10 @@ export function deployedNodeReleases(
   }
   const releases = [...byTag.values()];
   const reference =
-    releases.find((r) => mapLedger !== undefined && r.ledger === mapLedger) ?? releases.find((r) => r.networks.includes(REFERENCE_NETWORK));
+    // Among the releases on the map's ledger, mainnet's still comes first.
+    releases.find((r) => r.ledger === mapLedger && r.networks.includes(REFERENCE_NETWORK)) ??
+    releases.find((r) => mapLedger !== undefined && r.ledger === mapLedger) ??
+    releases.find((r) => r.networks.includes(REFERENCE_NETWORK));
   if (!reference) throw new Error(`The support matrix has no ${REFERENCE_NETWORK} entry`);
   return { reference, others: [...byTag.values()].filter((r) => r !== reference) };
 }

@@ -147,6 +147,10 @@ describe("live-check tag and matrix parsing", () => {
     expect(parseUpstreamMatrix(entry({ tag: "ledger-9.1.0.0", containerTag: "ledger-9.1.0.1" }), "mainnet").notes).toEqual([
       "onChainRuntime: upstream tag 9.1.0.0 but containerTag 9.1.0.1",
     ]);
+    // Without a tag, the container is compared with the version.
+    expect(parseUpstreamMatrix(entry({ version: "4.0.0", containerTag: "onchain-runtime-3.9.0" }), "mainnet").notes).toEqual([
+      "onChainRuntime: upstream version 4.0.0 but containerTag 3.9.0",
+    ]);
   });
 
   it("parses one network from the upstream matrix and ignores unmapped components", () => {

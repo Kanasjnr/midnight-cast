@@ -4,7 +4,7 @@ import {
   findLedgerCodesByName,
   parseRawErrorMessage,
 } from "../lib/error-parse.js";
-import { matchKnownMessages, type KnownMessage } from "../lib/known-messages.js";
+import { matchKnownMessages, normalOnNetwork, type KnownMessage } from "../lib/known-messages.js";
 import { loadSupportMatrix } from "../lib/versions.js";
 import { NETWORK_NAMES } from "../networks.js";
 import type { EmitResult, GlobalOptions, NextStep } from "../output.js";
@@ -472,7 +472,10 @@ function decodeRaw(raw: string, options: DecodeOptions): EmitResult {
 
   if (parts.length === 0) {
     return fail(
-      otherErrorRouterHint(raw) ??
+      // Text that is only a Ledger 9 marker is answered as such; in a longer error, the real error is routed first.
+      (/^\S+$/.test(raw.trim()) ? normalOnNetwork(raw, options.network) : undefined) ??
+        otherErrorRouterHint(raw) ??
+        normalOnNetwork(raw, options.network) ??
         failures[0] ??
         "No Midnight error recognised in this message. decode reads 1010 rejections, Custom(N) ledger codes, " +
           "pallet errors (DispatchError::Module), JSON-RPC codes and known tooling messages, or a bare code such as 170",
