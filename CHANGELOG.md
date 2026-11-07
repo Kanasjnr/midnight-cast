@@ -5,6 +5,10 @@
 ### Support matrix
 - Preview and mainnet run Ledger 9: node 2.1.101 (minimum and recommended), runtime spec 2001100, ledger 9.1.0.0, indexer 4.4.101, proof server 9.0.0 and on-chain runtime 4.0.0, with project pins from Midnight's examples on Ledger 9 (`ledger-v9` 1.0.0, `compact-runtime` 0.21.0, `onchain-runtime-v4` 4.0.0, Midnight.js 5.0.0). Preprod stays on Ledger 8. `versions`, `health` and the live check no longer report a runtime spec and proof server mismatch on the upgraded networks. With `--network preview` or `mainnet`, `decode` now warns that its error map is ledger 8.1.3's until it has one for Ledger 9
 
+### Decode
+- The message for Compact 0.35+ and Compact runtime 0.20+ output follows each network's ledger in the support matrix. It said Ledger 9 wasn't deployed anywhere and told everyone to run `compact update 0.31`, which on preview and mainnet would downgrade the right toolchain. Now `--network preview` or `mainnet` says a Ledger 9 build is right and to pin that network's Compact runtime, `--network preprod` keeps the advice to run `compact update 0.31`, and without `--network` it says which networks run which ledger. Compact runtime 0.21 is recognised too
+- `UnsupportedBlockVersion(N)` names the networks that run runtime spec N and the node they run, from the support matrix, instead of assuming every network runs 1000300. For 2001100 it says preview and mainnet run it and to upgrade to node 2.1.101 or later
+
 ### Fixes
 - The published support matrix is read from each entry's `version`, falling back to its tag. The on-chain runtime's tag is now `ledger-9.1.0.0`, which was read as 1.0.0, and the Compact runtime has no tag at all, so it wasn't read
 
