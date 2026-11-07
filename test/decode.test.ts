@@ -65,6 +65,40 @@ describe("decodeCommand", () => {
     }
   });
 
+  it("uses the minimum node, and doesn't guess Ledger 8 for a network the matrix gives no ledger", () => {
+    const dir = mkdtempSync(join(tmpdir(), "midnight-cast-decode-"));
+    const previous = process.env.XDG_CONFIG_HOME;
+    try {
+      mkdirSync(join(dir, "midnight-cast"), { recursive: true });
+      const row = { indexer: "4.4.101", indexerApi: "v4", proofServer: "9.0.0", onChainRuntime: "4.0.0" };
+      writeFileSync(
+        join(dir, "midnight-cast", "support-matrix.json"),
+        JSON.stringify({
+          docUrl: "https://example.com",
+          updated: "2026-11",
+          networks: {
+            preview: { ...row, node: "2.1.200", minNode: "2.1.101", runtimeSpec: 2001100 },
+            preprod: { ...row, node: "1.0.400", runtimeSpec: 1000300, ledger: "8.1.3" },
+          },
+        }),
+      );
+      process.env.XDG_CONFIG_HOME = dir;
+      const runtime = decodeCommand([], { json: true, raw: "UnsupportedBlockVersion(2001100)" });
+      expect((runtime.data as { decodings: Array<{ fix: string }> }).decodings[0]!.fix).toBe(
+        "Upgrade the node and toolkit to 2.1.101 or later, which Preview runs on this runtime.",
+      );
+      const compact = decodeCommand([], { json: true, raw: "ContractModuleProvider", network: "preview" });
+      const [message] = (compact.data as { decodings: Array<{ description: string; fix: string }> }).decodings;
+      expect(message!.description).toContain("The support matrix doesn't say which ledger Preview runs.");
+      expect(message!.description).not.toContain("undefined");
+      expect(message!.fix).toMatch(/^Check it with midnight-cast versions preview before changing the Compact toolchain/);
+    } finally {
+      if (previous === undefined) delete process.env.XDG_CONFIG_HOME;
+      else process.env.XDG_CONFIG_HOME = previous;
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("decodes system transaction code 211 (added in ledger 8.1)", () => {
     const result = decodeCommand(["211"], { json: true });
     expect(result.ok).toBe(true);

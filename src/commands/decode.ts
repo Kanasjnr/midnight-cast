@@ -179,7 +179,11 @@ function ledgerMapMeta(options: DecodeOptions, data: ErrorCodesFile): string | u
   }
 
   if (data.ledger) {
-    return `Map:    ledger ${data.ledger} (preprod/mainnet default, updated ${data.updated})`;
+    const networks = Object.entries(loadSupportMatrix().networks)
+      .filter(([name, row]) => row.ledger === data.ledger && name !== "local")
+      .map(([name]) => name);
+    const on = networks.length ? `the ledger ${networks.join(" and ")} ${networks.length > 1 ? "run" : "runs"}` : "no public network's ledger";
+    return `Map:    ledger ${data.ledger} (${on}; updated ${data.updated}; pass --network to check yours)`;
   }
 
   return undefined;

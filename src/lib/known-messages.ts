@@ -14,7 +14,8 @@ export interface KnownMessage {
 
 interface Pattern {
   test: RegExp;
-  describe: (match: RegExpMatchArray, network?: string) => KnownMessage;
+  /** undefined when the text matches but isn't a problem on this network. */
+  describe: (match: RegExpMatchArray, network?: string) => KnownMessage | undefined;
 }
 
 const PUBLIC_NETWORKS = ["preview", "preprod", "mainnet"];
@@ -28,24 +29,33 @@ function names(networks: string[]): string {
 
 const runs = (networks: string[]) => `${names(networks)} ${networks.length > 1 ? "run" : "runs"}`;
 
-const ledgerMajor = (ledger: string | undefined) => Number(ledger?.split(".")[0] ?? 0);
+/** The ledger's major version, or undefined when the matrix doesn't say. */
+const ledgerMajor = (ledger: string | undefined) => (ledger ? Number(ledger.split(".")[0]) : undefined);
+
+function compactRuntimePin(packages: Record<string, string> | undefined): string | undefined {
+  const name = Object.keys(packages ?? {}).find((key) => key.endsWith("/compact-runtime"));
+  return name ? packages![name] : undefined;
+}
 
 const PATTERNS: Pattern[] = [
   {
     test: /UnsupportedBlockVersion\((\d+)\)|unsupported node version (\d+)/i,
     describe: (match) => {
       const spec = Number(match[1] ?? match[2]);
+      const fromIndexer = match[2] !== undefined;
       const matrix = loadSupportMatrix().networks;
       const on = PUBLIC_NETWORKS.filter((network) => matrix[network]?.runtimeSpec === spec);
-      const node = on.length ? matrix[on[0]!]!.node : undefined;
+      const row = on.length ? matrix[on[0]!] : undefined;
+      const component = fromIndexer ? "indexer" : "node and toolkit";
+      const version = fromIndexer ? row?.indexer : (row?.minNode ?? row?.node);
       return {
         id: "unsupported-block-version",
         name: "UnsupportedBlockVersion",
-        description: node
-          ? `The tool reading the chain doesn't know runtime spec_version ${spec}, which ${runs(on)}. A node or toolkit built for an older runtime can't read its blocks.`
-          : `The tool reading the chain doesn't know runtime spec_version ${spec}.`,
-        fix: node
-          ? `Upgrade the node and toolkit to ${node} or later, which ${runs(on)} on this runtime.`
+        description: row
+          ? `The ${fromIndexer ? "indexer" : "tool reading the chain"} doesn't know runtime spec_version ${spec}, which ${runs(on)}. A ${component} built for an older runtime can't read its blocks.`
+          : `The ${fromIndexer ? "indexer" : "tool reading the chain"} doesn't know runtime spec_version ${spec}.`,
+        fix: version
+          ? `Upgrade the ${component} to ${version} or later, which ${runs(on)} on this runtime.`
           : "Upgrade the node, toolkit or indexer to a release that supports this runtime.",
         next: [{ command: "midnight-cast versions <network>", reason: "See which versions the network expects" }],
       };
@@ -108,51 +118,50 @@ const PATTERNS: Pattern[] = [
     }),
   },
   {
-    test: /--feature-zkir-v3|\bZKIR 3\.1\b|ContractModuleProvider|ModuleThunk|declaredInterfaces|circuitSignatures|\bledger-v9\b|compact-runtime["']?\s*[:@]?\s*["']?[\^~]?0\.2\d\./i,
+    test: /--feature-zkir-v3|\bZKIR 3\.1\b|ContractModuleProvider|ModuleThunk|declaredInterfaces|circuitSignatures|\bledger-v9\b|compact-runtime["']?\s*[:@]?\s*["']?[\^~]?(?:0\.[2-9]\d|[1-9]\d*\.\d+)\./i,
     describe: (_match, network) => {
       const matrix = loadSupportMatrix().networks;
-      const runtime = (name: string) => matrix[name]?.packages?.["@midnight-ntwrk/compact-runtime"];
-      const pin = (name: string) => (runtime(name) ? ` to ${runtime(name)}` : "");
-      const onNine = PUBLIC_NETWORKS.filter((name) => ledgerMajor(matrix[name]?.ledger) >= 9);
-      const onEight = PUBLIC_NETWORKS.filter((name) => !onNine.includes(name));
-      const intro = "This looks like output from Compact toolchain 0.35 or later, or Compact runtime 0.20 or later, which target Ledger 9.";
-      const next: NextStep[] = [{ command: "midnight-cast versions <network>", reason: "Which ledger and versions the network runs" }];
-      if (network && PUBLIC_NETWORKS.includes(network)) {
-        const ledger = matrix[network]?.ledger;
-        return onNine.includes(network)
-          ? {
-              id: "compact-ledger-9",
-              name: "Contract built for Ledger 9",
-              description: `${intro} ${title(network)} runs Ledger 9 (ledger ${ledger}), so a build for Ledger 9 is the right one there.`,
-              fix: `Keep the Ledger 9 toolchain, and pin the Compact runtime${pin(network)} as the support matrix lists for ${title(network)}. If the build still fails, the ledger it targets isn't the cause.`,
-              next,
-            }
-          : {
-              id: "compact-ledger-9",
-              name: "Contract built for Ledger 9",
-              description: `${intro} ${title(network)} still runs Ledger 8 (ledger ${ledger}), so a contract built for Ledger 9 doesn't run there.`,
-              fix: `For ${title(network)}, run compact update 0.31 and pin the Compact runtime${pin(network)} from the support matrix, then rebuild.`,
-              next,
-            };
-      }
-      if (!onNine.length) {
-        return {
-          id: "compact-ledger-9",
-          name: "Contract built for Ledger 9",
-          description: `${intro} Ledger 9 isn't deployed on ${names(PUBLIC_NETWORKS)}.`,
-          fix: "Run compact update 0.31 and pin the Compact runtime version from the support matrix, then rebuild.",
-          next,
-        };
-      }
-      return {
+      const pin = (name: string) => {
+        const version = compactRuntimePin(matrix[name]?.packages);
+        return version ? ` to ${version}` : "";
+      };
+      const known = PUBLIC_NETWORKS.filter((name) => ledgerMajor(matrix[name]?.ledger) !== undefined);
+      const onNine = known.filter((name) => ledgerMajor(matrix[name]?.ledger)! >= 9);
+      const onEight = known.filter((name) => !onNine.includes(name));
+      const message = (description: string, fix: string): KnownMessage => ({
         id: "compact-ledger-9",
         name: "Contract built for Ledger 9",
-        description: `${intro} ${runs(onNine)} Ledger 9${onEight.length ? `; ${names(onEight)} still ${onEight.length > 1 ? "run" : "runs"} Ledger 8` : ""}.`,
-        fix: onEight.length
-          ? `On ${names(onNine)}, keep this build and pin the Compact runtime from the support matrix. On ${names(onEight)}, run compact update 0.31 and pin its Compact runtime instead, then rebuild.`
-          : "Keep this build, and pin the Compact runtime from the support matrix.",
-        next: [{ command: 'midnight-cast decode --raw "<the message>" --network <network>', reason: "Advice for the network you deploy to" }, ...next],
-      };
+        description: `This looks like output from Compact toolchain 0.35 or later, or Compact runtime 0.20 or later, which target Ledger 9. ${description}`,
+        fix,
+        next: [{ command: "midnight-cast versions <network>", reason: "Which ledger and versions the network runs" }],
+      });
+      if (network && known.includes(network)) {
+        // On a Ledger 9 network these names are the normal packages, so the real error is something else.
+        if (onNine.includes(network)) return undefined;
+        return message(
+          `${title(network)} still runs Ledger 8 (ledger ${matrix[network]!.ledger}), so a contract built for Ledger 9 doesn't run there.`,
+          `For ${title(network)}, run compact update 0.31 and pin the Compact runtime${pin(network)} from the support matrix, then rebuild.`,
+        );
+      }
+      if (network) {
+        return message(
+          `The support matrix doesn't say which ledger ${title(network)} runs.`,
+          `Check it with midnight-cast versions ${network} before changing the Compact toolchain: keep a Ledger 9 build for a network on Ledger 9, and run compact update 0.31 for one on Ledger 8.`,
+        );
+      }
+      if (!onNine.length) {
+        return message(
+          `Ledger 9 isn't deployed on ${names(known.length ? known : PUBLIC_NETWORKS)}.`,
+          "Run compact update 0.31 and pin the Compact runtime version from the support matrix, then rebuild.",
+        );
+      }
+      if (!onEight.length) {
+        return message(`${runs(onNine)} Ledger 9.`, "Keep this build, and pin the Compact runtime from the support matrix.");
+      }
+      return message(
+        `${runs(onNine)} Ledger 9; ${names(onEight)} still ${onEight.length > 1 ? "run" : "runs"} Ledger 8.`,
+        `On ${names(onNine)}, keep this build and pin the Compact runtime from the support matrix; if it still fails there, the ledger it targets isn't the cause. On ${names(onEight)}, run compact update 0.31 and pin its Compact runtime instead, then rebuild. Pass --network for advice about one network.`,
+      );
     },
   },
 ];
@@ -160,6 +169,7 @@ const PATTERNS: Pattern[] = [
 export function matchKnownMessages(raw: string, network?: string): KnownMessage[] {
   return PATTERNS.flatMap((pattern) => {
     const match = raw.match(pattern.test);
-    return match ? [pattern.describe(match, network)] : [];
+    const message = match ? pattern.describe(match, network) : undefined;
+    return message ? [message] : [];
   });
 }

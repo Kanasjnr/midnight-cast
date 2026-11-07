@@ -74,22 +74,33 @@ describe("decode --raw recognises messages from current tooling", () => {
     }
   });
 
-  it("says a Ledger 9 build is right where Ledger 9 runs, and only advises Compact 0.31 for a network still on Ledger 8", () => {
+  it("leaves Ledger 9 builds alone on Ledger 9 networks, and only advises Compact 0.31 for a network still on Ledger 8", () => {
     const raw = '"@midnight-ntwrk/compact-runtime": "^0.21.0"';
-    for (const network of ["preview", "mainnet"]) {
-      const [message] = decodeRaw(raw, network).decodings;
-      expect(message, network).toMatchObject({ id: "compact-ledger-9", description: expect.stringContaining("runs Ledger 9 (ledger 9.1.0.0)") });
-      expect(message!.fix, network).not.toContain("compact update 0.31");
-      expect(message!.fix, network).toContain("0.21.0");
-    }
+    // On preview and mainnet these are the normal packages, so decode doesn't claim the message.
+    for (const network of ["preview", "mainnet"]) expect(decodeRaw(raw, network).decodings, network).toEqual([]);
+    expect(decodeRaw("Error: proof failed at node_modules/@midnight-ntwrk/ledger-v9/dist/index.js:12", "preview").ok).toBe(false);
     const [preprod] = decodeRaw(raw, "preprod").decodings;
     expect(preprod).toMatchObject({ description: expect.stringContaining("still runs Ledger 8"), fix: expect.stringContaining("compact update 0.31") });
     expect(preprod!.fix).toContain("0.16.0");
-    const [anyNetwork] = decodeRaw(raw).decodings;
-    expect(anyNetwork).toMatchObject({
+    const anyNetwork = decodeRaw(raw);
+    expect(anyNetwork.decodings[0]).toMatchObject({
       description: expect.stringContaining("Preview and Mainnet run Ledger 9; Preprod still runs Ledger 8"),
-      fix: expect.stringMatching(/^On Preview and Mainnet, keep this build.*On Preprod, run compact update 0\.31/),
+      fix: expect.stringMatching(/^On Preview and Mainnet, keep this build.*On Preprod, run compact update 0\.31.*--network/),
     });
+    expect(anyNetwork.next.some((command) => command.startsWith("midnight-cast decode"))).toBe(false);
+  });
+
+  it("recognises any Compact runtime from 0.20 on, not only 0.2x", () => {
+    for (const raw of ['"@midnight-ntwrk/compact-runtime": "^0.30.0"', "compact-runtime@1.0.2"]) {
+      expect(decodeRaw(raw, "preprod").decodings, raw).toEqual([expect.objectContaining({ id: "compact-ledger-9" })]);
+    }
+    expect(decodeRaw('"@midnight-ntwrk/compact-runtime": "0.16.0"', "preprod").ok).toBe(false);
+  });
+
+  it("tells the indexer, not the node, to upgrade when the indexer reports the runtime", () => {
+    expect(decodeRaw("Unsupported node version 2001100").decodings).toEqual([
+      expect.objectContaining({ fix: "Upgrade the indexer to 4.4.101 or later, which Preview and Mainnet run on this runtime." }),
+    ]);
   });
 
   it("OutOfDustValidityWindow notes the first-in-block indexer bug", () => {
