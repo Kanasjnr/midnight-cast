@@ -41,9 +41,9 @@ const UPSTREAM_COMPONENTS: Record<string, Component> = {
  */
 export const UNOBSERVABLE = new Set<Component>(["indexer", "onChainRuntime", "compactRuntime"]);
 
-/** "node-1.0.400" / "midnight-indexer-4.3.302" -> "1.0.400" */
+/** "node-1.0.400" -> "1.0.400", "ledger-9.1.0.0" -> "9.1.0.0" */
 export function versionFromTag(tag: string | undefined): string | undefined {
-  const match = /(\d+\.\d+\.\d+)$/.exec((tag ?? "").trim());
+  const match = /(\d+(?:\.\d+){2,})$/.exec((tag ?? "").trim());
   return match?.[1];
 }
 
@@ -57,9 +57,12 @@ export function parseUpstreamMatrix(json: unknown, network: string): UpstreamMat
     // The explicit version, since a tag can name another component's release (ledger-9.1.0.0 for the on-chain runtime) or be missing.
     const version = /^\d+(\.\d+)+$/.test(entry.version?.trim() ?? "") ? entry.version!.trim() : versionFromTag(entry.tag);
     if (version) versions[key] = version;
+    // A tag can name another component's release, so the container is compared with the tag when there is one.
+    const tagged = versionFromTag(entry.tag);
     const container = versionFromTag(entry.containerTag);
-    if (version && container && container !== version) {
-      notes.push(`${key}: upstream tag ${version} but containerTag ${container}`);
+    const against = tagged ?? version;
+    if (against && container && container !== against) {
+      notes.push(`${key}: upstream ${tagged ? "tag" : "version"} ${against} but containerTag ${container}`);
     }
   }
   return { versions, notes };

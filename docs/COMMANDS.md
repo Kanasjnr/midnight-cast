@@ -413,7 +413,7 @@ Auto-detects and decodes everything it finds in one pasted error:
   - `UnsupportedBlockVersion(1000300)` from toolkit 1.0.0 or node 1.0.2 on runtime 1.0.300
   - Blockfrost's "Missing project token" and "Invalid project token"
   - Anything mentioning the retired `rpc.mainnet.midnight.network` or `indexer.mainnet.midnight.network`
-  - Output from Compact toolchain 0.35 or later or Compact runtime 0.20 or later (`--feature-zkir-v3`, ZKIR 3.1, `ContractModuleProvider`, `ledger-v9`), which target Ledger 9. The advice follows each network's ledger in the support matrix: with `--network` set to a network on Ledger 9 it says the build is right, with one still on Ledger 8 it says to run `compact update 0.31`, and without `--network` it says which networks run which ledger
+  - Output from Compact toolchain 0.35 or later or Compact runtime 0.20 or later (`--feature-zkir-v3`, ZKIR 3.1, `ContractModuleProvider`, `ledger-v9`), which target Ledger 9. The advice follows each network's ledger in the support matrix: with `--network` set to a network still on Ledger 8 it says to run `compact update 0.31`; on a network that runs Ledger 9 these are the normal packages, so `decode` doesn't claim the message and routes the real error instead; without `--network` it says which networks run which ledger
 
 Hex codes need the `0x` prefix, "ledger N" counts only as "ledger error N" or "ledger code N", and single-word ledger names such as `Transaction` aren't matched in free text, since they also appear in ordinary error messages ("Invalid Transaction").
 

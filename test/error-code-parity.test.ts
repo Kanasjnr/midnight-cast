@@ -77,6 +77,25 @@ describe("error code parity", () => {
     expect(others).toEqual([{ tag: "node-2.0.0", ledger: "9.0.0", networks: ["preview"] }]);
   });
 
+  it("follows the release on the map's own ledger when mainnet has moved ahead of it", () => {
+    const network = (minNode: string, ledger: string) => ({ minNode, ledger }) as never;
+    const { reference, others } = deployedNodeReleases(
+      { networks: { preview: network("2.1.101", "9.1.0.0"), preprod: network("1.0.400", "8.1.3"), mainnet: network("2.1.101", "9.1.0.0") } } as never,
+      "8.1.3",
+    );
+    expect(reference).toEqual({ tag: "node-1.0.400", ledger: "8.1.3", networks: ["preprod"] });
+    expect(others).toEqual([{ tag: "node-2.1.101", ledger: "9.1.0.0", networks: ["preview", "mainnet"] }]);
+  });
+
+  it("still prefers mainnet's release among those on the map's ledger", () => {
+    const network = (minNode: string, ledger: string) => ({ minNode, ledger }) as never;
+    const { reference } = deployedNodeReleases(
+      { networks: { preview: network("2.2.0", "9.1.0.0"), preprod: network("1.0.400", "8.1.3"), mainnet: network("2.1.101", "9.1.0.0") } } as never,
+      "9.1.0.0",
+    );
+    expect(reference.tag).toBe("node-2.1.101");
+  });
+
   it("describes how a newer node's table differs", () => {
     const reference = new Map([[182, ["TransactionApplicationError"]], [117, ["NotNormalized"]]]);
     const newer = new Map([[117, ["NotNormalized"]], [228, ["IntentTtlExpired"]]]);
