@@ -452,7 +452,7 @@ function decodeRaw(raw: string, options: DecodeOptions): EmitResult {
     else if (r.error) failures.push(r.error);
   }
 
-  for (const message of matchKnownMessages(raw)) {
+  for (const message of matchKnownMessages(raw, options.network)) {
     appendDecodeResult(parts, sections, decodeKnownMessage(message, options), options.json);
   }
 

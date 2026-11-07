@@ -11,9 +11,19 @@ describe("decode --raw recognises messages from current tooling", () => {
   it("UnsupportedBlockVersion from toolkit 1.0.0 on runtime 1.0.300", () => {
     const result = decodeRaw("Error: UnsupportedBlockVersion(1000300)", "preprod");
     expect(result.decodings).toEqual([
-      expect.objectContaining({ kind: "message", id: "unsupported-block-version", fix: "Upgrade the node and toolkit to 1.0.400, which Preview, Preprod and Mainnet run on runtime 1.0.300." }),
+      expect.objectContaining({ kind: "message", id: "unsupported-block-version", fix: "Upgrade the node and toolkit to 1.0.400 or later, which Preprod runs on this runtime." }),
     ]);
     expect(result.next).toEqual(["midnight-cast versions preprod"]);
+  });
+
+  it("UnsupportedBlockVersion on the Ledger 9 runtime names the networks that run it", () => {
+    expect(decodeRaw("Error: UnsupportedBlockVersion(2001100)").decodings).toEqual([
+      expect.objectContaining({
+        id: "unsupported-block-version",
+        description: expect.stringContaining("which Preview and Mainnet run"),
+        fix: "Upgrade the node and toolkit to 2.1.101 or later, which Preview and Mainnet run on this runtime.",
+      }),
+    ]);
   });
 
   it("the indexer's wording of the same error, for another runtime", () => {
@@ -62,6 +72,24 @@ describe("decode --raw recognises messages from current tooling", () => {
     ]) {
       expect(decodeRaw(raw).decodings, raw).toEqual([expect.objectContaining({ id: "compact-ledger-9" })]);
     }
+  });
+
+  it("says a Ledger 9 build is right where Ledger 9 runs, and only advises Compact 0.31 for a network still on Ledger 8", () => {
+    const raw = '"@midnight-ntwrk/compact-runtime": "^0.21.0"';
+    for (const network of ["preview", "mainnet"]) {
+      const [message] = decodeRaw(raw, network).decodings;
+      expect(message, network).toMatchObject({ id: "compact-ledger-9", description: expect.stringContaining("runs Ledger 9 (ledger 9.1.0.0)") });
+      expect(message!.fix, network).not.toContain("compact update 0.31");
+      expect(message!.fix, network).toContain("0.21.0");
+    }
+    const [preprod] = decodeRaw(raw, "preprod").decodings;
+    expect(preprod).toMatchObject({ description: expect.stringContaining("still runs Ledger 8"), fix: expect.stringContaining("compact update 0.31") });
+    expect(preprod!.fix).toContain("0.16.0");
+    const [anyNetwork] = decodeRaw(raw).decodings;
+    expect(anyNetwork).toMatchObject({
+      description: expect.stringContaining("Preview and Mainnet run Ledger 9; Preprod still runs Ledger 8"),
+      fix: expect.stringMatching(/^On Preview and Mainnet, keep this build.*On Preprod, run compact update 0\.31/),
+    });
   });
 
   it("OutOfDustValidityWindow notes the first-in-block indexer bug", () => {
