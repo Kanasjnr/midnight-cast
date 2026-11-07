@@ -125,6 +125,21 @@ describe("live-check tag and matrix parsing", () => {
     expect(versionFromTag(undefined)).toBeUndefined();
   });
 
+  it("prefers an entry's own version to its tag, which can name another component's release", () => {
+    const file = {
+      components: [
+        { component: "On-chain runtime", versions: { preview: { version: "4.0.0", tag: "ledger-9.1.0.0" } } },
+        { component: "Compact runtime", versions: { preview: { version: "0.21.0", tag: null } } },
+        { component: "Proof server", versions: { preview: { tag: "proof-server-9.0.0" } } },
+      ],
+    };
+    expect(parseUpstreamMatrix(file, "preview").versions).toEqual({
+      onChainRuntime: "4.0.0",
+      compactRuntime: "0.21.0",
+      proofServer: "9.0.0",
+    });
+  });
+
   it("parses one network from the upstream matrix and ignores unmapped components", () => {
     const { versions, notes } = parseUpstreamMatrix(upstreamFile, "preprod");
     expect(versions).toEqual({ node: "1.0.400", indexer: "4.3.302", proofServer: "8.1.0" });

@@ -21,7 +21,7 @@ export interface UpstreamMatrix {
 interface UpstreamFile {
   components?: Array<{
     component: string;
-    versions?: Record<string, { tag?: string; containerTag?: string }>;
+    versions?: Record<string, { version?: string; tag?: string; containerTag?: string }>;
   }>;
 }
 
@@ -54,7 +54,8 @@ export function parseUpstreamMatrix(json: unknown, network: string): UpstreamMat
     const key = UPSTREAM_COMPONENTS[component.component];
     const entry = component.versions?.[network];
     if (!key || !entry) continue;
-    const version = versionFromTag(entry.tag);
+    // The explicit version, since a tag can name another component's release (ledger-9.1.0.0 for the on-chain runtime) or be missing.
+    const version = /^\d+(\.\d+)+$/.test(entry.version?.trim() ?? "") ? entry.version!.trim() : versionFromTag(entry.tag);
     if (version) versions[key] = version;
     const container = versionFromTag(entry.containerTag);
     if (version && container && container !== version) {
