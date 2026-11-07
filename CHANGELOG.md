@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Support matrix
+- Preview and mainnet run Ledger 9: node 2.1.101 (minimum and recommended), runtime spec 2001100, ledger 9.1.0.0, indexer 4.4.101, proof server 9.0.0 and on-chain runtime 4.0.0, with project pins from Midnight's examples on Ledger 9 (`ledger-v9` 1.0.0, `compact-runtime` 0.21.0, `onchain-runtime-v4` 4.0.0, Midnight.js 5.0.0). Preprod stays on Ledger 8. `versions`, `health` and the live check no longer report a runtime spec and proof server mismatch on the upgraded networks. With `--network preview` or `mainnet`, `decode` now warns that its error map is ledger 8.1.3's until it has one for Ledger 9
+
+### Fixes
+- The published support matrix is read from each entry's `version`, falling back to its tag. The on-chain runtime's tag is now `ledger-9.1.0.0`, which was read as 1.0.0, and the Compact runtime has no tag at all, so it wasn't read
+
 ## 0.2.1 (23 October 2026)
 
 A patch release. `tx` stops asking the indexer for fields it deprecates, the agent skill gets preprod's Blockfrost project ID and the MCP tools' parameter names right, and releases publish to npm through trusted publishing. Nothing breaks: the JSON stays at `schemaVersion` 1, and `tx` keeps its shape.
