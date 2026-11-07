@@ -121,8 +121,36 @@ describe("live-check tag and matrix parsing", () => {
     expect(versionFromTag("node-1.0.400")).toBe("1.0.400");
     expect(versionFromTag("midnight-indexer-4.3.302")).toBe("4.3.302");
     expect(versionFromTag("compact-runtime-0.16.0")).toBe("0.16.0");
+    expect(versionFromTag("ledger-9.1.0.0")).toBe("9.1.0.0");
     expect(versionFromTag("latest")).toBeUndefined();
     expect(versionFromTag(undefined)).toBeUndefined();
+  });
+
+  it("prefers an entry's own version to its tag, which can name another component's release", () => {
+    const file = {
+      components: [
+        { component: "On-chain runtime", versions: { preview: { version: "4.0.0", tag: "ledger-9.1.0.0" } } },
+        { component: "Compact runtime", versions: { preview: { version: "0.21.0", tag: null } } },
+        { component: "Proof server", versions: { preview: { tag: "proof-server-9.0.0" } } },
+      ],
+    };
+    expect(parseUpstreamMatrix(file, "preview").versions).toEqual({
+      onChainRuntime: "4.0.0",
+      compactRuntime: "0.21.0",
+      proofServer: "9.0.0",
+    });
+  });
+
+  it("notes a tag and containerTag that disagree, but not a version that differs from its tag's release", () => {
+    const entry = (versions: object) => ({ components: [{ component: "On-chain runtime", versions: { mainnet: versions } }] });
+    expect(parseUpstreamMatrix(entry({ version: "4.0.0", tag: "ledger-9.1.0.0", containerTag: "ledger-9.1.0.0" }), "mainnet").notes).toEqual([]);
+    expect(parseUpstreamMatrix(entry({ tag: "ledger-9.1.0.0", containerTag: "ledger-9.1.0.1" }), "mainnet").notes).toEqual([
+      "onChainRuntime: upstream tag 9.1.0.0 but containerTag 9.1.0.1",
+    ]);
+    // Without a tag, the container is compared with the version.
+    expect(parseUpstreamMatrix(entry({ version: "4.0.0", containerTag: "onchain-runtime-3.9.0" }), "mainnet").notes).toEqual([
+      "onChainRuntime: upstream version 4.0.0 but containerTag 3.9.0",
+    ]);
   });
 
   it("parses one network from the upstream matrix and ignores unmapped components", () => {

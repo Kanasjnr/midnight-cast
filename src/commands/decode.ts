@@ -4,7 +4,7 @@ import {
   findLedgerCodesByName,
   parseRawErrorMessage,
 } from "../lib/error-parse.js";
-import { matchKnownMessages, type KnownMessage } from "../lib/known-messages.js";
+import { matchKnownMessages, normalOnNetwork, type KnownMessage } from "../lib/known-messages.js";
 import { loadSupportMatrix } from "../lib/versions.js";
 import { NETWORK_NAMES } from "../networks.js";
 import type { EmitResult, GlobalOptions, NextStep } from "../output.js";
@@ -179,7 +179,11 @@ function ledgerMapMeta(options: DecodeOptions, data: ErrorCodesFile): string | u
   }
 
   if (data.ledger) {
-    return `Map:    ledger ${data.ledger} (preprod/mainnet default, updated ${data.updated})`;
+    const networks = Object.entries(loadSupportMatrix().networks)
+      .filter(([name, row]) => row.ledger === data.ledger && name !== "local")
+      .map(([name]) => name);
+    const on = networks.length ? `the ledger ${networks.join(" and ")} ${networks.length > 1 ? "run" : "runs"}` : "no public network's ledger";
+    return `Map:    ledger ${data.ledger} (${on}; updated ${data.updated}; pass --network to check yours)`;
   }
 
   return undefined;
@@ -452,7 +456,7 @@ function decodeRaw(raw: string, options: DecodeOptions): EmitResult {
     else if (r.error) failures.push(r.error);
   }
 
-  for (const message of matchKnownMessages(raw)) {
+  for (const message of matchKnownMessages(raw, options.network)) {
     appendDecodeResult(parts, sections, decodeKnownMessage(message, options), options.json);
   }
 
@@ -468,7 +472,10 @@ function decodeRaw(raw: string, options: DecodeOptions): EmitResult {
 
   if (parts.length === 0) {
     return fail(
-      otherErrorRouterHint(raw) ??
+      // Text that is only a Ledger 9 marker is answered as such; in a longer error, the real error is routed first.
+      (/^\S+$/.test(raw.trim()) ? normalOnNetwork(raw, options.network) : undefined) ??
+        otherErrorRouterHint(raw) ??
+        normalOnNetwork(raw, options.network) ??
         failures[0] ??
         "No Midnight error recognised in this message. decode reads 1010 rejections, Custom(N) ledger codes, " +
           "pallet errors (DispatchError::Module), JSON-RPC codes and known tooling messages, or a bare code such as 170",

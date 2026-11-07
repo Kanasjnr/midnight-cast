@@ -108,6 +108,20 @@ input BlockOffset {
   height: Int
 }
 
+"""
+A block's height, hash and protocol version. Query `block` with the hash for the full block.
+"""
+type BlockReference {
+  """The block height."""
+  height: Int!
+
+  """The block hash."""
+  hash: HexEncoded!
+
+  """The protocol version."""
+  protocolVersion: Int!
+}
+
 """Per-address bridge balance."""
 type BridgeBalance {
   """
@@ -327,9 +341,16 @@ type Contract {
 
   """
   The hex-encoded serialized contract state as of the queried block (the latest contract
-  action at or before it).
+  action at or before it), in that block's encoding; as of the latest block if no offset is
+  given.
   """
   state: HexEncoded!
+
+  """
+  The block at which `state` last changed: the latest action's block, or a later block at which
+  the state was translated to a new ledger version.
+  """
+  stateAt: BlockReference!
 
   """The contract's maintenance authority as of the queried block."""
   maintenanceAuthority: ContractMaintenanceAuthority!
@@ -346,6 +367,7 @@ type Contract {
 interface ContractAction {
   address: HexEncoded!
   state: HexEncoded!
+  stateAt: BlockReference!
   zswapState: HexEncoded!
   transaction: Transaction!
   unshieldedBalances: [ContractBalance!]!
@@ -390,8 +412,19 @@ type ContractCall implements ContractAction {
   """The entry point."""
   entryPoint: String!
 
-  """The hex-encoded serialized state."""
+  """
+  The hex-encoded serialized contract state at the end of this action's block, in the encoding
+  of the block the query is anchored to: the latest block for `contractAction` without an
+  offset, the fork block for a `contractActions` re-emission, otherwise the action's own
+  block.
+  """
   state: HexEncoded!
+
+  """
+  The block at which `state` last changed: this action's block, or a later block at which the
+  state was translated to a new ledger version.
+  """
+  stateAt: BlockReference!
 
   """The hex-encoded serialized contract-specific zswap state."""
   zswapState: HexEncoded!
@@ -424,8 +457,19 @@ type ContractDeploy implements ContractAction {
   """The hex-encoded serialized address."""
   address: HexEncoded!
 
-  """The hex-encoded serialized state."""
+  """
+  The hex-encoded serialized contract state at the end of this action's block, in the encoding
+  of the block the query is anchored to: the latest block for `contractAction` without an
+  offset, the fork block for a `contractActions` re-emission, otherwise the action's own
+  block.
+  """
   state: HexEncoded!
+
+  """
+  The block at which `state` last changed: this action's block, or a later block at which the
+  state was translated to a new ledger version.
+  """
+  stateAt: BlockReference!
 
   """The hex-encoded serialized contract-specific zswap state."""
   zswapState: HexEncoded!
@@ -555,8 +599,19 @@ type ContractUpdate implements ContractAction {
   """The hex-encoded serialized address."""
   address: HexEncoded!
 
-  """The hex-encoded serialized state."""
+  """
+  The hex-encoded serialized contract state at the end of this action's block, in the encoding
+  of the block the query is anchored to: the latest block for `contractAction` without an
+  offset, the fork block for a `contractActions` re-emission, otherwise the action's own
+  block.
+  """
   state: HexEncoded!
+
+  """
+  The block at which `state` last changed: this action's block, or a later block at which the
+  state was translated to a new ledger version.
+  """
+  stateAt: BlockReference!
 
   """The hex-encoded serialized contract-specific zswap state."""
   zswapState: HexEncoded!
@@ -1071,25 +1126,45 @@ type Query {
   """List SPO identities with pagination."""
   spoIdentities(limit: Int, offset: Int): [SpoIdentity!]!
 
-  """Get SPO identity by pool ID."""
+  """
+  Get SPO identity by pool ID.
+  
+  `poolIdHex` is case-insensitive hex with an optional `0x`/`0X` prefix; invalid hex
+  matches nothing.
+  """
   spoIdentityByPoolId(poolIdHex: String!): SpoIdentity
 
   """Get total count of SPOs."""
   spoCount: Int
 
-  """Get pool metadata by pool ID."""
+  """
+  Get pool metadata by pool ID.
+  
+  `poolIdHex` is case-insensitive hex with an optional `0x`/`0X` prefix; invalid hex
+  matches nothing.
+  """
   poolMetadata(poolIdHex: String!): PoolMetadata
 
   """List pool metadata with pagination."""
   poolMetadataList(limit: Int, offset: Int, withNameOnly: Boolean): [PoolMetadata!]!
 
-  """Get SPO with metadata by pool ID."""
+  """
+  Get SPO with metadata by pool ID.
+  
+  `poolIdHex` is case-insensitive hex with an optional `0x`/`0X` prefix; invalid hex
+  matches nothing.
+  """
   spoByPoolId(poolIdHex: String!): Spo
 
   """List SPOs with optional search."""
   spoList(limit: Int, offset: Int, search: String): [Spo!]!
 
-  """Get composite SPO data (identity + metadata + performance)."""
+  """
+  Get composite SPO data (identity + metadata + performance).
+  
+  `poolIdHex` is case-insensitive hex with an optional `0x`/`0X` prefix; invalid hex
+  matches nothing.
+  """
   spoCompositeByPoolId(poolIdHex: String!): SpoComposite
 
   """Get SPO identifiers ordered by performance."""
@@ -1098,7 +1173,12 @@ type Query {
   """Get latest SPO performance entries."""
   spoPerformanceLatest(limit: Int, offset: Int): [EpochPerf!]!
 
-  """Get SPO performance by SPO key."""
+  """
+  Get SPO performance by SPO key.
+  
+  `spoSkHex` is case-insensitive hex with an optional `0x`/`0X` prefix; invalid hex
+  returns an empty list.
+  """
   spoPerformanceBySpoSk(spoSkHex: String!, limit: Int, offset: Int): [EpochPerf!]!
 
   """Get epoch performance for all SPOs."""
@@ -1627,6 +1707,9 @@ type Subscription {
   """
   Subscribe to contract actions with the given address starting at the given offset or at the
   latest block if the offset is omitted.
+  
+  At a ledger hard fork, a contract without an action in the fork block has its latest action
+  re-emitted with the translated `state` and `stateAt` set to the fork block.
   """
   contractActions(address: HexEncoded!, offset: BlockOffset): ContractAction!
 

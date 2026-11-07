@@ -1,22 +1,22 @@
 {
   "docUrl": "https://docs.midnight.network/relnotes/support-matrix",
-  "updated": "2026-10",
+  "updated": "2026-11",
   "networks": {
     "preview": {
-      "node": "1.0.400",
-      "minNode": "1.0.400",
-      "minNodeReason": "node 1.0.400 carries ledger 8.1.3, which fixes the critical advisory GHSA-wr7g-rr4v-jmj8, and older nodes disagree with the network about which contract calls are valid",
-      "runtimeSpec": 1000300,
-      "ledger": "8.1.3",
-      "indexer": "4.3.5",
+      "node": "2.1.101",
+      "minNode": "2.1.101",
+      "minNodeReason": "the network upgraded to Ledger 9 (runtime spec 2001100) with node 2.1.101",
+      "runtimeSpec": 2001100,
+      "ledger": "9.1.0.0",
+      "indexer": "4.4.101",
       "indexerApi": "v4",
-      "proofServer": "8.0.3",
-      "onChainRuntime": "3.0.0",
+      "proofServer": "9.0.0",
+      "onChainRuntime": "4.0.0",
       "packages": {
-        "@midnight-ntwrk/ledger-v8": "8.1.2",
-        "@midnight-ntwrk/compact-runtime": "0.16.0",
-        "@midnight-ntwrk/onchain-runtime-v3": "3.0.0",
-        "@midnight-ntwrk/midnight-js-indexer-public-data-provider": "4.1.1"
+        "@midnight-ntwrk/ledger-v9": "1.0.0",
+        "@midnight-ntwrk/compact-runtime": "0.21.0",
+        "@midnight-ntwrk/onchain-runtime-v4": "4.0.0",
+        "@midnight-ntwrk/midnight-js-indexer-public-data-provider": "5.0.0"
       }
     },
     "preprod": {
@@ -37,20 +37,20 @@
       }
     },
     "mainnet": {
-      "node": "1.0.400",
-      "minNode": "1.0.400",
-      "minNodeReason": "node 1.0.400 carries ledger 8.1.3, which fixes the critical advisory GHSA-wr7g-rr4v-jmj8, and older nodes disagree with the network about which contract calls are valid",
-      "runtimeSpec": 1000300,
-      "ledger": "8.1.3",
-      "indexer": "4.3.302",
+      "node": "2.1.101",
+      "minNode": "2.1.101",
+      "minNodeReason": "the network upgraded to Ledger 9 (runtime spec 2001100) with node 2.1.101",
+      "runtimeSpec": 2001100,
+      "ledger": "9.1.0.0",
+      "indexer": "4.4.101",
       "indexerApi": "v4",
-      "proofServer": "8.1.0",
-      "onChainRuntime": "3.0.0",
+      "proofServer": "9.0.0",
+      "onChainRuntime": "4.0.0",
       "packages": {
-        "@midnight-ntwrk/ledger-v8": "8.1.2",
-        "@midnight-ntwrk/compact-runtime": "0.16.0",
-        "@midnight-ntwrk/onchain-runtime-v3": "3.0.0",
-        "@midnight-ntwrk/midnight-js-indexer-public-data-provider": "4.1.1"
+        "@midnight-ntwrk/ledger-v9": "1.0.0",
+        "@midnight-ntwrk/compact-runtime": "0.21.0",
+        "@midnight-ntwrk/onchain-runtime-v4": "4.0.0",
+        "@midnight-ntwrk/midnight-js-indexer-public-data-provider": "5.0.0"
       }
     }
   }

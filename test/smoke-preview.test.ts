@@ -3,6 +3,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { join } from "node:path";
 import { parseEnvelope } from "./schema.js";
+import { loadDataJson } from "../src/lib/data-path.js";
 import { loadSupportMatrix } from "../src/lib/versions.js";
 
 const execFileAsync = promisify(execFile);
@@ -112,11 +113,14 @@ describe.skipIf(!integration)("smoke (live preview)", () => {
     };
     expect(parsed.data.name).toBe("InvalidDustSpendProof");
     expect(parsed.data.network).toBe("preview");
-    // Read from the matrix rather than pinned, so a ledger upgrade doesn't break the smoke run.
-    const ledger = loadSupportMatrix().networks.preview!.ledger;
-    expect(parsed.data.ledger).toBe(ledger);
-    expect(
-      (parsed.data as { networkLedger?: string }).networkLedger,
-    ).toBe(ledger);
+    // Read from the bundled data rather than pinned, so a ledger upgrade doesn't break the smoke run.
+    // The error map and the network can be on different ledgers during a rollout, and decode says so.
+    const mapLedger = loadDataJson<{ ledger: string }>("error-codes.json").ledger;
+    const networkLedger = loadSupportMatrix().networks.preview!.ledger;
+    const data = parsed.data as { ledger: string; networkLedger?: string; mapMismatch?: string };
+    expect(data.ledger).toBe(mapLedger);
+    expect(data.networkLedger).toBe(networkLedger);
+    if (mapLedger === networkLedger) expect(data.mapMismatch).toBeUndefined();
+    else expect(data.mapMismatch).toContain(networkLedger);
   });
 });

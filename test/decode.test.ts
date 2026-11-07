@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -6,7 +6,7 @@ import { decodeCommand } from "../src/commands/decode.js";
 
 describe("decodeCommand", () => {
   it("decodes numeric ledger code 170", () => {
-    const result = decodeCommand(["170"], { json: true, network: "preview" });
+    const result = decodeCommand(["170"], { json: true, network: "preprod" });
     expect(result.ok).toBe(true);
     const data = result.data as {
       kind: string;
@@ -19,10 +19,14 @@ describe("decodeCommand", () => {
     expect(data.kind).toBe("ledger");
     expect(data.code).toBe(170);
     expect(data.name).toBe("InvalidDustSpendProof");
-    // Bundled map and every network are on ledger 8.1.3: no mismatch.
+    // The bundled map and preprod are both on ledger 8.1.3: no mismatch.
     expect(data.ledger).toBe("8.1.3");
     expect(data.networkLedger).toBe("8.1.3");
     expect(data.mapMismatch).toBeUndefined();
+    // Preview runs Ledger 9, which the bundled map wasn't built for, so it says so.
+    const preview = decodeCommand(["170"], { json: true, network: "preview" }).data as { networkLedger?: string; mapMismatch?: string };
+    expect(preview.networkLedger).toBe("9.1.0.0");
+    expect(preview.mapMismatch).toBeDefined();
   });
 
   it("warns when the network's ledger differs from the bundled error map", () => {
@@ -54,6 +58,57 @@ describe("decodeCommand", () => {
       const data = result.data as { networkLedger?: string; mapMismatch?: string };
       expect(data.networkLedger).toBe("9.0.0");
       expect(data.mapMismatch).toContain("9.0.0");
+    } finally {
+      if (previous === undefined) delete process.env.XDG_CONFIG_HOME;
+      else process.env.XDG_CONFIG_HOME = previous;
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("uses the minimum node, and doesn't guess Ledger 8 for a network the matrix gives no ledger", () => {
+    const dir = mkdtempSync(join(tmpdir(), "midnight-cast-decode-"));
+    const previous = process.env.XDG_CONFIG_HOME;
+    try {
+      mkdirSync(join(dir, "midnight-cast"), { recursive: true });
+      const row = { indexer: "4.4.101", indexerApi: "v4", proofServer: "9.0.0", onChainRuntime: "4.0.0" };
+      writeFileSync(
+        join(dir, "midnight-cast", "support-matrix.json"),
+        JSON.stringify({
+          docUrl: "https://example.com",
+          updated: "2026-11",
+          networks: {
+            preview: { ...row, node: "2.1.200", minNode: "2.1.101", runtimeSpec: 2001100 },
+            preprod: { ...row, node: "1.0.400", runtimeSpec: 1000300, ledger: "8.1.3" },
+          },
+        }),
+      );
+      process.env.XDG_CONFIG_HOME = dir;
+      // An unparsable ledger is unknown too, not Ledger 8.
+      const unparsable = JSON.parse(readFileSync(join(dir, "midnight-cast", "support-matrix.json"), "utf8"));
+      unparsable.networks.mainnet = { ...row, node: "2.1.300", runtimeSpec: 2001100, ledger: "v9" };
+      writeFileSync(join(dir, "midnight-cast", "support-matrix.json"), JSON.stringify(unparsable));
+      unparsable.networks.local = { ...row, node: "1.0.0", runtimeSpec: 2001100, ledger: "8.0.0" };
+      unparsable.networks.preview.minNode = undefined;
+      unparsable.networks.preview.node = undefined;
+      writeFileSync(join(dir, "midnight-cast", "support-matrix.json"), JSON.stringify(unparsable));
+      const runtime = decodeCommand([], { json: true, raw: "UnsupportedBlockVersion(2001100)" });
+      expect((runtime.data as { decodings: Array<{ fix: string }> }).decodings[0]!.fix).toBe(
+        "Upgrade the node and toolkit to 2.1.300 or later, which Mainnet runs on this runtime. The support matrix gives no version for Preview.",
+      );
+      const compact = decodeCommand([], { json: true, raw: "ContractModuleProvider", network: "preview" });
+      const [message] = (compact.data as { decodings: Array<{ description: string; fix: string }> }).decodings;
+      expect(message!.description).toContain("The support matrix doesn't say which ledger Preview runs.");
+      expect(message!.description).not.toContain("undefined");
+      expect(message!.fix).toMatch(/^Check it with midnight-cast versions preview before changing the Compact toolchain/);
+      // A row the override adds for local doesn't change the advice about the public networks, but is used when named.
+      const general = decodeCommand([], { json: true, raw: "ContractModuleProvider" });
+      expect(JSON.stringify(general.data)).not.toContain("Local");
+      const named = decodeCommand([], { json: true, raw: "ContractModuleProvider", network: "local" });
+      expect((named.data as { decodings: Array<{ description: string }> }).decodings[0]!.description).toContain("Local still runs Ledger 8");
+      const mainnet = decodeCommand([], { json: true, raw: "ContractModuleProvider", network: "mainnet" });
+      expect((mainnet.data as { decodings: Array<{ description: string }> }).decodings[0]!.description).toContain(
+        "The support matrix doesn't say which ledger Mainnet runs.",
+      );
     } finally {
       if (previous === undefined) delete process.env.XDG_CONFIG_HOME;
       else process.env.XDG_CONFIG_HOME = previous;

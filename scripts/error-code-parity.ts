@@ -18,7 +18,8 @@ function codeTablePaths(ledger: string): string[] {
   return ["ledger/src/versions/common/types.rs", `ledger/src/ledger_${ledger.split(".")[0]}/types.rs`];
 }
 
-// The map serves every network, so it follows mainnet; a network ahead of it during a rollout is noted.
+// The map is checked against the node release of the networks on its own ledger, falling back to mainnet's.
+// Networks on another ledger during a rollout are noted, not failed.
 const REFERENCE_NETWORK = "mainnet";
 
 export const MIDNIGHT_EXPERT_REF = "caabc67ee232cb2ea44d293fbee4f12acd08a0f0";
@@ -127,7 +128,10 @@ export interface NodeRelease {
   networks: string[];
 }
 
-export function deployedNodeReleases(matrix: SupportMatrixFile): { reference: NodeRelease; others: NodeRelease[] } {
+export function deployedNodeReleases(
+  matrix: SupportMatrixFile,
+  mapLedger?: string,
+): { reference: NodeRelease; others: NodeRelease[] } {
   const byTag = new Map<string, NodeRelease>();
   for (const [network, row] of Object.entries(matrix.networks)) {
     const tag = `node-${row.minNode ?? row.node}`;
@@ -135,7 +139,12 @@ export function deployedNodeReleases(matrix: SupportMatrixFile): { reference: No
     release.networks.push(network);
     byTag.set(tag, release);
   }
-  const reference = [...byTag.values()].find((r) => r.networks.includes(REFERENCE_NETWORK));
+  const releases = [...byTag.values()];
+  const reference =
+    // Among the releases on the map's ledger, mainnet's still comes first.
+    releases.find((r) => r.ledger === mapLedger && r.networks.includes(REFERENCE_NETWORK)) ??
+    releases.find((r) => mapLedger !== undefined && r.ledger === mapLedger) ??
+    releases.find((r) => r.networks.includes(REFERENCE_NETWORK));
   if (!reference) throw new Error(`The support matrix has no ${REFERENCE_NETWORK} entry`);
   return { reference, others: [...byTag.values()].filter((r) => r !== reference) };
 }
@@ -161,29 +170,46 @@ async function fetchText(url: string, attempts = 3): Promise<string | undefined>
   }
 }
 
-async function fetchNodeTable(release: NodeRelease): Promise<CodeTable> {
+/** undefined when the release publishes none of the files the table can live in, as before its source is public. */
+async function fetchNodeTable(release: NodeRelease): Promise<CodeTable | undefined> {
+  let fileWithoutTable: string | undefined;
   for (const path of codeTablePaths(release.ledger)) {
     const source = await fetchText(`${NODE_RAW}/${release.tag}/${path}`);
     if (source === undefined) continue;
-    return requireCodeTable(source, `${release.tag}/${path}`);
+    const table = parseCodeTable(source);
+    if (table.size) return table;
+    fileWithoutTable ??= `${release.tag}/${path}`;
   }
-  throw new Error(`No ledger error table found in midnight-node ${release.tag}`);
+  if (fileWithoutTable) throw new Error(`${fileWithoutTable} has no ledger error table, nor does any later path; the parser needs updating`);
+  return undefined;
 }
 
 async function main(): Promise<number> {
   const matrix = JSON.parse(readFileSync(join(root, "src/data/support-matrix.json"), "utf8")) as SupportMatrixFile;
-  const ours = JSON.parse(readFileSync(join(root, "src/data/error-codes.json"), "utf8")).codes;
-  const { reference, others } = deployedNodeReleases(matrix);
+  const map = JSON.parse(readFileSync(join(root, "src/data/error-codes.json"), "utf8"));
+  const ours = map.codes;
+  const { reference, others } = deployedNodeReleases(matrix, map.ledger);
   const [node, expertText, ...otherTables] = await Promise.all([
-    fetchNodeTable(reference),
+    fetchNodeTable(reference).then((table) => {
+      if (!table) throw new Error(`No ledger error table found in midnight-node ${reference.tag}`);
+      return table;
+    }),
     fetchText(MIDNIGHT_EXPERT_CODES),
+    // A release that isn't public yet, such as one still under embargo, can't be compared, but it doesn't make the map wrong.
     ...others.map(fetchNodeTable),
   ]);
   if (!expertText) throw new Error("Midnight Expert catalog not found at the pinned ref");
   const report = compare(ours, node, JSON.parse(expertText).entries, reference.tag);
   console.log(formatReport(report));
   others.forEach((release, i) => {
-    const { added, removed } = tableDifference(node, otherTables[i]!);
+    const table = otherTables[i];
+    if (!table) {
+      console.log(
+        `Note: ${release.networks.join(", ")} run ${release.tag} on ledger ${release.ledger}${release.ledger === reference.ledger ? "" : `, which the map (ledger ${reference.ledger}) doesn't cover`}; ${release.tag} isn't published with a code table, so it wasn't compared.`,
+      );
+      return;
+    }
+    const { added, removed } = tableDifference(node, table);
     const change = added.length || removed.length ? `adds ${added.join(", ") || "none"}, removes ${removed.join(", ") || "none"}` : "same codes";
     console.log(`Note: ${release.networks.join(", ")} run ${release.tag} (${change}); the map follows ${reference.tag}.`);
   });
