@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.2.2 (7 November 2026)
+
+A patch release for Ledger 9, now live on preview and mainnet (preprod stays on Ledger 8). The support matrix carries each network's ledger, so `versions`, `health` and the live checks stop reporting false mismatches on the upgraded networks, and `decode` stops telling Ledger 9 users to downgrade Compact. The error-code map is still ledger 8.1.3's; on preview and mainnet `decode` says so until a map for node 2.1.101 follows. Nothing breaks: the JSON stays at `schemaVersion` 1.
 
 ### Support matrix
 - Preview and mainnet run Ledger 9: node 2.1.101 (minimum and recommended), runtime spec 2001100, ledger 9.1.0.0, indexer 4.4.101, proof server 9.0.0 and on-chain runtime 4.0.0, with project pins from Midnight's examples on Ledger 9 (`ledger-v9` 1.0.0, `compact-runtime` 0.21.0, `onchain-runtime-v4` 4.0.0, Midnight.js 5.0.0). Preprod stays on Ledger 8. `versions`, `health` and the live check no longer report a runtime spec and proof server mismatch on the upgraded networks. With `--network preview` or `mainnet`, `decode` now warns that its error map is ledger 8.1.3's until it has one for Ledger 9
@@ -14,6 +16,7 @@
 - The published support matrix is read from each entry's `version`, falling back to its tag, and tags keep every part of their version. The on-chain runtime's tag is now `ledger-9.1.0.0`, which was read as 1.0.0, and the Compact runtime has no tag at all, so it wasn't read. A tag is compared with its `containerTag` as tags, so the on-chain runtime's 4.0.0 isn't reported as disagreeing with the ledger release in its tag
 
 ### Tests & CI
+- The live smoke test for `decode 170 --network preview` expects the error map's ledger and the network's ledger separately, and a mismatch warning when they differ, as they do now that preview runs Ledger 9
 - `npm run error-codes` checks the ledger error map against the node release of the networks on the map's own ledger (preprod, node 1.0.400, for the 8.1.3 map) instead of always mainnet's. After mainnet moved to node 2.1.101, whose source isn't public yet, the check failed and blocked the live checks. A node release that publishes none of the files the table can live in yet is noted and compared once it does. Every path is tried before giving up, and a file without the table, or any other failure to fetch, still fails the check
 - The recorded responses and indexer schemas are re-recorded for all three networks after Ledger 9. Preview was reset with the upgrade, so it has a fresh transaction, block, DUST event and, for the first time, a contract. The schemas gain a `BlockReference` type and `stateAt` fields, and preprod's Blockfrost indexer now has the same schema as mainnet's. No field midnight-cast uses was removed or deprecated
 
