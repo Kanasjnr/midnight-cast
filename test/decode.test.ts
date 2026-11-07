@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -83,15 +83,23 @@ describe("decodeCommand", () => {
         }),
       );
       process.env.XDG_CONFIG_HOME = dir;
+      // An unparsable ledger is unknown too, not Ledger 8.
+      const unparsable = JSON.parse(readFileSync(join(dir, "midnight-cast", "support-matrix.json"), "utf8"));
+      unparsable.networks.mainnet = { ...row, node: "2.1.300", runtimeSpec: 2001100, ledger: "v9" };
+      writeFileSync(join(dir, "midnight-cast", "support-matrix.json"), JSON.stringify(unparsable));
       const runtime = decodeCommand([], { json: true, raw: "UnsupportedBlockVersion(2001100)" });
       expect((runtime.data as { decodings: Array<{ fix: string }> }).decodings[0]!.fix).toBe(
-        "Upgrade the node and toolkit to 2.1.101 or later, which Preview runs on this runtime.",
+        "Upgrade the node and toolkit to 2.1.101 or later, which Preview runs; 2.1.300 or later, which Mainnet runs on this runtime.",
       );
       const compact = decodeCommand([], { json: true, raw: "ContractModuleProvider", network: "preview" });
       const [message] = (compact.data as { decodings: Array<{ description: string; fix: string }> }).decodings;
       expect(message!.description).toContain("The support matrix doesn't say which ledger Preview runs.");
       expect(message!.description).not.toContain("undefined");
       expect(message!.fix).toMatch(/^Check it with midnight-cast versions preview before changing the Compact toolchain/);
+      const mainnet = decodeCommand([], { json: true, raw: "ContractModuleProvider", network: "mainnet" });
+      expect((mainnet.data as { decodings: Array<{ description: string }> }).decodings[0]!.description).toContain(
+        "The support matrix doesn't say which ledger Mainnet runs.",
+      );
     } finally {
       if (previous === undefined) delete process.env.XDG_CONFIG_HOME;
       else process.env.XDG_CONFIG_HOME = previous;

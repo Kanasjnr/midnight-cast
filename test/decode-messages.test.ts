@@ -78,6 +78,14 @@ describe("decode --raw recognises messages from current tooling", () => {
     const raw = '"@midnight-ntwrk/compact-runtime": "^0.21.0"';
     // On preview and mainnet these are the normal packages, so decode doesn't claim the message.
     for (const network of ["preview", "mainnet"]) expect(decodeRaw(raw, network).decodings, network).toEqual([]);
+    // Unless the message names a different Compact runtime than the network pins.
+    expect(decodeRaw('"@midnight-ntwrk/compact-runtime": "^0.20.0"', "preview").decodings).toEqual([
+      expect.objectContaining({
+        id: "compact-ledger-9",
+        description: expect.stringContaining("pins Compact runtime 0.21.0, and this names 0.20.0"),
+        fix: expect.stringContaining("Pin the Compact runtime to 0.21.0"),
+      }),
+    ]);
     expect(decodeRaw("Error: proof failed at node_modules/@midnight-ntwrk/ledger-v9/dist/index.js:12", "preview").ok).toBe(false);
     const [preprod] = decodeRaw(raw, "preprod").decodings;
     expect(preprod).toMatchObject({ description: expect.stringContaining("still runs Ledger 8"), fix: expect.stringContaining("compact update 0.31") });
@@ -95,11 +103,15 @@ describe("decode --raw recognises messages from current tooling", () => {
       expect(decodeRaw(raw, "preprod").decodings, raw).toEqual([expect.objectContaining({ id: "compact-ledger-9" })]);
     }
     expect(decodeRaw('"@midnight-ntwrk/compact-runtime": "0.16.0"', "preprod").ok).toBe(false);
+    expect(decodeRaw("compact-runtime 0.16.0", "preprod").ok).toBe(false);
   });
 
   it("tells the indexer, not the node, to upgrade when the indexer reports the runtime", () => {
     expect(decodeRaw("Unsupported node version 2001100").decodings).toEqual([
-      expect.objectContaining({ fix: "Upgrade the indexer to 4.4.101 or later, which Preview and Mainnet run on this runtime." }),
+      expect.objectContaining({
+        description: expect.stringContaining("An indexer built for an older runtime"),
+        fix: "Upgrade the indexer to 4.4.101 or later, which Preview and Mainnet run on this runtime.",
+      }),
     ]);
   });
 

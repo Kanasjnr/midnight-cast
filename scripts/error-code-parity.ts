@@ -185,7 +185,12 @@ async function main(): Promise<number> {
     fetchNodeTable(reference),
     fetchText(MIDNIGHT_EXPERT_CODES),
     // A release that isn't public yet, such as one still under embargo, can't be compared, but it doesn't make the map wrong.
-    ...others.map((release) => fetchNodeTable(release).catch(() => undefined)),
+    ...others.map((release) =>
+      fetchNodeTable(release).catch((err: unknown) => {
+        if (err instanceof Error && err.message.startsWith("No ledger error table found")) return undefined;
+        throw err;
+      }),
+    ),
   ]);
   if (!expertText) throw new Error("Midnight Expert catalog not found at the pinned ref");
   const report = compare(ours, node, JSON.parse(expertText).entries, reference.tag);
@@ -194,7 +199,7 @@ async function main(): Promise<number> {
     const table = otherTables[i];
     if (!table) {
       console.log(
-        `Note: ${release.networks.join(", ")} run ${release.tag} on ledger ${release.ledger}, which the map (ledger ${reference.ledger}) doesn't cover; its code table isn't public, so it wasn't compared.`,
+        `Note: ${release.networks.join(", ")} run ${release.tag} on ledger ${release.ledger}${release.ledger === reference.ledger ? "" : `, which the map (ledger ${reference.ledger}) doesn't cover`}; ${release.tag} isn't published with a code table, so it wasn't compared.`,
       );
       return;
     }
