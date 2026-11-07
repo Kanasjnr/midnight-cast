@@ -6,7 +6,7 @@ import { decodeCommand } from "../src/commands/decode.js";
 
 describe("decodeCommand", () => {
   it("decodes numeric ledger code 170", () => {
-    const result = decodeCommand(["170"], { json: true, network: "preview" });
+    const result = decodeCommand(["170"], { json: true, network: "preprod" });
     expect(result.ok).toBe(true);
     const data = result.data as {
       kind: string;
@@ -19,10 +19,14 @@ describe("decodeCommand", () => {
     expect(data.kind).toBe("ledger");
     expect(data.code).toBe(170);
     expect(data.name).toBe("InvalidDustSpendProof");
-    // Bundled map and every network are on ledger 8.1.3: no mismatch.
+    // The bundled map and preprod are both on ledger 8.1.3: no mismatch.
     expect(data.ledger).toBe("8.1.3");
     expect(data.networkLedger).toBe("8.1.3");
     expect(data.mapMismatch).toBeUndefined();
+    // Preview runs Ledger 9, which the bundled map wasn't built for, so it says so.
+    const preview = decodeCommand(["170"], { json: true, network: "preview" }).data as { networkLedger?: string; mapMismatch?: string };
+    expect(preview.networkLedger).toBe("9.1.0.0");
+    expect(preview.mapMismatch).toBeDefined();
   });
 
   it("warns when the network's ledger differs from the bundled error map", () => {
