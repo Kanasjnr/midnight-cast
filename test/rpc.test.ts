@@ -72,7 +72,7 @@ describe("rpcCommand", () => {
 describe("rpc's read-only methods", () => {
   it("leave out submitting, keys, peers, logs, offchain storage, subscriptions and unsafe reads", () => {
     const writes = READ_ONLY_RPC_METHODS.filter((m) =>
-      /submit|insertKey|rotateKeys|removeExtrinsic|Peer|LogFilter|offchain_|subscribe|unwatch|follow|broadcast|dryRun|traceBlock|stop/i.test(m),
+      /submit|insertKey|rotateKeys|removeExtrinsic|Peer|LogFilter|offchain_|subscribe|unwatch|follow|broadcast|dryRun|traceBlock|getPairs|queryStorage$|stop/i.test(m),
     );
     expect(writes).toEqual([]);
     expect(new Set(READ_ONLY_RPC_METHODS).size).toBe(READ_ONLY_RPC_METHODS.length);

@@ -1,6 +1,7 @@
 // JSON-RPC methods `rpc` calls without --allow-write: one-shot queries that read chain or node state.
 // Left out: anything that submits, signs, changes keys, peers, logs or offchain storage; subscriptions,
-// which need a WebSocket; and reads Substrate marks unsafe, such as system_dryRun and state_traceBlock.
+// which need a WebSocket; and reads Substrate marks unsafe, such as system_dryRun, state_traceBlock, state_getPairs
+// and state_queryStorage, which public nodes refuse.
 export const READ_ONLY_RPC_METHODS: readonly string[] = [
   "account_nextIndex",
   "archive_v1_body",
@@ -54,7 +55,6 @@ export const READ_ONLY_RPC_METHODS: readonly string[] = [
   "state_getKeysPaged",
   "state_getKeysPagedAt",
   "state_getMetadata",
-  "state_getPairs",
   "state_getReadProof",
   "state_getRuntimeVersion",
   "state_getStorage",
@@ -63,7 +63,6 @@ export const READ_ONLY_RPC_METHODS: readonly string[] = [
   "state_getStorageHashAt",
   "state_getStorageSize",
   "state_getStorageSizeAt",
-  "state_queryStorage",
   "state_queryStorageAt",
   "systemParameters_getAriadneParameters",
   "systemParameters_getDParameter",
