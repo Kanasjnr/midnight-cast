@@ -14,7 +14,6 @@
     "url": "https://github.com/Kanasjnr/midnight-cast/issues"
   },
   "bin": {
-    "mn": "dist/cli.js",
     "midnight-cast": "dist/cli.js"
   },
   "files": [

@@ -2,7 +2,11 @@
 
 ## Unreleased
 
+### Breaking changes
+- The `mn` alias is gone: run `midnight-cast`. midnight-wallet-cli and `@mermaid-js/mermaid-cli` install an `mn` too, so a global install next to either left `mn` running whichever tool was installed last, and `npx mn` fetches an unrelated package. npm no longer links `mn`, and `install.sh` and `install.ps1` no longer create it. They remove the alias an earlier install left (a symlink to `midnight-cast`, or the `mn.cmd` the installer wrote) and leave any other tool's `mn` alone. The docs, hints and JSON output have only said `midnight-cast` since 0.2.0
+
 ### Tests & CI
+- The tarball smoke test checks that no `mn` is installed, and the binary smoke test starts from an install dir holding an old `mn` alias and checks the installer removes it
 - npm publishing runs from a job that checks out and installs nothing. The release's tarball job keeps the tarball its Linux Node 24 run packed and tested (`npm run smoke:tarball -- --keep <dir>`), and the publish job downloads that file, checks it is midnight-cast at the release tag's version, and runs `npm publish <tarball> --ignore-scripts`. Before, the job that could get npm's OIDC token also ran `npm ci` and the build, so any dependency's install script ran while it could publish as midnight-cast. The job runs in the `npm-publish` environment, which the npm trusted publisher names and a maintainer can protect with a required reviewer and a `v*` tag rule (see docs/RELEASING.md)
 - The tarball and binary jobs install dependencies with `npm ci --ignore-scripts`, so no install script can change the files that are published and attested. esbuild, the only dependency with one, works without it
 - Build provenance for the binaries is recorded by its own job, which only downloads the archives and attests them. The job that installs dependencies to write `SHA256SUMS` no longer has an OIDC token

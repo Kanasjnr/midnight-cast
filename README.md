@@ -12,8 +12,6 @@ npx midnight-cast@latest health preview
 
 Preview needs nothing else. Preprod and mainnet go through Blockfrost and need a free project ID for each; see [Quick start](#quick-start).
 
-> **Note:** midnight-cast also installs a short alias, `mn`, which runs the same commands. Other global CLIs (e.g. `@mermaid-js/mermaid-cli`, `midnight-wallet-cli`) install an `mn` too, so these docs, the hints and the JSON output always say `midnight-cast`.
-
 ```bash
 midnight-cast health preview
 ```
