@@ -11,7 +11,7 @@ import {
   NIGHT_TOKEN_TYPE,
   addressKind,
   cardanoWallet,
-  dustResetSince,
+  pastDustReset,
   formatPreflightHuman,
   formatUnits,
   networkCheck,
@@ -138,35 +138,49 @@ describe("preflight", () => {
   });
 
   it("says when the Ledger 9 upgrade reset a registration, and only for UTXOs created before it", () => {
-    const since = 2001100;
-    const before = (hash: string, registered = false) => ({ ...utxo(hash, "5000000", registered), createdProtocolVersion: 1000300 });
-    const after = (hash: string, registered = false) => ({ ...utxo(hash, "5000000", registered), createdProtocolVersion: since });
-    const reset = unshieldedWallet(ADDRESS, { utxos: [before("a"), before("b")], transactions: 2, complete: true }, undefined, since);
-    expect(reset.check).toMatchObject({
+    const at = (hash: string, protocol: number, registered = false) => ({ ...utxo(hash, "5000000", registered), createdProtocolVersion: protocol });
+    const before = (hash: string) => at(hash, 1000300);
+    const after = (hash: string, registered = false) => at(hash, 2001100, registered);
+    const wallet = (utxos: ReturnType<typeof utxo>[], past = true) =>
+      unshieldedWallet(ADDRESS, { utxos, transactions: utxos.length, complete: true }, undefined, past);
+
+    const all = wallet([before("a"), before("b")]);
+    expect(all.check).toMatchObject({
       ok: false,
-      detail: "10 NIGHT in 2 UTXOs, none registered for DUST generation, so it can't pay fees. They all predate the Ledger 9 upgrade, which reset every DUST registration: register it for DUST again from the wallet, even if it was registered before",
+      detail: "10 NIGHT in 2 UTXOs, none registered for DUST generation, so it can't pay fees. They were all created before the Ledger 9 upgrade, which reset every DUST registration: register it for DUST again from the wallet, even if it was registered before",
     });
-    expect(reset.wallet.resetByUpgrade).toBe(2);
-    const mixed = unshieldedWallet(ADDRESS, { utxos: [after("a", true), before("b"), after("c")], transactions: 3, complete: true }, undefined, since);
-    expect(mixed.check).toMatchObject({ ok: true, detail: expect.stringContaining("1 registered for DUST generation. 1 of them predate the Ledger 9 upgrade") });
-    expect(mixed.wallet.resetByUpgrade).toBe(1);
-    // Created after the upgrade, of unknown age, or on a network that hasn't upgraded: the plain message.
-    for (const [utxos, resetSince] of [[[after("a")], since], [[utxo("a", "5000000", false)], since], [[before("a")], undefined]] as const) {
-      const plain = unshieldedWallet(ADDRESS, { utxos: [...utxos], transactions: 1, complete: true }, undefined, resetSince);
-      expect(plain.check.detail).toMatch(/none registered for DUST generation, so it can't pay fees\. Register it for DUST from the wallet$/);
-      expect(plain.wallet).not.toHaveProperty("resetByUpgrade");
-    }
+    expect(all.wallet.resetByUpgrade).toBe(2);
+    expect(wallet([before("a")]).check.detail).toContain("It was created before the Ledger 9 upgrade");
+
+    const one = wallet([after("a", true), before("b"), after("c")]);
+    expect(one.check).toMatchObject({
+      ok: true,
+      detail: expect.stringContaining("1 registered for DUST generation. 1 unregistered UTXO was created before the Ledger 9 upgrade, which reset every DUST registration: register it again"),
+    });
+    expect(one.wallet.resetByUpgrade).toBe(1);
+
+    // A later Ledger 9 runtime doesn't move the cutoff: a UTXO created after the fork, under any spec, wasn't reset.
+    const later = wallet([at("a", 2001200), after("b")]);
+    expect(later.check.detail).toMatch(/none registered for DUST generation, so it can't pay fees\. Register it for DUST from the wallet$/);
+    expect(later.wallet.resetByUpgrade).toBe(0);
+    // Of unknown age, or on a network that hasn't upgraded: the plain message, and no count when it wasn't checked.
+    expect(wallet([utxo("a", "5000000", false)]).wallet.resetByUpgrade).toBe(0);
+    const before9 = wallet([before("a")], false);
+    expect(before9.check.detail).toMatch(/Register it for DUST from the wallet$/);
+    expect(before9.wallet).not.toHaveProperty("resetByUpgrade");
   });
 
-  it("knows a network has upgraded to Ledger 9 by its node's runtime spec", () => {
+  it("knows a network is past the Ledger 9 upgrade by its node's runtime spec, or its own row when the node can't be read", () => {
     const networks = {
       preview: { ledger: "9.1.0.0", runtimeSpec: 2001100 },
       preprod: { ledger: "8.1.3", runtimeSpec: 1000300 },
-    } as unknown as Parameters<typeof dustResetSince>[0];
-    expect(dustResetSince(networks, 2001100)).toBe(2001100);
-    expect(dustResetSince(networks, 1000300)).toBeUndefined();
-    expect(dustResetSince(networks, 999)).toBeUndefined();
-    expect(dustResetSince(networks, undefined)).toBeUndefined();
+    } as unknown as Parameters<typeof pastDustReset>[0];
+    expect(pastDustReset(networks, "preprod", 2001100)).toBe(true);
+    expect(pastDustReset(networks, "preprod", 2001200)).toBe(true);
+    expect(pastDustReset(networks, "preprod", 1000300)).toBe(false);
+    expect(pastDustReset(networks, "preview", undefined)).toBe(true);
+    expect(pastDustReset(networks, "preprod", undefined)).toBe(false);
+    expect(pastDustReset(networks, "local", undefined)).toBe(false);
   });
 
   it("doesn't send a wallet to the faucet when it couldn't read the whole history", () => {
