@@ -11,7 +11,14 @@ import { formatDate, type BundledReports } from "../src/lib/examples-report.js";
 import { examplesToolchainChecks, findPragmas, nodeAdmits, satisfies } from "../src/lib/examples-toolchain.js";
 
 const root = mkdtempSync(join(tmpdir(), "examples-links-"));
-afterAll(() => rmSync(root, { recursive: true, force: true }));
+// The ledger notes read the support matrix, which a user's own override would change: use an empty config home.
+const configHome = process.env.XDG_CONFIG_HOME;
+process.env.XDG_CONFIG_HOME = join(root, "config");
+afterAll(() => {
+  if (configHome === undefined) delete process.env.XDG_CONFIG_HOME;
+  else process.env.XDG_CONFIG_HOME = configHome;
+  rmSync(root, { recursive: true, force: true });
+});
 const toolchain = loadExamplesIndex().toolchain;
 
 function project(name: string, packageJson: object, files: Record<string, string> = {}): string {
@@ -83,6 +90,18 @@ describe("the examples' toolchain against a project", () => {
     expect(findPragmas(dir).map((p) => p.constraint)).toEqual([">= 0.16 && <= 0.20"]);
   });
 
+  it("checks a midnight-js package the examples pin on their own against that pin, prereleases exactly", () => {
+    expect(toolchain["@midnight-ntwrk/midnight-js-network-id"]).toBe("5.0.0-rc.5");
+    const verdicts = (packages: Record<string, string>) =>
+      examplesToolchainChecks(toolchain, { dir: join(root, "none"), packages }).map((c) => [c.label, c.live, c.ok]);
+    expect(verdicts({ "@midnight-ntwrk/midnight-js-network-id": "5.0.0-rc.5", "@midnight-ntwrk/midnight-js-contracts": "5.0.0" })).toEqual([
+      ["midnight-js", "5.0.0", true],
+      ["midnight-js-network-id", "5.0.0-rc.5", true],
+    ]);
+    expect(verdicts({ "@midnight-ntwrk/midnight-js-network-id": "^5.0.0" })).toEqual([["midnight-js-network-id", "^5.0.0", false]]);
+    expect(verdicts({ "@midnight-ntwrk/midnight-js-network-id": "^5.0.0-rc.5" })).toEqual([["midnight-js-network-id", "^5.0.0-rc.5", true]]);
+  });
+
   it("skips unreadable contracts and only looks for pragmas inside a project", () => {
     const dir = project("broken", {}, { "contract/ok.compact": "pragma language_version 0.23;\n" });
     symlinkSync(join(dir, "missing.compact"), join(dir, "contract", "dangling.compact"));
@@ -132,6 +151,27 @@ describe("working code for what decode and explain identify", () => {
     expect(decodeCommand(["155"], { json: true, network: "preprod" }).data).not.toHaveProperty("examplesNote");
     expect(explainCommand("dust", { json: true }).data).toMatchObject({ examplesNote: examplesLedgerNote() });
     expect(explainCommand("1010", { json: true }).data).not.toHaveProperty("examplesNote");
+    expect(explainCommand("dust", { json: true, network: "preprod" }).data).toMatchObject({ examplesNote: examplesLedgerNote("preprod") });
+    expect(explainCommand("dust", { json: true, network: "mainnet" }).data).not.toHaveProperty("examplesNote");
+    // A network the matrix gives no ledger for gets the general note.
+    expect(examplesLedgerNote("local")).toBe(examplesLedgerNote());
+  });
+
+  it("says the note once when a raw error decodes to several codes", () => {
+    const text = decodeCommand([], { raw: "Custom error: 170 then Custom error: 196", network: "preprod" }).data as string;
+    expect(text.match(/^Kind: {3}ledger/gm)).toHaveLength(2);
+    expect(text.match(/^Note: {3}This code targets/gm)).toHaveLength(1);
+  });
+
+  it("leaves the note out rather than fail on a broken support-matrix override", () => {
+    const dir = join(root, "config", "midnight-cast");
+    mkdirSync(dir, { recursive: true });
+    for (const broken of ["{ not json", "{}"]) {
+      writeFileSync(join(dir, "support-matrix.json"), broken);
+      expect(examplesLedgerNote("preprod")).toBeUndefined();
+      expect(explainCommand("dust", { json: true }).ok).toBe(true);
+    }
+    rmSync(join(dir, "support-matrix.json"));
   });
 
   it("names only declarations the pinned index has", () => {
