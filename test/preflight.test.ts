@@ -11,6 +11,7 @@ import {
   NIGHT_TOKEN_TYPE,
   addressKind,
   cardanoWallet,
+  dustResetSince,
   formatPreflightHuman,
   formatUnits,
   networkCheck,
@@ -59,7 +60,12 @@ async function fakeIndexer(events: unknown[], { complete = false, raw = false } 
 }
 
 const progress = (highestTransactionId: number) => ({ __typename: "UnshieldedTransactionsProgress", highestTransactionId });
-const tx = (id: number, createdUtxos: unknown[], spentUtxos: unknown[] = []) => ({ __typename: "UnshieldedTransaction", transaction: { id }, createdUtxos, spentUtxos });
+const tx = (id: number, createdUtxos: unknown[], spentUtxos: unknown[] = [], protocolVersion?: number) => ({
+  __typename: "UnshieldedTransaction",
+  transaction: { id, ...(protocolVersion === undefined ? {} : { protocolVersion }) },
+  createdUtxos,
+  spentUtxos,
+});
 
 describe("preflight", () => {
   it("tells unshielded and Cardano addresses apart, and refuses another network's address", () => {
@@ -131,6 +137,38 @@ describe("preflight", () => {
     expect(partial.check.detail).toContain("read 40 transactions before the timeout");
   });
 
+  it("says when the Ledger 9 upgrade reset a registration, and only for UTXOs created before it", () => {
+    const since = 2001100;
+    const before = (hash: string, registered = false) => ({ ...utxo(hash, "5000000", registered), createdProtocolVersion: 1000300 });
+    const after = (hash: string, registered = false) => ({ ...utxo(hash, "5000000", registered), createdProtocolVersion: since });
+    const reset = unshieldedWallet(ADDRESS, { utxos: [before("a"), before("b")], transactions: 2, complete: true }, undefined, since);
+    expect(reset.check).toMatchObject({
+      ok: false,
+      detail: "10 NIGHT in 2 UTXOs, none registered for DUST generation, so it can't pay fees. They all predate the Ledger 9 upgrade, which reset every DUST registration: register it for DUST again from the wallet, even if it was registered before",
+    });
+    expect(reset.wallet.resetByUpgrade).toBe(2);
+    const mixed = unshieldedWallet(ADDRESS, { utxos: [after("a", true), before("b"), after("c")], transactions: 3, complete: true }, undefined, since);
+    expect(mixed.check).toMatchObject({ ok: true, detail: expect.stringContaining("1 registered for DUST generation. 1 of them predate the Ledger 9 upgrade") });
+    expect(mixed.wallet.resetByUpgrade).toBe(1);
+    // Created after the upgrade, of unknown age, or on a network that hasn't upgraded: the plain message.
+    for (const [utxos, resetSince] of [[[after("a")], since], [[utxo("a", "5000000", false)], since], [[before("a")], undefined]] as const) {
+      const plain = unshieldedWallet(ADDRESS, { utxos: [...utxos], transactions: 1, complete: true }, undefined, resetSince);
+      expect(plain.check.detail).toMatch(/none registered for DUST generation, so it can't pay fees\. Register it for DUST from the wallet$/);
+      expect(plain.wallet).not.toHaveProperty("resetByUpgrade");
+    }
+  });
+
+  it("knows a network has upgraded to Ledger 9 by its node's runtime spec", () => {
+    const networks = {
+      preview: { ledger: "9.1.0.0", runtimeSpec: 2001100 },
+      preprod: { ledger: "8.1.3", runtimeSpec: 1000300 },
+    } as unknown as Parameters<typeof dustResetSince>[0];
+    expect(dustResetSince(networks, 2001100)).toBe(2001100);
+    expect(dustResetSince(networks, 1000300)).toBeUndefined();
+    expect(dustResetSince(networks, 999)).toBeUndefined();
+    expect(dustResetSince(networks, undefined)).toBeUndefined();
+  });
+
   it("doesn't send a wallet to the faucet when it couldn't read the whole history", () => {
     const check = unshieldedWallet(ADDRESS, { utxos: [], transactions: 4000, complete: false }, "https://faucet.example").check;
     expect(check).toMatchObject({ ok: false, detail: expect.stringContaining("couldn't read the whole history in time: 4000 transactions read") });
@@ -145,11 +183,13 @@ describe("preflight", () => {
   });
 
   it("follows an address's UTXOs until the indexer catches up", async () => {
-    const indexer = await fakeIndexer([progress(3), tx(1, [utxo("a", "1000000"), utxo("b", "2000000")]), tx(3, [utxo("c", "3000000")], [{ intentHash: "a", outputIndex: 0 }])]);
+    const indexer = await fakeIndexer([progress(3), tx(1, [utxo("a", "1000000"), utxo("b", "2000000")], [], 1000300), tx(3, [utxo("c", "3000000")], [{ intentHash: "a", outputIndex: 0 }])]);
     try {
       const holdings = await unshieldedHoldings(indexer, ADDRESS, { timeoutMs: 5000 });
       expect(holdings).toMatchObject({ transactions: 2, complete: true });
       expect(holdings.utxos.map((u) => u.intentHash).sort()).toEqual(["b", "c"]);
+      // Each UTXO carries the protocol version of the transaction that created it, when the indexer gives one.
+      expect(holdings.utxos.map((u) => [u.intentHash, u.createdProtocolVersion])).toEqual([["b", 1000300], ["c", undefined]]);
     } finally {
       indexer.stop();
     }
