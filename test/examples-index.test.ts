@@ -35,7 +35,8 @@ describe("Midnight's examples", () => {
         expect(file.lines[1]).toBeGreaterThanOrEqual(file.lines[0]);
       }
     }
-    expect(index.toolchain).toMatchObject({ "Compact language (pragma)": "0.23", "@midnight-ntwrk/midnight-js-*": "4.1.1" });
+    expect(index.ledger).toBe("9");
+    expect(index.toolchain).toMatchObject({ "Compact language (pragma)": "0.28", "@midnight-ntwrk/midnight-js-*": "5.0.0" });
   });
 
   it("finds the example that shows a topic, asked in a person's words", () => {

@@ -69,12 +69,12 @@ describe("the examples' toolchain against a project", () => {
         "@midnight-ntwrk/midnight-js-contracts": "4.0.0",
         "@midnightntwrk/midnight-js-types": "4.1.1",
         "@midnight-ntwrk/wallet-sdk": "1.0.4",
-        "@midnight-ntwrk/testkit-js": "^4.1.0",
+        "@midnight-ntwrk/testkit-js": "^5.0.0",
       },
     });
     expect(checks.map((c) => [c.label, c.live, c.ok])).toEqual([
       ["midnight-js", "4.0.0, 4.1.1", false],
-      ["testkit-js", "^4.1.0", true],
+      ["testkit-js", "^5.0.0", true],
       ["wallet-sdk", "1.0.4", false],
       ["pragma language_version", ">= 0.16 && <= 0.20", false],
       ["node.js", "^20", false],
