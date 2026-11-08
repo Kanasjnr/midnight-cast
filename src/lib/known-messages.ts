@@ -1,6 +1,7 @@
 import { RETIRED, RETIRED_HOSTS, blockfrostProject, networkTitle as title } from "./blockfrost.js";
 import type { NextStep } from "../output.js";
 import { loadSupportMatrix } from "./versions.js";
+import { PUBLIC_NETWORKS, ledgerMajor, names, publicNetworks, runs } from "./network-names.js";
 
 export interface KnownMessage {
   id: string;
@@ -17,23 +18,6 @@ interface Pattern {
   /** undefined when the text matches but isn't a problem on this network. */
   describe: (match: RegExpMatchArray, network?: string) => KnownMessage | undefined;
 }
-
-// The public networks the general advice speaks about; a network named with --network may also come from a user's override.
-const PUBLIC_NETWORKS = ["preview", "preprod", "mainnet"];
-const publicNetworks = (matrix: Record<string, unknown>) => PUBLIC_NETWORKS.filter((name) => name in matrix);
-
-function names(networks: string[]): string {
-  const titled = networks.map(title);
-  return titled.length > 1 ? `${titled.slice(0, -1).join(", ")} and ${titled.at(-1)}` : (titled[0] ?? "");
-}
-
-const runs = (networks: string[]) => `${names(networks)} ${networks.length > 1 ? "run" : "runs"}`;
-
-/** The ledger's major version, or undefined when the matrix doesn't say. */
-const ledgerMajor = (ledger: string | undefined) => {
-  const major = Number(ledger?.split(".")[0]);
-  return ledger && Number.isInteger(major) ? major : undefined;
-};
 
 /** Each version with the networks that run it, so networks that differ aren't given one network's version. */
 /** How to upgrade, per network, so networks that differ aren't given one network's version. */

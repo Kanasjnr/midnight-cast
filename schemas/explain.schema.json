@@ -51,6 +51,10 @@
               }
             }
           }
+        },
+        "examplesNote": {
+          "type": "string",
+          "description": "When the linked code targets a ledger the network (or, without --network, a public network) doesn't run, which ledger it targets and which networks differ"
         }
       }
     },

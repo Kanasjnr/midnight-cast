@@ -1,4 +1,4 @@
-import { describeLinks, examplesForLedgerCode, resolveLinks } from "../lib/example-links.js";
+import { describeLinks, examplesForLedgerCode, examplesLedgerNote, resolveLinks } from "../lib/example-links.js";
 import { loadDataJson } from "../lib/data-path.js";
 import {
   findLedgerCodesByName,
@@ -207,6 +207,7 @@ function decodeLedger(input: string, options: DecodeOptions): EmitResult {
   const mapMismatch = ledgerMapMismatch(options, data);
   const related = relatedNoteFor(code, options.network);
   const examples = examplesForLedgerCode(Number(code));
+  const examplesNote = examples.length ? examplesLedgerNote(options.network) : undefined;
   const payload = {
     kind: "ledger" as const,
     code: parseInt(code, 10),
@@ -224,6 +225,7 @@ function decodeLedger(input: string, options: DecodeOptions): EmitResult {
     ...(mapMismatch ? { mapMismatch } : {}),
     ...(related ? { relatedHint: related.hint } : {}),
     ...(examples.length ? { examples } : {}),
+    ...(examplesNote ? { examplesNote } : {}),
   };
   const next = related?.next ?? [];
 
@@ -240,6 +242,7 @@ function decodeLedger(input: string, options: DecodeOptions): EmitResult {
     `Fix:    ${entry.fix}`,
     ...(related ? [`Hint:   ${related.hint}`] : []),
     ...describeLinks(examples).map((l) => `Code:   ${l}`),
+    ...(examplesNote ? [`Note:   ${examplesNote}`] : []),
     ...(mapMismatch ? [`Warn:   ${mapMismatch}`] : []),
     ...(meta ? [meta] : []),
     `Docs:   ${data.docUrl}`,
@@ -503,7 +506,14 @@ function decodeRaw(raw: string, options: DecodeOptions): EmitResult {
     );
   }
 
-  return { ...success(sections.join("\n").trimEnd()), next };
+  // Each decoding that links the examples carries the same ledger note; say it once.
+  const seen = new Set<string>();
+  const text = sections
+    .join("\n")
+    .split("\n")
+    .filter((line) => !line.startsWith("Note:   This code targets") || (!seen.has(line) && seen.add(line)))
+    .join("\n");
+  return { ...success(text.trimEnd()), next };
 }
 
 function decodeKnownMessage(message: KnownMessage, options: DecodeOptions): EmitResult {
@@ -511,15 +521,20 @@ function decodeKnownMessage(message: KnownMessage, options: DecodeOptions): Emit
     options.network ? { ...step, command: step.command.replace("<network>", options.network) } : step,
   );
   const examples = resolveLinks(message.examples ?? []);
+  const examplesNote = examples.length ? examplesLedgerNote(options.network) : undefined;
   if (options.json) {
     const { next: _, examples: __, ...rest } = message;
-    return { ...success({ kind: "message" as const, ...rest, ...(examples.length ? { examples } : {}) }), next };
+    return {
+      ...success({ kind: "message" as const, ...rest, ...(examples.length ? { examples } : {}), ...(examplesNote ? { examplesNote } : {}) }),
+      next,
+    };
   }
   const text = [
     `Kind:   message (${message.name})`,
     `Desc:   ${message.description}`,
     `Fix:    ${message.fix}`,
     ...describeLinks(examples).map((l) => `Code:   ${l}`),
+    ...(examplesNote ? [`Note:   ${examplesNote}`] : []),
   ].join("\n");
   return { ...success(text), next };
 }

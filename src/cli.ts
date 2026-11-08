@@ -495,14 +495,14 @@ program
   .command("explain [topic]")
   .description("Static help (e.g. explain dust); with --json and no topic, a catalog of every command")
   .action(async (topic: string | undefined, _opts, cmd) => {
-    await run(async () => explainCommand(topic, globalOpts(cmd), () => buildCatalog(program, TOPICS)), cmd);
+    await run(async () => explainCommand(topic, { ...globalOpts(cmd), network: resolveFlags(cmd).network }, () => buildCatalog(program, TOPICS)), cmd);
   });
 
 program
   .command("examples [topic...]")
   .description("Midnight's official examples: list them, or find the code that shows a topic (e.g. examples dust sponsorship)")
   .action(async (topic: string[], _opts, cmd) => {
-    await run(async () => examplesCommand(topic.join(" "), globalOpts(cmd)), cmd);
+    await run(async () => examplesCommand(topic.join(" "), { ...globalOpts(cmd), network: resolveFlags(cmd).network }), cmd);
   });
 
 program

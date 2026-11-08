@@ -21,6 +21,8 @@ import { settle } from "../lib/settle.js";
 import { examplesVerdict } from "../lib/examples-report.js";
 import { examplesToolchainChecks } from "../lib/examples-toolchain.js";
 import { loadExamplesIndex } from "../lib/examples-index.js";
+import { ledgerMajor } from "../lib/network-names.js";
+import { networkTitle } from "../lib/blockfrost.js";
 
 export async function versionsCommand(
   networkArg: string | undefined,
@@ -79,7 +81,29 @@ export async function versionsCommand(
   const local = flags.local !== false ? checkLocalPackages(expected, projectDir) : {};
   // Advice beside the matrix: the toolchain Midnight's examples are known to work with.
   const index = flags.local !== false ? loadExamplesIndex() : undefined;
-  const toolchainChecks = index ? examplesToolchainChecks(index.toolchain, { dir: projectDir, packages: local.localPackages }) : [];
+  // The examples' toolchain is advice for their ledger only: a project on another ledger needs other versions.
+  // The network's ledger is the one the matrix gives for the runtime spec its node reports, so an upgrade the
+  // matrix's own row hasn't caught up with still counts; the row's ledger when no row has that spec.
+  const liveLedger = Object.values(matrix.networks).find((n) => n.runtimeSpec === live.runtimeSpecVersion)?.ledger;
+  const networkLedger = ledgerMajor(liveLedger ?? expected.ledger);
+  const otherLedger = index !== undefined && networkLedger !== undefined && networkLedger !== Number(index.ledger);
+  const toolchainChecks = index && !otherLedger ? examplesToolchainChecks(index.toolchain, { dir: projectDir, packages: local.localPackages }) : [];
+  const declaresToolchain = Object.keys(local.localPackages ?? {}).some((name) => /midnight-js-|testkit-js|wallet-sdk/.test(name));
+  const examplesToolchain =
+    index && (toolchainChecks.length || (otherLedger && declaresToolchain))
+      ? {
+          repo: index.repo,
+          commit: index.commit,
+          ledger: index.ledger,
+          toolchain: index.toolchain,
+          checks: toolchainChecks,
+          ...(otherLedger
+            ? {
+                note: `Midnight's examples target Ledger ${index.ledger}, and ${networkTitle(endpoints.network)} runs Ledger ${networkLedger}, so the project isn't compared with them. The matrix checks above are the ones for this network.`,
+              }
+            : {}),
+        }
+      : undefined;
   const { localPackageChecks } = local;
   const allOk =
     checks.every((c) => c.ok) &&
@@ -106,7 +130,7 @@ export async function versionsCommand(
     checks,
     ...local,
     examples: await examples,
-    ...(index && toolchainChecks.length ? { examplesToolchain: { repo: index.repo, commit: index.commit, toolchain: index.toolchain, checks: toolchainChecks } } : {}),
+    ...(examplesToolchain ? { examplesToolchain } : {}),
     allOk,
   };
 

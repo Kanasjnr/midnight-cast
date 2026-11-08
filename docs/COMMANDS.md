@@ -268,7 +268,7 @@ The published matrix updates only what the endpoints can't reveal: the indexer, 
 - It is `unverified`, with a `reason`, when the node version has no report (it is never matched to an older one), when the report ran a different runtime `spec_version` or another network, or when it has no passing tests. The runs are on preprod, so mainnet and preview show the preprod run for context but stay unverified: the same node on another network isn't what the examples tested.
 - The report is fetched for that exact version with a 3-second timeout and cached like the published matrix: six hours, a week as a fallback, and no retry for an hour after a failure. A report that says it's about a different node version is rejected. Offline, or when nothing can be fetched, the summaries bundled with this release are used, and a cached copy older than them is ignored. `source` says which was used, and how old it is. Reading the report never fails `versions` or `health`; a problem shows as `unverified` with the reason.
 
-**Against Midnight's examples:** next to the matrix checks, `versions` compares the project with the toolchain Midnight's examples are pinned to, a set known to compile and pass its tests together (`examplesToolchain` in JSON). It covers the `midnight-js-*` packages, `testkit-js`, the wallet SDK, the `pragma language_version` in the project's `.compact` files (only in a directory with a `package.json`, four levels deep, build output, dot directories and `node_modules` skipped; a constraint such as `>= 0.16 && <= 0.20` must admit the examples' language) and the Node.js version in `.nvmrc` or `engines`. It checks only what the project declares, and it's advice: a difference doesn't change `allOk` or the exit code, since a project can be right on other versions. For example: "wallet-sdk: examples=1.2.0 project=1.0.4 → DIFFERS (the official examples run 1.2.0)".
+**Against Midnight's examples:** next to the matrix checks, `versions` compares the project with the toolchain Midnight's examples are pinned to, a set known to compile and pass its tests together (`examplesToolchain` in JSON). It covers the `midnight-js-*` packages, `testkit-js`, the wallet SDK, the `pragma language_version` in the project's `.compact` files (only in a directory with a `package.json`, four levels deep, build output, dot directories and `node_modules` skipped; a constraint such as `>= 0.16 && <= 0.20` must admit the examples' language) and the Node.js version in `.nvmrc` or `engines`. It checks only what the project declares, and it's advice: a difference doesn't change `allOk` or the exit code, since a project can be right on other versions. For example: "wallet-sdk: examples=2.0.0 project=1.0.4 → DIFFERS (the official examples run 2.0.0)". A `midnight-js-*` package the examples pin on its own, such as `midnight-js-network-id` at `5.0.0-rc.5`, is checked against that pin, and a prerelease pin matches only a spec that names it. The examples target one ledger (`ledger`, Ledger 9 today), so on a network that runs another, such as preprod on Ledger 8, `versions` doesn't compare the project with them and says why in `note`, with `checks` empty. The network's ledger is the one the matrix gives for the runtime spec its node reports, so an upgrade counts as soon as the node runs it.
 
 Example output:
 
@@ -423,7 +423,7 @@ Auto-detects and decodes everything it finds in one pasted error:
 
 Hex codes need the `0x` prefix, "ledger N" counts only as "ledger error N" or "ledger code N", and single-word ledger names such as `Transaction` aren't matched in free text, since they also appear in ordinary error messages ("Invalid Transaction").
 
-Where Midnight's examples show the fix, a decoding links that code, at the examples index's pinned commit (`examples` in JSON, `Code:` lines otherwise):
+Where Midnight's examples show the fix, a decoding links that code, at the examples index's pinned commit (`examples` in JSON, `Code:` lines otherwise). The examples target Ledger 9, so when the network runs another ledger (with `--network`, that network; without it, any public network), `examplesNote` (`Note:`) says so, once per decoding. `explain` and `examples` give the same note and take `--network` too:
 - stale-DUST errors (170, 171, 196) link hello-world's wallet sync;
 - a fee beyond the available DUST (138) links private-party's DUST sponsorship;
 - a token balance error (126) links token-transfers' `sendToUser` circuit;
@@ -600,11 +600,12 @@ midnight-cast examples "verify a signature in a circuit" --json
 Example output (cut short):
 
 ```text
-Midnight's examples for "dust sponsorship" (midnightntwrk/midnight-examples at 95d4f50, pinned to Compact language 0.23, Compact compiler 0.31.1, @midnight-ntwrk/midnight-js-* 4.1.1)
+Midnight's examples for "dust sponsorship" (midnightntwrk/midnight-examples at 377495c, Ledger 9, pinned to Compact language 0.28, Compact compiler 0.36.0, @midnight-ntwrk/midnight-js-* 5.0.0)
+This code targets Ledger 9, which Preview and Mainnet run; Preprod runs Ledger 8, so its APIs may not match there.
 
 private-party: Private on-chain data, access control, and DUST sponsorship: one wallet pays the fees for another's transaction
-  Having a sponsor wallet pay the DUST fee and submit: examples/private-party/src/sponsor.ts:96-115
-    https://github.com/midnightntwrk/midnight-examples/blob/95d4f50…/examples/private-party/src/sponsor.ts#L96-L115
+  Having a sponsor wallet pay the DUST fee and submit: examples/private-party/src/sponsor.ts:97-116
+    https://github.com/midnightntwrk/midnight-examples/blob/377495c…/examples/private-party/src/sponsor.ts#L97-L116
 
     export async function sponsorAndSubmit(
     …
@@ -626,7 +627,7 @@ The index covers all twelve examples:
 
 The topics and code locations are chosen by hand. `npm run examples-index` finds each location by its declaration at the pinned commit, so the line ranges and excerpts always match the linked code. The JSON has the toolchain the examples are pinned to (Compact language and compiler, midnight-js, wallet SDK, Node.js), so you can tell when your project is on a different generation. A topic with no match exits `1`; a topic of only filler words, such as "show me code", lists every example. When an example matches as a whole but none of its files does, the JSON says so (`filesMatched: false`) and lists all of its files, and the human output shows no excerpt rather than an unrelated one.
 
-`live.yml` checks the index against its pinned commit and notes when midnight-examples has moved past it, with any toolchain change; moving the pin is a deliberate change to `COMMIT` in `scripts/examples-index.ts`.
+`live.yml` checks the index against its pinned commit and notes when midnight-examples has moved past it, with any toolchain change; moving the pin is a deliberate change to `COMMIT` in `scripts/examples-index.ts`, and to `LEDGER` beside it when the examples move to another ledger.
 
 ---
 

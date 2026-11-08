@@ -3,6 +3,9 @@
 // the index's pinned commit; a test fails if one stops resolving when the pin moves.
 
 import { loadExamplesIndex } from "./examples-index.js";
+import { networkTitle } from "./blockfrost.js";
+import { ledgerMajor, publicNetworks, runs } from "./network-names.js";
+import { loadSupportMatrix, type SupportMatrixFile } from "./versions.js";
 
 export interface ExampleLink {
   example: string;
@@ -64,4 +67,33 @@ export function examplesForTopic(topic: string): ExampleLink[] {
 
 export function describeLinks(links: ExampleLink[]): string[] {
   return links.map((l) => `${l.about} (${l.example}): ${l.url}`);
+}
+
+/**
+ * When the examples' code targets a ledger a network doesn't run, a note saying so: for that network,
+ * or, without one or for one the matrix gives no ledger for, the public networks on another ledger.
+ * Undefined when nothing differs.
+ */
+export function examplesLedgerNote(network?: string): string | undefined {
+  const ledger = Number(loadExamplesIndex().ledger);
+  let matrix: SupportMatrixFile["networks"];
+  try {
+    matrix = loadSupportMatrix().networks;
+    if (typeof matrix !== "object" || matrix === null) return undefined;
+  } catch {
+    // A note beside working code isn't worth failing over a broken support-matrix override.
+    return undefined;
+  }
+  const majorOf = (name: string) => ledgerMajor(matrix[name]?.ledger);
+  // A network the matrix gives no ledger for, such as local, gets the general note.
+  const on = network ? majorOf(network) : undefined;
+  if (on !== undefined) {
+    return on !== ledger ? `This code targets Ledger ${ledger}, and ${networkTitle(network!)} runs Ledger ${on}, so its APIs may not match.` : undefined;
+  }
+  const known = publicNetworks(matrix).filter((name) => majorOf(name) !== undefined);
+  const others = known.filter((name) => majorOf(name) !== ledger);
+  if (!others.length) return undefined;
+  const same = known.filter((name) => majorOf(name) === ledger);
+  const otherLedgers = [...new Set(others.map(majorOf))].map((major) => `${runs(others.filter((name) => majorOf(name) === major))} Ledger ${major}`);
+  return `This code targets Ledger ${ledger}${same.length ? `, which ${runs(same)}` : ""}; ${otherLedgers.join(", and ")}, so its APIs may not match there.`;
 }

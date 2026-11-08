@@ -83,7 +83,10 @@ export function satisfies(range: string, version: string): boolean | undefined {
 
 /** A package check against the examples' version: exact pins and installed versions compared, ranges asked whether they admit it, anything else left out. */
 function packageCheck(label: string, expected: string, specs: string[]): VersionCheck | undefined {
-  const verdicts = specs.map((spec) => satisfies(spec, expected));
+  // satisfies() reads release versions only. A prerelease pin, such as 5.0.0-rc.5, matches only a spec that
+  // names it, as npm's own ranges do: ^5.0.0 doesn't admit 5.0.0-rc.5.
+  const prerelease = /-/.test(expected);
+  const verdicts = specs.map((spec) => (prerelease ? spec.trim().replace(/^(\^|~|=|v)+/, "") === expected : satisfies(spec, expected)));
   if (!verdicts.length || verdicts.every((v) => v === undefined)) return undefined;
   const ok = verdicts.every((v) => v !== false);
   const live = [...new Set(specs)].join(", ");
@@ -123,8 +126,17 @@ export function examplesToolchainChecks(
   const specsOf = (match: (base: string) => boolean) =>
     entries.filter(([name]) => match(packageBaseName(name) ?? "")).map(([, spec]) => spec);
   const checks: Array<VersionCheck | undefined> = [];
+  // A midnight-js package the examples pin on its own, such as midnight-js-network-id at an rc, is checked
+  // against that pin, and the rest against midnight-js-*.
+  const pinnedJs = Object.entries(toolchain)
+    .map(([key, version]) => [/^@midnight-ntwrk\/(midnight-js-[a-z-]+)$/.exec(key)?.[1], version] as const)
+    .filter((entry): entry is readonly [string, string] => entry[0] !== undefined);
   const js = toolchain["@midnight-ntwrk/midnight-js-*"];
-  if (js) checks.push(packageCheck("midnight-js", js, specsOf((b) => b.startsWith("midnight-js-"))));
+  if (js) {
+    const own = new Set(pinnedJs.map(([base]) => base));
+    checks.push(packageCheck("midnight-js", js, specsOf((b) => b.startsWith("midnight-js-") && !own.has(b))));
+  }
+  for (const [base, version] of pinnedJs) checks.push(packageCheck(base, version, specsOf((b) => b === base)));
   const testkit = toolchain["@midnight-ntwrk/testkit-js"];
   if (testkit) checks.push(packageCheck("testkit-js", testkit, specsOf((b) => b === "testkit-js")));
   const wallet = toolchain["wallet SDK"];

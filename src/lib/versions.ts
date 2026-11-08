@@ -74,7 +74,7 @@ export interface VersionsReport {
   /** Whether Midnight's examples pass on the node this network runs. */
   examples?: ExamplesVerdict;
   /** The project against the toolchain Midnight's examples are pinned to: advice, not part of allOk. */
-  examplesToolchain?: { repo: string; commit: string; toolchain: Record<string, string>; checks: VersionCheck[] };
+  examplesToolchain?: { repo: string; commit: string; ledger: string; toolchain: Record<string, string>; checks: VersionCheck[]; note?: string };
   allOk: boolean;
 }
 
@@ -540,7 +540,8 @@ export function formatVersionsHuman(report: VersionsReport): string {
 
   if (report.examplesToolchain) {
     const t = report.examplesToolchain;
-    lines.push("", `Against Midnight's examples (${t.repo} at ${t.commit.slice(0, 7)}, known to work together; advice, not a matrix check):`);
+    lines.push("", `Against Midnight's examples (${t.repo} at ${t.commit.slice(0, 7)}, Ledger ${t.ledger}, known to work together; advice, not a matrix check):`);
+    if (t.note) lines.push(`  ${t.note}`);
     for (const check of t.checks) lines.push(`  ${check.label}: examples=${check.expected} project=${check.live} → ${check.ok ? "OK" : "DIFFERS"}${check.note ? ` (${check.note})` : ""}`);
   }
 

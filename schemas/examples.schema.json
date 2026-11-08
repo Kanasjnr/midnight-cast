@@ -7,6 +7,7 @@
   "required": [
     "repo",
     "commit",
+    "ledger",
     "toolchain"
   ],
   "properties": {
@@ -15,6 +16,14 @@
     },
     "commit": {
       "type": "string"
+    },
+    "ledger": {
+      "type": "string",
+      "description": "The ledger the examples' code at that commit targets, e.g. \"9\""
+    },
+    "ledgerNote": {
+      "type": "string",
+      "description": "Which public networks run another ledger than the examples' code targets, when any do"
     },
     "toolchain": {
       "type": "object",
