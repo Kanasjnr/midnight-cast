@@ -38,8 +38,6 @@ export async function rpcCommand(
       exitCode: 1,
     };
   }
-  if (!readOnly) warn(`--allow-write: ${method} isn't a known read-only method and may submit or change node state.`);
-
   let endpoints;
   try {
     endpoints = resolveNetwork(networkArg ?? flags.network, flags);
@@ -53,6 +51,8 @@ export async function rpcCommand(
   } catch (err) {
     return fail(err);
   }
+
+  if (!readOnly) warn(`--allow-write: ${method} isn't a known read-only method and may submit or change node state.`);
 
   try {
     // A method that may submit is never retried.
