@@ -649,7 +649,7 @@ With `--json`, every command prints one envelope on stdout:
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "ok": false,
   "command": "tip",
   "network": "preprod",
