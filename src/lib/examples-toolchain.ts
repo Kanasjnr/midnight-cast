@@ -180,8 +180,8 @@ export interface ExamplesUpgrade {
 }
 
 /**
- * Where to see the move to the examples' ledger done, for a project whose midnight-js is a major version behind
- * them: the migration pull request and what it changed in the example closest to the project.
+ * Where to see the move to the examples' ledger done, for a project with a midnight-js package a major version
+ * behind them: the migration pull request and what it changed in the example closest to the project.
  */
 export function examplesUpgrade(index: ExamplesIndex, checks: VersionCheck[], dir: string): ExamplesUpgrade | undefined {
   const migration = index.migration;
@@ -189,7 +189,8 @@ export function examplesUpgrade(index: ExamplesIndex, checks: VersionCheck[], di
   if (!migration || !js || js.ok) return undefined;
   const target = Number(js.expected.split(".")[0]);
   const majors = js.live.split(", ").map((spec) => Number(/(\d+)/.exec(spec)?.[1]));
-  if (!majors.length || majors.some((major) => !(major < target))) return undefined;
+  // Any package a major behind, including a project halfway through the move.
+  if (!majors.some((major) => major < target)) return undefined;
   const contracts = new Set(findPragmas(dir).map((p) => basename(p.file)));
   const example =
     Object.keys(migration.examples).find((name) => migration.examples[name]!.some((f) => f.path.endsWith(".compact") && contracts.has(basename(f.path)))) ??
