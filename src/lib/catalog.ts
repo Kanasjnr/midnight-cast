@@ -2,6 +2,7 @@ import type { Command, Option } from "commander";
 import type { NetworkErrorKind } from "./network-error.js";
 import { SCHEMA_VERSION } from "../output.js";
 import { READ_ONLY_RPC_METHODS } from "./rpc-methods.js";
+import { packageVersion } from "./data-path.js";
 
 export interface CatalogOption {
   flags: string;
@@ -55,7 +56,8 @@ const ERROR_KINDS: Record<NetworkErrorKind | "usage" | "rate_limited" | "not_rea
   invalid_response: "The response wasn't the JSON expected",
 };
 
-const SCHEMA_BASE = "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/main/schemas/";
+// The release tag, not main, so an installed release keeps linking to the schemas its output matches.
+export const schemaBase = (version: string) => `https://raw.githubusercontent.com/Kanasjnr/midnight-cast/v${version}/schemas/`;
 const WRITES_FILES = new Set(["config init", "agents init"]);
 const NO_ENVELOPE = new Set(["mcp"]);
 const EXTRAS: Record<string, Partial<CatalogCommand>> = { rpc: { readOnlyMethods: [...READ_ONLY_RPC_METHODS] } };
@@ -63,7 +65,7 @@ const EXTRAS: Record<string, Partial<CatalogCommand>> = { rpc: { readOnlyMethods
 export function outputSchemaFor(command: string): string {
   const [first = "", second] = command.split(" ");
   const file = first === "config" ? `config-${second}` : first === "matrix" ? "versions" : first;
-  return `${SCHEMA_BASE}${file}.schema.json`;
+  return `${schemaBase(packageVersion())}${file}.schema.json`;
 }
 
 function describeOption(option: Option): CatalogOption {
