@@ -346,7 +346,7 @@ midnight-cast rpc system_version
 
 `params` must be a JSON array (or omitted for `[]`).
 
-`rpc` sends only methods on its list of one-shot reads: the `chain_`, `state_`, `childstate_`, `archive_v1_` and `chainSpec_v1_` queries, `midnight_`, `sidechain_` and `systemParameters_` methods, and `system_version`, `system_health` and the other `system_` reads. `midnight-cast explain --json` gives the full list, as `readOnlyMethods` on the `rpc` command. Any other method is refused before it is sent, with exit code 1: anything that submits a transaction, signs, or changes keys, peers, log filters or offchain storage; subscriptions, which need a WebSocket; and reads Substrate marks unsafe, such as `system_dryRun`.
+`rpc` sends only methods on its list of one-shot reads: the `chain_`, `state_`, `childstate_`, `archive_v1_` and `chainSpec_v1_` queries, `midnight_`, `sidechain_` and `systemParameters_` methods, and `system_version`, `system_health` and the other `system_` reads. `midnight-cast explain --json` gives the full list, as `readOnlyMethods` on the `rpc` command. Any other method is refused before it is sent, with exit code 1 and the error kind `not_read_only`: anything that submits a transaction, signs, or changes keys, peers, log filters or offchain storage; subscriptions, which need a WebSocket; and reads Substrate marks unsafe, which public nodes refuse, such as `system_dryRun`, `state_getPairs` and `state_queryStorage`.
 
 | Option | Description |
 |--------|-------------|
