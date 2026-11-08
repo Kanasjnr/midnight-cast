@@ -1,0 +1,1047 @@
+{
+  "repo": "midnightntwrk/servicedesk",
+  "commit": "df6adf840fd0562d7c52ca4174a6b8769a54c581",
+  "runbooks": {
+    "cnight-dust-duplicate-registration-runbook": {
+      "title": "cNIGHT→DUST duplicate registrations",
+      "url": "https://github.com/midnightntwrk/servicedesk/blob/main/runbooks/cnight-dust-duplicate-registration-runbook/cnight-dust-duplicate-registration-runbook.md"
+    },
+    "wallet-dust-balancing-hang-runbook": {
+      "title": "WalletFacade balance/finalization hang",
+      "url": "https://github.com/midnightntwrk/servicedesk/blob/main/runbooks/wallet-dust-balancing-hang-runbook/wallet-dust-balancing-hang-runbook.md"
+    },
+    "indexer-blockfrost-migration-runbook": {
+      "title": "Moving to Blockfrost, beyond the docs migration guide",
+      "url": "https://github.com/midnightntwrk/servicedesk/blob/main/runbooks/indexer-blockfrost-migration-runbook/indexer-blockfrost-migration-runbook.md"
+    },
+    "contract-batched-deploy-runbook": {
+      "title": "Batched deploy for oversized contracts",
+      "url": "https://github.com/midnightntwrk/servicedesk/blob/main/runbooks/contract-batched-deploy-runbook/contract-batched-deploy-runbook.md"
+    },
+    "toolchain-version-mismatch-runbook": {
+      "title": "Toolchain and package version mismatch",
+      "url": "https://github.com/midnightntwrk/servicedesk/blob/main/runbooks/toolchain-version-mismatch-runbook/toolchain-version-mismatch-runbook.md"
+    },
+    "proof-server-proving-failures-runbook": {
+      "title": "Proof server and proving failures",
+      "url": "https://github.com/midnightntwrk/servicedesk/blob/main/runbooks/proof-server-proving-failures-runbook/proof-server-proving-failures-runbook.md"
+    },
+    "node-1010-custom-error-runbook": {
+      "title": "Node rejects a transaction (1010, Custom error: N)",
+      "url": "https://github.com/midnightntwrk/servicedesk/blob/main/runbooks/node-1010-custom-error-runbook/node-1010-custom-error-runbook.md"
+    },
+    "contract-native-night-mainnet-runbook": {
+      "title": "Contract circuits that move NIGHT fail on Mainnet",
+      "url": "https://github.com/midnightntwrk/servicedesk/blob/main/runbooks/contract-native-night-mainnet-runbook/contract-native-night-mainnet-runbook.md"
+    },
+    "compact-ai-generated-compile-errors-runbook": {
+      "title": "Compact compile errors in AI-written code",
+      "url": "https://github.com/midnightntwrk/servicedesk/blob/main/runbooks/compact-ai-generated-compile-errors-runbook/compact-ai-generated-compile-errors-runbook.md"
+    },
+    "sdk-ai-generated-code-errors-runbook": {
+      "title": "AI-written SDK code that won't install, compile or load",
+      "url": "https://github.com/midnightntwrk/servicedesk/blob/main/runbooks/sdk-ai-generated-code-errors-runbook/sdk-ai-generated-code-errors-runbook.md"
+    },
+    "wallet-preprod-sync-runbook": {
+      "title": "Wallet sync on Preprod: slow, repeated on every restart, or stuck",
+      "url": "https://github.com/midnightntwrk/servicedesk/blob/main/runbooks/wallet-preprod-sync-runbook/wallet-preprod-sync-runbook.md"
+    },
+    "node-indexer-sync-halt-runbook": {
+      "title": "Self-hosted node or indexer stops on a block the chain accepted",
+      "url": "https://github.com/midnightntwrk/servicedesk/blob/main/runbooks/node-indexer-sync-halt-runbook/node-indexer-sync-halt-runbook.md"
+    },
+    "wallet-sync-cursor-indexer-mismatch-runbook": {
+      "title": "Wallet sync stuck after the indexer changed",
+      "url": "https://github.com/midnightntwrk/servicedesk/blob/main/runbooks/wallet-sync-cursor-indexer-mismatch-runbook/wallet-sync-cursor-indexer-mismatch-runbook.md"
+    },
+    "compact-zkir-keygen-failures-runbook": {
+      "title": "Compact compile fails at the proving keys",
+      "url": "https://github.com/midnightntwrk/servicedesk/blob/main/runbooks/compact-zkir-keygen-failures-runbook/compact-zkir-keygen-failures-runbook.md"
+    },
+    "wallet-test-funds-runbook": {
+      "title": "Test funds don't arrive from the faucet",
+      "url": "https://github.com/midnightntwrk/servicedesk/blob/main/runbooks/wallet-test-funds-runbook/wallet-test-funds-runbook.md"
+    },
+    "cnight-dust-after-registration-runbook": {
+      "title": "DUST doesn't arrive after registering cNIGHT",
+      "url": "https://github.com/midnightntwrk/servicedesk/blob/main/runbooks/cnight-dust-after-registration-runbook/cnight-dust-after-registration-runbook.md"
+    },
+    "toolchain-project-setup-runbook": {
+      "title": "npm, yarn or Node fail while setting up a Midnight project",
+      "url": "https://github.com/midnightntwrk/servicedesk/blob/main/runbooks/toolchain-project-setup-runbook/toolchain-project-setup-runbook.md"
+    }
+  },
+  "lookups": [
+    {
+      "match": [
+        [
+          "values inserted non-linearly into dust generation tree"
+        ]
+      ],
+      "runbooks": [
+        "wallet-sync-cursor-indexer-mismatch-runbook",
+        "indexer-blockfrost-migration-runbook"
+      ],
+      "advice": "Cursor mismatch (and Blockfrost if the app just switched)"
+    },
+    {
+      "match": [
+        [
+          "values inserted non-linearly into dust commitment tree"
+        ]
+      ],
+      "runbooks": [
+        "wallet-sync-cursor-indexer-mismatch-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "values inserted non-linearly into zswap commitment tree"
+        ]
+      ],
+      "runbooks": [
+        "wallet-sync-cursor-indexer-mismatch-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "received an event with a timestamp prior to the time already synced to"
+        ]
+      ],
+      "runbooks": [
+        "wallet-sync-cursor-indexer-mismatch-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "ENDPOINT_DECOMMISSIONED"
+        ]
+      ],
+      "when": "ENDPOINT_DECOMMISSIONED (HTTP 410 from indexer.preprod.midnight.network or indexer.mainnet.midnight.network)",
+      "runbooks": [
+        "indexer-blockfrost-migration-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "Missing project token. Please include project_id in your request."
+        ],
+        [
+          "Invalid project token."
+        ]
+      ],
+      "runbooks": [
+        "indexer-blockfrost-migration-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "Wallet sync timeout after 90000ms"
+        ]
+      ],
+      "when": "Wallet sync timeout after 90000ms with unshielded=false",
+      "runbooks": [
+        "indexer-blockfrost-migration-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "TypeError: Invalid URL"
+        ]
+      ],
+      "when": "TypeError: Invalid URL at wallet build (placeholder nodeWS)",
+      "runbooks": [
+        "indexer-blockfrost-migration-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "exceeded block limit in transaction fee computation"
+        ]
+      ],
+      "runbooks": [
+        "contract-batched-deploy-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "Transaction would exhaust the block limits"
+        ]
+      ],
+      "when": "Transaction would exhaust the block limits (RPC 1010)",
+      "runbooks": [
+        "contract-batched-deploy-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "1010: Invalid Transaction: Custom error:"
+        ]
+      ],
+      "runbooks": [
+        "node-1010-custom-error-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "Invalid Transaction"
+        ]
+      ],
+      "runbooks": [
+        "node-1010-custom-error-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "Transaction submission error"
+        ]
+      ],
+      "runbooks": [
+        "node-1010-custom-error-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "Transaction submission failed"
+        ]
+      ],
+      "runbooks": [
+        "node-1010-custom-error-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "submitTx rejected the transaction"
+        ]
+      ],
+      "runbooks": [
+        "node-1010-custom-error-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "Transaction is invalid and was rejected by the node"
+        ]
+      ],
+      "runbooks": [
+        "node-1010-custom-error-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "Rejected transaction"
+        ]
+      ],
+      "runbooks": [
+        "node-1010-custom-error-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "Rejecting transaction"
+        ]
+      ],
+      "runbooks": [
+        "node-1010-custom-error-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "guaranteed execution would fail"
+        ]
+      ],
+      "runbooks": [
+        "node-1010-custom-error-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "index_blocks_task failed: apply transactions"
+        ]
+      ],
+      "when": "index_blocks_task failed: apply transactions with Intent TTL has expired or dust is outside of its validity window (a self-hosted indexer exits at the same block on every restart)",
+      "runbooks": [
+        "node-indexer-sync-halt-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "Aborting the rest of the block execution"
+        ]
+      ],
+      "when": "Aborting the rest of the block execution after Intent TTL has expired (a node syncing from genesis stops importing)",
+      "runbooks": [
+        "node-indexer-sync-halt-runbook",
+        "node-1010-custom-error-runbook"
+      ],
+      "advice": "Sync halt (a DApp's own transaction rejected with Custom error: 182: Node rejection codes)"
+    },
+    {
+      "match": [
+        [
+          "Wallet.InsufficientFunds: Insufficient funds"
+        ]
+      ],
+      "when": "Wallet.InsufficientFunds: Insufficient funds on Mainnet, with DUST in the wallet (\"tokenType\":\"0000…0000\", 64 zeros, in err.cause)",
+      "runbooks": [
+        "contract-native-night-mainnet-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "Custom error: 194"
+        ]
+      ],
+      "when": "Custom error: 194 (Invalid.BalanceCheckOutOfBounds) from a circuit that sends NIGHT (sendUnshielded(nativeToken(), …)) on Mainnet",
+      "runbooks": [
+        "contract-native-night-mainnet-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "Insufficient Funds: could not balance dust"
+        ]
+      ],
+      "when": "Insufficient Funds: could not balance dust (capital F: short of DUST for the fee, not NIGHT)",
+      "runbooks": [
+        "cnight-dust-duplicate-registration-runbook"
+      ],
+      "advice": "cNIGHT→DUST duplicates if DUST stopped generating; otherwise wait for DUST to generate"
+    },
+    {
+      "match": [
+        [
+          "Version mismatch: compiled code expects"
+        ]
+      ],
+      "runbooks": [
+        "toolchain-version-mismatch-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "Failed to configure constructor context with coin public key"
+        ]
+      ],
+      "runbooks": [
+        "toolchain-version-mismatch-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "expected instance of ContractMaintenanceAuthority"
+        ]
+      ],
+      "runbooks": [
+        "toolchain-version-mismatch-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "does not provide an export named 'Clock'"
+        ]
+      ],
+      "runbooks": [
+        "toolchain-version-mismatch-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "EraMismatchError"
+        ]
+      ],
+      "when": "EraMismatchError (ledger8-deploy-on-ledger9-network, ledger9-artifact-on-ledger8-network, unknown-artifact-runtime-version, ledger8-artifacts-in-ledger9-container)",
+      "runbooks": [
+        "toolchain-version-mismatch-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "no ZK artifact manifest (compiler/contract-manifest.json) was found"
+        ]
+      ],
+      "runbooks": [
+        "toolchain-version-mismatch-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "No matching version found for @midnight-ntwrk/"
+        ]
+      ],
+      "when": "No matching version found for @midnight-ntwrk/ (from npm install)",
+      "runbooks": [
+        "sdk-ai-generated-code-errors-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "has no exported member"
+        ]
+      ],
+      "when": "has no exported member on a @midnight-ntwrk/ import (from tsc)",
+      "runbooks": [
+        "sdk-ai-generated-code-errors-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "Cannot find module '@midnight-ntwrk/wallet'"
+        ]
+      ],
+      "when": "Cannot find module '@midnight-ntwrk/wallet' (or ledger-v7, ledger, zswap)",
+      "runbooks": [
+        "sdk-ai-generated-code-errors-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "checkRuntimeVersion is not a function"
+        ]
+      ],
+      "runbooks": [
+        "sdk-ai-generated-code-errors-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "unknown network ID"
+        ]
+      ],
+      "runbooks": [
+        "sdk-ai-generated-code-errors-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "addIntent is not a function"
+        ]
+      ],
+      "runbooks": [
+        "sdk-ai-generated-code-errors-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "pendingOutputs.values.map is not a function"
+        ]
+      ],
+      "runbooks": [
+        "sdk-ai-generated-code-errors-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "setContractAddress is not a function"
+        ]
+      ],
+      "runbooks": [
+        "sdk-ai-generated-code-errors-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "Property 'midnight' does not exist on type 'Window"
+        ]
+      ],
+      "runbooks": [
+        "sdk-ai-generated-code-errors-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "unbound identifier"
+        ]
+      ],
+      "when": "unbound identifier (from compact compile)",
+      "runbooks": [
+        "compact-ai-generated-compile-errors-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "apparent use of an old standard-library / ledger operator name"
+        ]
+      ],
+      "runbooks": [
+        "compact-ai-generated-compile-errors-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "undefined for ledger field type"
+        ]
+      ],
+      "runbooks": [
+        "compact-ai-generated-compile-errors-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "potential witness-value disclosure must be declared but is not"
+        ]
+      ],
+      "runbooks": [
+        "compact-ai-generated-compile-errors-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "no compatible function named"
+        ]
+      ],
+      "runbooks": [
+        "compact-ai-generated-compile-errors-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "language version",
+          "mismatch"
+        ]
+      ],
+      "when": "language version … mismatch (0.23.0, 0.26.0 or 0.27.0, from compact compile)",
+      "runbooks": [
+        "compact-ai-generated-compile-errors-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "has no field named"
+        ]
+      ],
+      "runbooks": [
+        "compact-ai-generated-compile-errors-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "(which is reserved for future use)"
+        ]
+      ],
+      "runbooks": [
+        "compact-ai-generated-compile-errors-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "cross-contract calls are not yet supported"
+        ],
+        [
+          "contract-info.json; try (re)compiling"
+        ]
+      ],
+      "runbooks": [
+        "compact-ai-generated-compile-errors-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "another binding found for",
+          "in the same scope"
+        ]
+      ],
+      "runbooks": [
+        "compact-ai-generated-compile-errors-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "zkir returned a non-zero exit status"
+        ]
+      ],
+      "runbooks": [
+        "compact-zkir-keygen-failures-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "Failed to fetch data from",
+          "bls_midnight_2p"
+        ]
+      ],
+      "when": "Failed to fetch data from … bls_midnight_2p (from compact compile)",
+      "runbooks": [
+        "compact-zkir-keygen-failures-runbook",
+        "proof-server-proving-failures-runbook"
+      ],
+      "advice": "zkir key generation (from a proof server: Proof server)"
+    },
+    {
+      "match": [
+        [
+          "Hash mismatch in data stored at"
+        ]
+      ],
+      "runbooks": [
+        "compact-zkir-keygen-failures-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "compiler toolchain was terminated by a signal"
+        ]
+      ],
+      "runbooks": [
+        "compact-zkir-keygen-failures-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "exec: zkir-v3: not found"
+        ]
+      ],
+      "runbooks": [
+        "compact-zkir-keygen-failures-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "ZKIR not found; skipping final circuit compilation"
+        ]
+      ],
+      "runbooks": [
+        "compact-zkir-keygen-failures-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "ZkStdLibArch must enable jubjub"
+        ],
+        [
+          "Unsupported test_eq: JubjubScalar"
+        ],
+        [
+          "to an AssignedBounded less than 2^"
+        ],
+        [
+          "cannot convert JubjubPoint to \"Native\""
+        ]
+      ],
+      "runbooks": [
+        "compact-zkir-keygen-failures-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "Replicate Registrations Detected"
+        ]
+      ],
+      "runbooks": [
+        "cnight-dust-duplicate-registration-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "Registration Syncing"
+        ]
+      ],
+      "when": "Registration Syncing (cNgD DApp)",
+      "runbooks": [
+        "cnight-dust-after-registration-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "NO REGISTRATION FOUND"
+        ]
+      ],
+      "when": "NO REGISTRATION FOUND (cNgD DApp, for a wallet that registered)",
+      "runbooks": [
+        "cnight-dust-after-registration-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "No cNIGHT tokens found in wallet"
+        ]
+      ],
+      "when": "No cNIGHT tokens found in wallet (cNgD DApp)",
+      "runbooks": [
+        "cnight-dust-after-registration-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "\"registered\": false"
+        ]
+      ],
+      "when": "\"registered\": false (indexer dustGenerationStatus)",
+      "runbooks": [
+        "cnight-dust-after-registration-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "Waiting to receive tokens..."
+        ]
+      ],
+      "when": "Waiting to receive tokens... for an hour or more on Preprod",
+      "runbooks": [
+        "wallet-preprod-sync-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "Wallet synced state emission (synced=false)"
+        ]
+      ],
+      "when": "Wallet synced state emission (synced=false) with dust=false, for an hour on Preprod",
+      "runbooks": [
+        "wallet-preprod-sync-runbook",
+        "indexer-blockfrost-migration-runbook"
+      ],
+      "advice": "Preprod wallet sync (with unshielded=false and Wallet sync timeout after 90000ms: Blockfrost)"
+    },
+    {
+      "match": [
+        [
+          "Wallet.Sync: [object ErrorEvent]"
+        ]
+      ],
+      "runbooks": [
+        "wallet-preprod-sync-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "1000:: Normal Closure"
+        ]
+      ],
+      "when": "1000:: Normal Closure from subscribeRuntimeVersion() while a wallet syncs (harmless)",
+      "runbooks": [
+        "wallet-preprod-sync-runbook",
+        "node-1010-custom-error-runbook"
+      ],
+      "advice": "Preprod wallet sync (at submission, with no code: Node rejection codes)"
+    },
+    {
+      "match": [
+        [
+          "Provided address is invalid"
+        ]
+      ],
+      "when": "Provided address is invalid (faucet)",
+      "runbooks": [
+        "wallet-test-funds-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "Your transaction is being submitted."
+        ]
+      ],
+      "when": "Your transaction is being submitted. (faucet page that never finishes)",
+      "runbooks": [
+        "wallet-test-funds-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "You can't resubmit right now, next attempt is allowed at"
+        ]
+      ],
+      "when": "You can't resubmit right now, next attempt is allowed at (faucet)",
+      "runbooks": [
+        "wallet-test-funds-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "Failed to prove transaction"
+        ]
+      ],
+      "when": "Failed to prove transaction on a faucet page",
+      "runbooks": [
+        "wallet-test-funds-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "Insufficient funds to move"
+        ]
+      ],
+      "when": "Insufficient funds to move (faucet)",
+      "runbooks": [
+        "wallet-test-funds-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "Services are currently unavailable. Please try again later."
+        ]
+      ],
+      "when": "Services are currently unavailable. Please try again later. (faucet)",
+      "runbooks": [
+        "wallet-test-funds-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "Transaction submission error"
+        ]
+      ],
+      "when": "Transaction submission error on a faucet page",
+      "runbooks": [
+        "wallet-test-funds-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "Could not find Task with id"
+        ]
+      ],
+      "when": "Could not find Task with id (faucet request status)",
+      "runbooks": [
+        "wallet-test-funds-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "Token request failed due to timeout"
+        ]
+      ],
+      "when": "Token request failed due to timeout (faucet)",
+      "runbooks": [
+        "wallet-test-funds-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "Could not read package.json"
+        ]
+      ],
+      "runbooks": [
+        "toolchain-project-setup-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "Missing script:"
+        ]
+      ],
+      "runbooks": [
+        "toolchain-project-setup-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "UNC paths are not supported"
+        ]
+      ],
+      "runbooks": [
+        "toolchain-project-setup-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "Defaulting to Windows directory"
+        ]
+      ],
+      "runbooks": [
+        "toolchain-project-setup-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "EPERM: operation not permitted"
+        ]
+      ],
+      "runbooks": [
+        "toolchain-project-setup-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "EBADENGINE"
+        ]
+      ],
+      "runbooks": [
+        "toolchain-project-setup-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "EBADDEVENGINES"
+        ]
+      ],
+      "runbooks": [
+        "toolchain-project-setup-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "EACCES: permission denied"
+        ]
+      ],
+      "runbooks": [
+        "toolchain-project-setup-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "command not found: yarn"
+        ]
+      ],
+      "runbooks": [
+        "toolchain-project-setup-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "yarn: command not found"
+        ]
+      ],
+      "runbooks": [
+        "toolchain-project-setup-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "However the current global version of Yarn is"
+        ]
+      ],
+      "runbooks": [
+        "toolchain-project-setup-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "Command 'nvm' not found"
+        ]
+      ],
+      "runbooks": [
+        "toolchain-project-setup-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "failed to resolve"
+        ]
+      ],
+      "runbooks": [
+        "toolchain-project-setup-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "EJSONPARSE"
+        ]
+      ],
+      "runbooks": [
+        "toolchain-project-setup-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "ENOSPC: no space left on device"
+        ]
+      ],
+      "runbooks": [
+        "toolchain-project-setup-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "This repository is archived and no longer maintained"
+        ]
+      ],
+      "runbooks": [
+        "toolchain-project-setup-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "DEPRECATED — migrate to Kapa + Midnight Expert"
+        ]
+      ],
+      "runbooks": [
+        "toolchain-project-setup-runbook"
+      ]
+    }
+  ]
+}
