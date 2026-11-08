@@ -12,9 +12,9 @@ const SKIP_DIRS = new Set(["node_modules", "dist", "build", "managed", "coverage
 const MAX_DEPTH = 4;
 const MAX_DIRS = 500;
 
-/** Every `pragma language_version …` in the project's .compact files, skipping build output and anything unreadable. */
-export function findPragmas(dir: string): Array<{ file: string; constraint: string }> {
-  const found: Array<{ file: string; constraint: string }> = [];
+/** The project's .compact files, each with its `pragma language_version …` when it has one, skipping build output and anything unreadable. */
+export function findCompactFiles(dir: string): Array<{ file: string; constraint?: string }> {
+  const found: Array<{ file: string; constraint?: string }> = [];
   let visited = 0;
   const walk = (current: string, level: number) => {
     if (level > MAX_DEPTH || ++visited > MAX_DIRS) return;
@@ -31,7 +31,7 @@ export function findPragmas(dir: string): Array<{ file: string; constraint: stri
       } else if (entry.isFile() && entry.name.endsWith(".compact")) {
         try {
           const match = /^\s*pragma\s+language_version\s+([^;]+);/m.exec(readFileSync(path, "utf8"));
-          if (match) found.push({ file: path, constraint: match[1]!.trim() });
+          found.push({ file: path, ...(match ? { constraint: match[1]!.trim() } : {}) });
         } catch {
           // An unreadable file is left out; this check is advice and mustn't fail versions.
         }
@@ -40,6 +40,11 @@ export function findPragmas(dir: string): Array<{ file: string; constraint: stri
   };
   walk(dir, 0);
   return found;
+}
+
+/** Every `pragma language_version …` in the project's .compact files. */
+export function findPragmas(dir: string, files = findCompactFiles(dir)): Array<{ file: string; constraint: string }> {
+  return files.filter((f): f is { file: string; constraint: string } => f.constraint !== undefined);
 }
 
 /** Whether two versions agree on every component the shorter one names: "0.23" and "0.23.0" do. */
@@ -121,7 +126,7 @@ export function nodeAdmits(declared: string, major: string): boolean | undefined
  */
 export function examplesToolchainChecks(
   toolchain: Record<string, string>,
-  project: { dir: string; packages?: Record<string, string> },
+  project: { dir: string; packages?: Record<string, string>; compactFiles?: Array<{ file: string; constraint?: string }> },
 ): VersionCheck[] {
   const entries = Object.entries(project.packages ?? {});
   const specsOf = (match: (base: string) => boolean) =>
@@ -146,7 +151,7 @@ export function examplesToolchainChecks(
   const language = toolchain["Compact language (pragma)"];
   // Only a directory that is a project gets walked: the MCP server's default may be / or a home directory.
   if (language && existsSync(join(project.dir, "package.json"))) {
-    const readable = [...new Set(findPragmas(project.dir).map((p) => p.constraint))]
+    const readable = [...new Set(findPragmas(project.dir, project.compactFiles).map((p) => p.constraint))]
       .map((constraint) => ({ constraint, admits: satisfies(constraint, language) }))
       .filter((p) => p.admits !== undefined);
     if (readable.length) {
@@ -172,30 +177,45 @@ export function examplesToolchainChecks(
 
 export interface ExamplesUpgrade {
   pr: number;
-  title: string;
   url: string;
-  /** The example whose changes to follow: the one that shares a contract file name with the project, or hello-world. */
+  /** The example whose changes to follow: the one that shares the most contract file names with the project, or hello-world. */
   example: string;
   files: Array<{ path: string; url: string }>;
 }
 
+/** Whether a version spec stays below a major: an upper bound at or under it, or a lowest version under it. */
+function belowMajor(spec: string, major: number): boolean {
+  const upper = /^\s*<(=?)\s*v?(\d+)(?:\.(\d+))?/.exec(spec);
+  if (upper) return Number(upper[2]) < major || (Number(upper[2]) === major && !upper[1] && !Number(upper[3] ?? 0));
+  const lowest = /(\d+)/.exec(spec);
+  return lowest !== null && Number(lowest[1]) < major;
+}
+
 /**
  * Where to see the move to the examples' ledger done, for a project with a midnight-js package a major version
- * behind them: the migration pull request and what it changed in the example closest to the project.
+ * behind them, including one pinned on its own such as midnight-js-network-id: the migration pull request and what
+ * it changed in the example closest to the project.
  */
-export function examplesUpgrade(index: ExamplesIndex, checks: VersionCheck[], dir: string): ExamplesUpgrade | undefined {
+export function examplesUpgrade(
+  index: ExamplesIndex,
+  checks: VersionCheck[],
+  compactFiles: Array<{ file: string }>,
+): ExamplesUpgrade | undefined {
   const migration = index.migration;
-  const js = checks.find((c) => c.label === "midnight-js");
-  if (!migration || !js || js.ok) return undefined;
-  const target = Number(js.expected.split(".")[0]);
-  const majors = js.live.split(", ").map((spec) => Number(/(\d+)/.exec(spec)?.[1]));
-  // Any package a major behind, including a project halfway through the move.
-  if (!majors.some((major) => major < target)) return undefined;
-  const contracts = new Set(findPragmas(dir).map((p) => basename(p.file)));
-  const example =
-    Object.keys(migration.examples).find((name) => migration.examples[name]!.some((f) => f.path.endsWith(".compact") && contracts.has(basename(f.path)))) ??
-    "hello-world";
+  if (!migration) return undefined;
+  const behind = checks.some((check) => {
+    if (check.ok || !check.label.startsWith("midnight-js")) return false;
+    const major = Number(check.expected.split(".")[0]);
+    // Any spec a major behind, including a project halfway through the move. A spec that admits the examples'
+    // version, such as ^4.0.0 || ^5.0.0, can't fail the check, so it never gets here.
+    return check.live.split(", ").some((spec) => belowMajor(spec, major));
+  });
+  if (!behind) return undefined;
+  const contracts = new Set(compactFiles.map((f) => basename(f.file)));
+  const shared = (name: string) => migration.examples[name]!.filter((f) => f.path.endsWith(".compact") && contracts.has(basename(f.path))).length;
+  const [best] = Object.keys(migration.examples).sort((a, b) => shared(b) - shared(a) || a.localeCompare(b));
+  const example = best && shared(best) > 0 ? best : "hello-world";
   const files = migration.examples[example];
   if (!files) return undefined;
-  return { pr: migration.pr, title: migration.title, url: migration.url, example, files };
+  return { pr: migration.pr, url: migration.url, example, files };
 }

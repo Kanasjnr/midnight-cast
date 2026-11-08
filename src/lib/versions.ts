@@ -553,7 +553,7 @@ export function formatVersionsHuman(report: VersionsReport): string {
     if (t.note) lines.push(`  ${t.note}`);
     for (const check of t.checks) lines.push(`  ${check.label}: examples=${check.expected} project=${check.live} → ${check.ok ? "OK" : "DIFFERS"}${check.note ? ` (${check.note})` : ""}`);
     if (t.upgrade) {
-      lines.push(`  To upgrade, see the examples' own move: ${t.upgrade.title}`, `    ${t.upgrade.url}`, `  What it changed in ${t.upgrade.example}:`);
+      lines.push(`  To upgrade, see the examples' own move to Ledger ${t.ledger}, ${t.repo}#${t.upgrade.pr}:`, `    ${t.upgrade.url}`, `  What it changed in ${t.upgrade.example}:`);
       for (const file of t.upgrade.files) lines.push(`    ${file.path}: ${file.url}`);
     }
   }
