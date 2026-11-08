@@ -10,16 +10,20 @@
 // repository's main branch has moved past the pin, so the pin gets reviewed. To move the pin,
 // change COMMIT (and LEDGER, if the examples moved ledger), run the script, and review the diff.
 
+import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import type { ExampleFile, ExamplesIndex } from "../src/lib/examples-index.js";
+import type { ExampleFile, ExamplesIndex, ExamplesMigration } from "../src/lib/examples-index.js";
 import { fetchGitHub, notice } from "./github.js";
 
 const REPO = "midnightntwrk/midnight-examples";
 export const COMMIT = "377495c5efbd5b1f3123f5aee2776c3694b05eda";
 // The ledger the code at COMMIT targets. Set it with COMMIT: midnight-examples#88 moved the examples to Ledger 9.
 export const LEDGER = "9";
+// The pull request that moved the examples to LEDGER from the ledger before it: a worked migration for each example.
+// Set it with LEDGER, or leave it undefined when the pin didn't move ledger.
+export const MIGRATION_PR: number | undefined = 88;
 const MAX_EXCERPT_LINES = 24;
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -285,7 +289,32 @@ export async function buildIndex(): Promise<ExamplesIndex> {
       files,
     });
   }
-  return { repo: REPO, commit: COMMIT, ledger: LEDGER, toolchain: readToolchain(readme), examples };
+  const migration = MIGRATION_PR === undefined ? undefined : await readMigration(MIGRATION_PR);
+  return { repo: REPO, commit: COMMIT, ledger: LEDGER, toolchain: readToolchain(readme), ...(migration ? { migration } : {}), examples };
+}
+
+/**
+ * What the migration pull request changed in each example's own code: its contract, package.json and the
+ * non-test files under src/, each linked to its diff. UI code, tests, docs and lockfiles are left out.
+ */
+async function readMigration(pr: number): Promise<ExamplesMigration> {
+  const meta = JSON.parse(await fetchGitHub(`https://api.github.com/repos/${REPO}/pulls/${pr}`)) as { title: string; merged_at: string | null };
+  if (!meta.merged_at) throw new Error(`${REPO}#${pr} isn't merged`);
+  const paths: string[] = [];
+  for (let page = 1; ; page++) {
+    const files = JSON.parse(await fetchGitHub(`https://api.github.com/repos/${REPO}/pulls/${pr}/files?per_page=100&page=${page}`)) as Array<{ filename: string }>;
+    paths.push(...files.map((f) => f.filename));
+    if (files.length < 100) break;
+  }
+  const own = /^examples\/([^/]+)\/(package\.json|contract\/[^/]+\.(?:compact|ts)|src\/(?!test\/)[^/]+\.ts)$/;
+  const examples: ExamplesMigration["examples"] = {};
+  for (const path of paths.sort()) {
+    const name = own.exec(path)?.[1];
+    if (!name || !EXAMPLES.some((e) => e.name === name)) continue;
+    const anchor = createHash("sha256").update(path).digest("hex");
+    (examples[name] ??= []).push({ path, url: `https://github.com/${REPO}/pull/${pr}/files#diff-${anchor}` });
+  }
+  return { pr, title: meta.title, url: `https://github.com/${REPO}/pull/${pr}`, fromLedger: String(Number(LEDGER) - 1), examples };
 }
 
 async function main(): Promise<number> {
