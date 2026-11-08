@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/main/schemas/envelope.schema.json",
+  "$id": "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/v0.2.2/schemas/envelope.schema.json",
   "title": "midnight-cast --json envelope",
   "type": "object",
   "required": [

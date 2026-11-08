@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/main/schemas/contract.schema.json",
+  "$id": "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/v0.2.2/schemas/contract.schema.json",
   "title": "contract data",
   "type": "object",
   "required": [

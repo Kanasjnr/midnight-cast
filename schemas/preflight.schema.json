@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/main/schemas/preflight.schema.json",
+  "$id": "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/v0.2.2/schemas/preflight.schema.json",
   "title": "preflight data",
   "description": "Whether a network, its proof server and optionally a wallet are ready before the first transaction. ready is true when every check passed.",
   "type": "object",
