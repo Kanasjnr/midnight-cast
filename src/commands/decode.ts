@@ -506,7 +506,14 @@ function decodeRaw(raw: string, options: DecodeOptions): EmitResult {
     );
   }
 
-  return { ...success(sections.join("\n").trimEnd()), next };
+  // Each decoding that links the examples carries the same ledger note; say it once.
+  const seen = new Set<string>();
+  const text = sections
+    .join("\n")
+    .split("\n")
+    .filter((line) => !line.startsWith("Note:   This code targets") || (!seen.has(line) && seen.add(line)))
+    .join("\n");
+  return { ...success(text.trimEnd()), next };
 }
 
 function decodeKnownMessage(message: KnownMessage, options: DecodeOptions): EmitResult {
