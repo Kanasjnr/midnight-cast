@@ -102,10 +102,10 @@ async function main(): Promise<number> {
   const valid = schemaValidator(join(installed, "schemas"));
 
   const version = packageVersion();
-  for (const bin of ["midnight-cast", "mn"]) {
-    const v = await cli(project, bin, ["--version"]);
-    check(v.code === 0 && v.stdout.trim() === version, `${bin} --version prints ${version}`);
-  }
+  const v = await cli(project, "midnight-cast", ["--version"]);
+  check(v.code === 0 && v.stdout.trim() === version, `midnight-cast --version prints ${version}`);
+  const bins = readdirSync(join(project, "node_modules", ".bin"));
+  check(!bins.some((bin) => /^mn(\.|$)/.test(bin)), "no mn alias is installed");
 
   await commandChecks((args) => cli(project, "midnight-cast", args), valid, check, () => startMcp(project));
 

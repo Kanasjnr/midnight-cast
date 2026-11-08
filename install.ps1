@@ -47,12 +47,11 @@
     Expand-Archive -Path (Join-Path $tmp $archive) -DestinationPath (Join-Path $tmp 'out')
     New-Item -ItemType Directory -Force -Path $dir | Out-Null
     Copy-Item -Force (Join-Path $tmp 'out\midnight-cast.exe') (Join-Path $dir 'midnight-cast.exe')
-    # The npm package installs an mn alias too; another tool's mn is left alone.
+    # Before 0.3.0 this wrote an mn alias, which clashed with other tools' mn. Remove ours; leave any other.
     $mn = Join-Path $dir 'mn.cmd'
-    if (-not (Test-Path $mn) -or (Get-Content $mn -Raw) -match 'midnight-cast\.exe') {
-      Set-Content -Path $mn -Value "@`"%~dp0midnight-cast.exe`" %*" -Encoding ASCII
-    } else {
-      Write-Host "Left $mn alone: it isn't midnight-cast's."
+    if ((Test-Path $mn) -and (Get-Content $mn -Raw).Trim() -eq '@"%~dp0midnight-cast.exe" %*') {
+      Remove-Item -Force $mn
+      Write-Host "Removed the old mn alias: run midnight-cast instead."
     }
   } catch {
     # throw, not exit: under irm | iex, exit would close the caller's PowerShell.
