@@ -5,7 +5,7 @@
 import { loadExamplesIndex } from "./examples-index.js";
 import { networkTitle } from "./blockfrost.js";
 import { ledgerMajor, publicNetworks, runs } from "./network-names.js";
-import { loadSupportMatrix } from "./versions.js";
+import { loadSupportMatrix, type SupportMatrixFile } from "./versions.js";
 
 export interface ExampleLink {
   example: string;
@@ -71,17 +71,24 @@ export function describeLinks(links: ExampleLink[]): string[] {
 
 /**
  * When the examples' code targets a ledger a network doesn't run, a note saying so: for that network,
- * or, without one, for the public networks on another ledger. Undefined when nothing differs.
+ * or, without one or for one the matrix gives no ledger for, the public networks on another ledger.
+ * Undefined when nothing differs.
  */
 export function examplesLedgerNote(network?: string): string | undefined {
   const ledger = Number(loadExamplesIndex().ledger);
-  const matrix = loadSupportMatrix().networks;
+  let matrix: SupportMatrixFile["networks"];
+  try {
+    matrix = loadSupportMatrix().networks;
+    if (typeof matrix !== "object" || matrix === null) return undefined;
+  } catch {
+    // A note beside working code isn't worth failing over a broken support-matrix override.
+    return undefined;
+  }
   const majorOf = (name: string) => ledgerMajor(matrix[name]?.ledger);
-  if (network) {
-    const on = majorOf(network);
-    return on !== undefined && on !== ledger
-      ? `This code targets Ledger ${ledger}, and ${networkTitle(network)} runs Ledger ${on}, so its APIs may not match.`
-      : undefined;
+  // A network the matrix gives no ledger for, such as local, gets the general note.
+  const on = network ? majorOf(network) : undefined;
+  if (on !== undefined) {
+    return on !== ledger ? `This code targets Ledger ${ledger}, and ${networkTitle(network!)} runs Ledger ${on}, so its APIs may not match.` : undefined;
   }
   const known = publicNetworks(matrix).filter((name) => majorOf(name) !== undefined);
   const others = known.filter((name) => majorOf(name) !== ledger);
