@@ -22,14 +22,16 @@ const LINK = /\[([^\]]+)\]\(([^)\s]+)\)/g;
 
 /** A table's body rows under a heading, as cells. */
 function tableRows(markdown: string, heading: string): string[][] {
-  const at = markdown.indexOf(`## ${heading}`);
+  // The whole heading line, so "## Index" doesn't find "## Indexer notes".
+  const at = markdown.search(new RegExp(`^## ${heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}[ \t]*$`, "m"));
   if (at === -1) throw new Error(`the runbooks README has no "## ${heading}" section`);
   const lines = markdown.slice(at).split("\n").slice(1);
   const rows: string[][] = [];
   for (const line of lines) {
     if (line.startsWith("## ")) break;
     if (!line.startsWith("|") || /^\|\s*-/.test(line)) continue;
-    rows.push(line.split(/(?<!\\)\|/).slice(1, -1).map((cell) => cell.trim()));
+    // An escaped pipe is a pipe in the cell, as GitHub renders it.
+    rows.push(line.split(/(?<!\\)\|/).slice(1, -1).map((cell) => cell.trim().replace(/\\\|/g, "|")));
   }
   return rows.slice(1);
 }
@@ -43,7 +45,9 @@ const plain = (cell: string) => cell.replace(LINK, "$1").replace(/`/g, "").repla
 /**
  * The strings a row's error cell asks to search for: the backticked strings at its start, outside
  * parentheses. `/` or "or" between two starts another alternative, `…` continues the same one in order,
- * and anything else, such as "on Mainnet" or "with `unshielded=false`", ends them: the rest is context.
+ * and anything else, such as "on Mainnet" or "with `unshielded=false`", ends them: the rest is context. A
+ * variant list right after them, as in "`Cannot find module '@midnight-ntwrk/wallet'` (or `ledger-v7`, `zswap`)",
+ * adds the last string with its final name swapped for each variant.
  */
 export function parseErrorCell(cell: string): { match: string[][]; when?: string } {
   const match: string[][] = [];
@@ -60,6 +64,16 @@ export function parseErrorCell(cell: string): { match: string[][]; when?: string
     if (!sep) break;
     joiner = sep[1] === "…" ? "then" : "or";
     rest = rest.slice(sep[0].length);
+  }
+  const variants = /^\s*\(or ((?:`[^`]+`(?:,\s*)?)+)\)/.exec(rest);
+  const last = match.at(-1);
+  if (variants && last?.length === 1) {
+    const name = /[\w.-]+(?=[^\w.-]*$)/.exec(last[0]!);
+    if (name) {
+      for (const [, variant] of variants[1]!.matchAll(/`([^`]+)`/g)) {
+        match.push([last[0]!.slice(0, name.index) + variant + last[0]!.slice(name.index + name[0].length)]);
+      }
+    }
   }
   const shown = plain(cell);
   const matchedText = match.map((parts) => parts.join(" … ")).join(" / ");
