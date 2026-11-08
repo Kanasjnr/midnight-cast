@@ -201,7 +201,7 @@ A sandbox or CI image without Node.js can run the same server from the [standalo
 
 ### What an agent can and can't do with it
 
-- Every MCP tool only reads, and each is marked read-only to the client. None signs or submits a transaction, and none needs a wallet, a key or a seed. The CLI's `rpc` command, which passes any JSON-RPC method to a node, isn't an MCP tool.
+- Every MCP tool only reads, and each is marked read-only to the client. None signs or submits a transaction, and none needs a wallet, a key or a seed. The CLI's `rpc` command isn't an MCP tool, and it sends only read-only JSON-RPC methods unless you pass `--allow-write`.
 - `MIDNIGHT_CAST_NETWORKS` limits which networks the model may query, for example `preview,preprod`.
 - Tools that reach a network are rate limited, 30 calls a minute by default (`MIDNIGHT_CAST_MAX_CALLS_PER_MINUTE`), so a looping agent can't exhaust public endpoints or a Blockfrost plan.
 - The only secrets it holds are optional Blockfrost project IDs for preprod and mainnet. They're sent only to Blockfrost and redacted from every response, so the model never sees them.
