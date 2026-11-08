@@ -18,8 +18,12 @@ export interface ExamplesReport {
 }
 
 /** Midnight's official examples: all of them, or the ones that show a topic, with the code that does. */
-export function examplesCommand(topic: string | undefined, options: GlobalOptions, index: ExamplesIndex = loadExamplesIndex()): EmitResult {
-  const ledgerNote = examplesLedgerNote();
+export function examplesCommand(
+  topic: string | undefined,
+  options: GlobalOptions & { network?: string },
+  index: ExamplesIndex = loadExamplesIndex(),
+): EmitResult {
+  const ledgerNote = examplesLedgerNote(options.network);
   const base = { repo: index.repo, commit: index.commit, ledger: index.ledger, ...(ledgerNote ? { ledgerNote } : {}), toolchain: index.toolchain };
   const query = topic?.trim();
   // A topic of only filler words ("show me code") asks for the list.

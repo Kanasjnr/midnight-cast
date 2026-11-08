@@ -144,7 +144,7 @@ const HELP_BY_TOPIC: Record<(typeof TOPICS)[number], string | (() => string)> = 
 
 export function explainCommand(
   topic: string | undefined,
-  options: GlobalOptions,
+  options: GlobalOptions & { network?: string },
   catalog?: () => Catalog,
 ): EmitResult {
   if (topic === undefined) {
@@ -165,7 +165,7 @@ export function explainCommand(
   }
   const text = typeof help === "function" ? help() : help;
   const examples = examplesForTopic(key);
-  const examplesNote = examples.length ? examplesLedgerNote() : undefined;
+  const examplesNote = examples.length ? examplesLedgerNote(options.network) : undefined;
 
   if (options.json) {
     return success({ topic: key, text, ...(examples.length ? { examples } : {}), ...(examplesNote ? { examplesNote } : {}) });
