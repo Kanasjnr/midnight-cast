@@ -10,7 +10,7 @@ import { schemaErrors } from "./schema.js";
 const index = loadExamplesIndex();
 // A full envelope around a command's result, as the CLI prints it.
 const envelope = (result: { ok: boolean; data?: unknown; error?: string }) => ({
-  schemaVersion: 1,
+  schemaVersion: 2,
   ok: result.ok,
   command: "examples",
   network: null,

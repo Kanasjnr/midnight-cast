@@ -28,7 +28,7 @@ describe("--json envelope", () => {
     const { envelope, code } = await runJson(["decode", "ledger", "170"]);
     expect(code).toBe(0);
     expect(envelope).toMatchObject({
-      schemaVersion: 1,
+      schemaVersion: 2,
       ok: true,
       command: "decode ledger",
       error: null,
