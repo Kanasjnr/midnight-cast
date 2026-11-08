@@ -9,6 +9,7 @@ import { isBlockfrostUrl } from "./blockfrost.js";
 import { NEW_SCOPE, OLD_SCOPE, isMidnightPackage, loadMigratedPackages, packageBaseName } from "./npm-scope.js";
 import { describeMatrixSource, type MatrixSource } from "./upstream-matrix.js";
 import { describeExamples, type ExamplesVerdict } from "./examples-report.js";
+import type { ExamplesUpgrade } from "./examples-toolchain.js";
 
 export interface MatrixNetwork {
   /** Recommended node release for running your own node. */
@@ -74,7 +75,15 @@ export interface VersionsReport {
   /** Whether Midnight's examples pass on the node this network runs. */
   examples?: ExamplesVerdict;
   /** The project against the toolchain Midnight's examples are pinned to: advice, not part of allOk. */
-  examplesToolchain?: { repo: string; commit: string; ledger: string; toolchain: Record<string, string>; checks: VersionCheck[]; note?: string };
+  examplesToolchain?: {
+    repo: string;
+    commit: string;
+    ledger: string;
+    toolchain: Record<string, string>;
+    checks: VersionCheck[];
+    note?: string;
+    upgrade?: ExamplesUpgrade;
+  };
   allOk: boolean;
 }
 
@@ -543,6 +552,10 @@ export function formatVersionsHuman(report: VersionsReport): string {
     lines.push("", `Against Midnight's examples (${t.repo} at ${t.commit.slice(0, 7)}, Ledger ${t.ledger}, known to work together; advice, not a matrix check):`);
     if (t.note) lines.push(`  ${t.note}`);
     for (const check of t.checks) lines.push(`  ${check.label}: examples=${check.expected} project=${check.live} → ${check.ok ? "OK" : "DIFFERS"}${check.note ? ` (${check.note})` : ""}`);
+    if (t.upgrade) {
+      lines.push(`  To upgrade, see the examples' own move to Ledger ${t.ledger}, ${t.repo}#${t.upgrade.pr}:`, `    ${t.upgrade.url}`, `  What it changed in ${t.upgrade.example}:`);
+      for (const file of t.upgrade.files) lines.push(`    ${file.path}: ${file.url}`);
+    }
   }
 
   if (report.localPackageChecks?.length) {

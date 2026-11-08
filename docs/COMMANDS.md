@@ -271,6 +271,17 @@ The published matrix updates only what the endpoints can't reveal: the indexer, 
 
 **Against Midnight's examples:** next to the matrix checks, `versions` compares the project with the toolchain Midnight's examples are pinned to, a set known to compile and pass its tests together (`examplesToolchain` in JSON). It covers the `midnight-js-*` packages, `testkit-js`, the wallet SDK, the `pragma language_version` in the project's `.compact` files (only in a directory with a `package.json`, four levels deep, build output, dot directories and `node_modules` skipped; a constraint such as `>= 0.16 && <= 0.20` must admit the examples' language) and the Node.js version in `.nvmrc` or `engines`. It checks only what the project declares, and it's advice: a difference doesn't change `allOk` or the exit code, since a project can be right on other versions. For example: "wallet-sdk: examples=2.0.0 project=1.0.4 → DIFFERS (the official examples run 2.0.0)". A `midnight-js-*` package the examples pin on its own, such as `midnight-js-network-id` at `5.0.0-rc.5`, is checked against that pin, and a prerelease pin matches only a spec that names it. The examples target one ledger (`ledger`, Ledger 9 today), so on a network that runs another, such as preprod on Ledger 8, `versions` doesn't compare the project with them and says why in `note`, with `checks` empty. The network's ledger is the one the matrix gives for the runtime spec its node reports, so an upgrade counts as soon as the node runs it.
 
+**Upgrading with the examples:** when a project has a `midnight-js-*` package a major version behind the examples, on a network that runs their ledger, `versions` points at the examples' own move to that ledger, midnightntwrk/midnight-examples#88 (Midnight.js 5.0.0, wallet SDK 2.0.0, Compact 0.36.0), as `examplesToolchain.upgrade`. It lists what that pull request changed in the example closest to the project, its `package.json` and non-test source under `contract/` and `src/`, each linked to its diff: the example that shares the most contract file names with the project, or hello-world. Any `midnight-js-*` package counts, including one the examples pin on their own, such as `midnight-js-network-id`, and so does a project halfway through the move. A worked migration of the same code, step by step:
+
+```text
+  To upgrade, see the examples' own move to Ledger 9, midnightntwrk/midnight-examples#88:
+    https://github.com/midnightntwrk/midnight-examples/pull/88
+  What it changed in private-party:
+    examples/private-party/contract/private-party.compact: https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-d738…
+    examples/private-party/src/sponsor.ts: https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-00f0…
+    …
+```
+
 Example output:
 
 ```text

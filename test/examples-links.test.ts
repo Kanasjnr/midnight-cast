@@ -8,7 +8,7 @@ import { ALL_REFS, examplesForLedgerCode, examplesForTopic, examplesLedgerNote, 
 import { loadExamplesIndex } from "../src/lib/examples-index.js";
 import { loadDataJson } from "../src/lib/data-path.js";
 import { formatDate, type BundledReports } from "../src/lib/examples-report.js";
-import { examplesToolchainChecks, findPragmas, nodeAdmits, satisfies } from "../src/lib/examples-toolchain.js";
+import { examplesToolchainChecks, examplesUpgrade, findCompactFiles, findPragmas, nodeAdmits, satisfies } from "../src/lib/examples-toolchain.js";
 
 const root = mkdtempSync(join(tmpdir(), "examples-links-"));
 // The ledger notes read the support matrix, which a user's own override would change: use an empty config home.
@@ -100,6 +100,34 @@ describe("the examples' toolchain against a project", () => {
     ]);
     expect(verdicts({ "@midnight-ntwrk/midnight-js-network-id": "^5.0.0" })).toEqual([["midnight-js-network-id", "^5.0.0", false]]);
     expect(verdicts({ "@midnight-ntwrk/midnight-js-network-id": "^5.0.0-rc.5" })).toEqual([["midnight-js-network-id", "^5.0.0-rc.5", true]]);
+  });
+
+  it("points a project a major version behind at the examples' own move, in the example closest to it", () => {
+    const index = loadExamplesIndex();
+    expect(index.migration).toEqual({ pr: 88, url: "https://github.com/midnightntwrk/midnight-examples/pull/88", examples: expect.any(Object) });
+    for (const [name, files] of Object.entries(index.migration!.examples)) {
+      for (const file of files) {
+        expect(file.path.startsWith(`examples/${name}/`), file.path).toBe(true);
+        expect(file.url).toMatch(/^https:\/\/github\.com\/midnightntwrk\/midnight-examples\/pull\/88\/files#diff-[0-9a-f]{64}$/);
+      }
+    }
+    const upgrade = (name: string, packages: Record<string, string>, files: Record<string, string> = {}) => {
+      const dir = project(name, { dependencies: packages }, files);
+      const compactFiles = findCompactFiles(dir);
+      return examplesUpgrade(index, examplesToolchainChecks(toolchain, { dir, packages, compactFiles }), compactFiles);
+    };
+    const party = upgrade("party", { "@midnight-ntwrk/midnight-js-contracts": "4.1.1" }, { "contract/private-party.compact": "pragma language_version 0.23;\n" });
+    expect(party).toMatchObject({ pr: 88, example: "private-party", files: expect.arrayContaining([expect.objectContaining({ path: "examples/private-party/src/sponsor.ts" })]) });
+    expect(upgrade("other", { "@midnight-ntwrk/midnight-js-contracts": "^4.0.0" })?.example).toBe("hello-world");
+    // Current, or only a patch or minor behind: nothing to migrate.
+    expect(upgrade("current", { "@midnight-ntwrk/midnight-js-contracts": "5.0.0" })).toBeUndefined();
+    // Halfway through the move is still behind.
+    expect(upgrade("mixed", { "@midnight-ntwrk/midnight-js-contracts": "4.1.1", "@midnight-ntwrk/midnight-js-types": "5.0.0" })?.example).toBe("hello-world");
+    expect(upgrade("none", {})).toBeUndefined();
+    // A package pinned on its own, an upper bound below the major, and a contract without a pragma.
+    expect(upgrade("network-id", { "@midnight-ntwrk/midnight-js-contracts": "5.0.0", "@midnight-ntwrk/midnight-js-network-id": "^4.0.0" })).toBeDefined();
+    expect(upgrade("upper", { "@midnight-ntwrk/midnight-js-contracts": "<5.0.0" })).toBeDefined();
+    expect(upgrade("no-pragma", { "@midnight-ntwrk/midnight-js-contracts": "4.1.1" }, { "contract/private-bid.compact": "export circuit bid(): [] {}\n" })?.example).toBe("private-bid");
   });
 
   it("skips unreadable contracts and only looks for pragmas inside a project", () => {
