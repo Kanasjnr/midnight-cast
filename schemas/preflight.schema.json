@@ -70,6 +70,10 @@
           "type": "integer",
           "description": "NIGHT UTXOs registered for DUST generation"
         },
+        "resetByUpgrade": {
+          "type": "integer",
+          "description": "Unshielded addresses on a network whose node runs Ledger 9: NIGHT UTXOs created before the upgrade and not registered now. The ledger 8 to 9 fork reset their registration, so they need registering again"
+        },
         "complete": {
           "type": "boolean",
           "description": "false when the address's history couldn't be read before the timeout, so the totals may be short"
