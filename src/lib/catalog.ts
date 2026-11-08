@@ -1,6 +1,7 @@
 import type { Command, Option } from "commander";
 import type { NetworkErrorKind } from "./network-error.js";
 import { SCHEMA_VERSION } from "../output.js";
+import { READ_ONLY_RPC_METHODS } from "./rpc-methods.js";
 
 export interface CatalogOption {
   flags: string;
@@ -15,6 +16,8 @@ export interface CatalogCommand {
   arguments: Array<{ name: string; required: boolean; variadic: boolean }>;
   options: CatalogOption[];
   readOnly: boolean;
+  /** rpc only: the methods it sends without --allow-write. */
+  readOnlyMethods?: string[];
   /** Absent for commands that don't print a JSON envelope, such as mcp. */
   outputSchema?: string;
 }
@@ -106,6 +109,7 @@ function walk(cmd: Command, prefix: string[]): CatalogCommand[] {
               arguments: args,
               options,
               readOnly: !WRITES_FILES.has(path.join(" ")),
+              ...(path.join(" ") === "rpc" ? { readOnlyMethods: [...READ_ONLY_RPC_METHODS] } : {}),
               ...(NO_ENVELOPE.has(path.join(" ")) ? {} : { outputSchema: outputSchemaFor(path.join(" ")) }),
             },
           ]

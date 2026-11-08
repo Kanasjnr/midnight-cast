@@ -161,6 +161,13 @@
               "readOnly": {
                 "type": "boolean"
               },
+              "readOnlyMethods": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "rpc only: the JSON-RPC methods it sends without --allow-write"
+              },
               "outputSchema": {
                 "type": "string"
               }
