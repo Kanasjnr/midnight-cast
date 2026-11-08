@@ -58,6 +58,7 @@ const ERROR_KINDS: Record<NetworkErrorKind | "usage" | "rate_limited" | "not_rea
 const SCHEMA_BASE = "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/main/schemas/";
 const WRITES_FILES = new Set(["config init", "agents init"]);
 const NO_ENVELOPE = new Set(["mcp"]);
+const EXTRAS: Record<string, Partial<CatalogCommand>> = { rpc: { readOnlyMethods: [...READ_ONLY_RPC_METHODS] } };
 
 export function outputSchemaFor(command: string): string {
   const [first = "", second] = command.split(" ");
@@ -98,20 +99,21 @@ function walk(cmd: Command, prefix: string[]): CatalogCommand[] {
   return cmd.commands.flatMap((sub) => {
     const isDefault = isDefaultSubcommand(sub);
     const path = isDefault ? prefix : [...prefix, sub.name()];
+    const name = path.join(" ");
     const args = describeArguments(sub);
     const options = [...(isDefault ? cmd.options : []), ...sub.options].map(describeOption);
     const self: CatalogCommand[] =
       sub.commands.length === 0
         ? [
             {
-              name: path.join(" "),
+              name,
               usage: formatUsage(path, args, options.length > 0),
               description: sub.description(),
               arguments: args,
               options,
-              readOnly: !WRITES_FILES.has(path.join(" ")),
-              ...(path.join(" ") === "rpc" ? { readOnlyMethods: [...READ_ONLY_RPC_METHODS] } : {}),
-              ...(NO_ENVELOPE.has(path.join(" ")) ? {} : { outputSchema: outputSchemaFor(path.join(" ")) }),
+              readOnly: !WRITES_FILES.has(name),
+              ...EXTRAS[name],
+              ...(NO_ENVELOPE.has(name) ? {} : { outputSchema: outputSchemaFor(name) }),
             },
           ]
         : [];
