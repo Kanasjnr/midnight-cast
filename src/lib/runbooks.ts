@@ -50,13 +50,22 @@ function inOrder(text: string, parts: string[]): boolean {
   return true;
 }
 
-/** The runbook rows whose error strings appear in the text, longest match first, each once. */
+/**
+ * The runbook rows whose error strings appear in the text, longest match first. A row whose runbooks a longer
+ * match already names is left out: "Invalid Transaction" adds nothing to "1010: Invalid Transaction: Custom error:".
+ */
 export function matchRunbooks(text: string, index: RunbooksIndex = loadRunbooksIndex()): RunbookMatch[] {
-  const matches = index.lookups.flatMap((row) => {
-    const hit = row.match.find((parts) => inOrder(text, parts));
-    if (!hit) return [];
+  const hits = index.lookups
+    .flatMap((row) => {
+      const hit = row.match.find((parts) => inOrder(text, parts));
+      return hit ? [{ row, matched: hit.join(" … ") }] : [];
+    })
+    .sort((a, b) => b.matched.length - a.matched.length);
+  const named = new Set<string>();
+  return hits.flatMap(({ row, matched }) => {
+    if (row.runbooks.every((key) => named.has(key))) return [];
+    for (const key of row.runbooks) named.add(key);
     const runbooks = row.runbooks.map((key) => index.runbooks[key]).filter((r): r is Runbook => r !== undefined);
-    return [{ matched: hit.join(" … "), runbooks, ...(row.when ? { when: row.when } : {}), ...(row.advice ? { advice: row.advice } : {}) }];
+    return [{ matched, runbooks, ...(row.when ? { when: row.when } : {}), ...(row.advice ? { advice: row.advice } : {}) }];
   });
-  return matches.sort((a, b) => b.matched.length - a.matched.length);
 }

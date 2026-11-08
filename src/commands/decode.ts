@@ -1,4 +1,5 @@
 import { describeLinks, examplesForLedgerCode, examplesLedgerNote, resolveLinks } from "../lib/example-links.js";
+import { matchRunbooks, type RunbookMatch } from "../lib/runbooks.js";
 import { loadDataJson } from "../lib/data-path.js";
 import {
   findLedgerCodesByName,
@@ -473,7 +474,10 @@ function decodeRaw(raw: string, options: DecodeOptions): EmitResult {
     }
   }
 
-  if (parts.length === 0) {
+  // The service desk's runbook for each error string it lists, beside whatever decoded.
+  const runbooks = matchRunbooks(raw);
+
+  if (parts.length === 0 && runbooks.length === 0) {
     return fail(
       // Text that is only a Ledger 9 marker is answered as such; in a longer error, the real error is routed first.
       (/^\S+$/.test(raw.trim()) ? normalOnNetwork(raw, options.network) : undefined) ??
@@ -481,7 +485,7 @@ function decodeRaw(raw: string, options: DecodeOptions): EmitResult {
         normalOnNetwork(raw, options.network) ??
         failures[0] ??
         "No Midnight error recognised in this message. decode reads 1010 rejections, Custom(N) ledger codes, " +
-          "pallet errors (DispatchError::Module), JSON-RPC codes and known tooling messages, or a bare code such as 170",
+          "pallet errors (DispatchError::Module), JSON-RPC codes, known tooling messages and the error strings the service desk's runbooks list, or a bare code such as 170",
     );
   }
 
@@ -493,11 +497,14 @@ function decodeRaw(raw: string, options: DecodeOptions): EmitResult {
         raw,
       parsed: { ...parsed, ledgerCodes, ledgerNames: nameCodes },
         decodings: parts.map((p) => p.data),
+        ...(runbooks.length > 0 ? { runbooks } : {}),
         ...(failures.length > 0 ? { warnings: failures } : {}),
       }),
       next,
     };
   }
+
+  if (runbooks.length > 0) sections.push(...describeRunbooks(runbooks), "");
 
   if (failures.length > 0) {
     sections.push(
@@ -514,6 +521,20 @@ function decodeRaw(raw: string, options: DecodeOptions): EmitResult {
     .filter((line) => !line.startsWith("Note:   This code targets") || (!seen.has(line) && seen.add(line)))
     .join("\n");
   return { ...success(text.trimEnd()), next };
+}
+
+/** Each matched row: the runbook to read, the others it names, and when the row applies. */
+function describeRunbooks(matches: RunbookMatch[]): string[] {
+  const lines = ["Midnight's service desk has a runbook for this:"];
+  for (const match of matches) {
+    const [first, ...others] = match.runbooks;
+    if (!first) continue;
+    lines.push(`  "${match.matched}": ${first.title}`, `    ${first.url}`);
+    for (const other of others) lines.push(`    also ${other.title}: ${other.url}`);
+    if (match.advice) lines.push(`    ${match.advice}`);
+    if (match.when) lines.push(`    For: ${match.when}`);
+  }
+  return lines;
 }
 
 function decodeKnownMessage(message: KnownMessage, options: DecodeOptions): EmitResult {
