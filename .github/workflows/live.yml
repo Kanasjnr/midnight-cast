@@ -265,20 +265,24 @@ jobs:
           code=0
           npm run --silent runbooks-index -- --check > runbooks.txt 2>&1 || code=$?
           cat runbooks.txt
-          open=$(gh issue list --repo "$GITHUB_REPOSITORY" --label runbooks --state open --json number --jq '.[0].number // empty')
+          # Every gh call is guarded: a GitHub hiccup or a token that can't edit issues warns instead of failing.
+          ghx() { gh "$@" || echo "::warning title=Runbooks issue not updated::gh $1 $2 failed"; }
+          open=$(gh issue list --repo "$GITHUB_REPOSITORY" --label runbooks --state open --json number --jq '.[0].number // empty' 2>/dev/null || true)
           if [ "$code" = 0 ] && [ -n "$open" ] && [ "$SCHEDULED" = true ]; then
-            gh issue close "$open" --repo "$GITHUB_REPOSITORY" --comment "The bundled runbook strings match the service desk's lookup table again."
+            ghx issue close "$open" --repo "$GITHUB_REPOSITORY" --comment "The bundled runbook strings match the service desk's lookup table again."
           elif [ "$code" = 2 ]; then
             echo "::warning title=Runbooks not compared::$(head -1 runbooks.txt)"
           elif [ "$code" = 1 ]; then
             echo "::warning title=Runbooks moved on::The service desk's lookup table differs from src/data/runbooks.json. Run npm run runbooks-index and ship it in a patch."
             if [ "$SCHEDULED" = true ]; then
-              gh label create runbooks --repo "$GITHUB_REPOSITORY" --color C5DEF5 --description "The service desk's runbooks moved on" 2>/dev/null || true
-              { echo "The service desk's runbooks index on main no longer matches the strings \`decode\` bundles. Run \`npm run runbooks-index\`, review the diff, and ship it in a patch."; echo; echo '```'; cat runbooks.txt; echo '```'; } > body.md
+              # The rows that differ, without the first line's commits, so the issue changes only when they do.
+              { echo "The service desk's runbooks index on main no longer matches the strings \`decode\` bundles. Run \`npm run runbooks-index\`, review the diff, and ship it in a patch."; tail -n +2 runbooks.txt; } > body.md
               if [ -n "$open" ]; then
-                gh issue edit "$open" --repo "$GITHUB_REPOSITORY" --body-file body.md
+                current=$(gh issue view "$open" --repo "$GITHUB_REPOSITORY" --json body --jq .body 2>/dev/null || true)
+                [ "$current" = "$(cat body.md)" ] || ghx issue edit "$open" --repo "$GITHUB_REPOSITORY" --body-file body.md
               else
-                gh issue create --repo "$GITHUB_REPOSITORY" --title "Runbooks: the service desk's lookup table moved on" --label runbooks --body-file body.md
+                gh label create runbooks --repo "$GITHUB_REPOSITORY" --color C5DEF5 --description "The service desk's runbooks moved on" 2>/dev/null || true
+                ghx issue create --repo "$GITHUB_REPOSITORY" --title "Runbooks: the service desk's lookup table moved on" --label runbooks --body-file body.md
               fi
             fi
           fi
