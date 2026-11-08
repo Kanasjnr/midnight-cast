@@ -40,10 +40,10 @@ The live checks fail during a network outage. Report the outage to Midnight's se
 
 After the pull request merges, create a GitHub release that targets `main`, tagged `v<x.y.z>`, with the changelog section as its notes. Publishing it starts `publish.yml`, which:
 
-1. runs the tarball smoke test again on the merged code;
+1. runs the tarball smoke test again on the merged code, and keeps the tarball the Linux Node 24 job tested;
 2. confirms that a full live check on `main` (a scheduled run or a push, not a manual run that may cover one network) succeeded within the last 24 hours, and that no `live-check` issue is open, since the live check keeps one open for each network while it reports drift or an outage;
-3. builds and publishes to npm through trusted publishing, which needs no npm token and adds provenance itself (see [npm trusted publishing](#npm-trusted-publishing)), then lists that version in the MCP Registry: it waits until npm serves the version, then runs `mcp-publisher publish` with GitHub's OIDC login, which needs no secret. The registry checks that the package's `mcpName` matches `server.json`, so if that job fails, re-run it once npm has the version;
-4. separately, builds the standalone binaries, smokes them, records build provenance and, once steps 1 and 2 have passed, attaches the archives, `SHA256SUMS`, `install.sh` and `install.ps1` to the GitHub release.
+3. publishes that tested tarball to npm through trusted publishing, from a job in the `npm-publish` environment that checks out and installs nothing and runs no package scripts, so no dependency's install script runs while the job can get the OIDC token. The jobs that build the tarball and the binaries install dependencies without their scripts too, so none can change what is published. It first checks that there is exactly one tarball, and that it is midnight-cast at the release tag's version. Trusted publishing needs no npm token and adds provenance itself (see [npm trusted publishing](#npm-trusted-publishing)). The workflow then lists that version in the MCP Registry: it waits until npm serves the version, then runs `mcp-publisher publish` with GitHub's OIDC login, which needs no secret. The registry checks that the package's `mcpName` matches `server.json`, so if that job fails, re-run it once npm has the version;
+4. separately, builds the standalone binaries, smokes them, records build provenance from a job that only downloads the archives and attests them, and, once steps 1 and 2 have passed, attaches the archives, `SHA256SUMS`, `install.sh` and `install.ps1` to the GitHub release.
 
 npm doesn't wait for step 4, since the binaries are an extra channel. If a binary job fails after npm has published, re-run the failed jobs from the workflow run; until it passes, the release has no binaries and the install one-liner returns 404.
 
@@ -69,8 +69,10 @@ gh attestation verify midnight-cast-linux-x64.tar.gz --repo Kanasjnr/midnight-ca
 `publish.yml` publishes to npm with GitHub's OIDC token rather than an npm token, so there's no secret to expire. npm adds provenance to every version published this way. It needs npm 11.5.1 or later, which the job's Node 24 has, and a one-time setting on npmjs.com by a maintainer of the package:
 
 1. On npmjs.com, open the `midnight-cast` package, then **Settings**, then **Trusted Publisher**, and choose **GitHub Actions**.
-2. Enter `Kanasjnr` as the organization or user, `midnight-cast` as the repository and `publish.yml` as the workflow filename. Leave the environment empty, and allow `npm publish`, not only staged publishes.
+2. Enter `Kanasjnr` as the organization or user, `midnight-cast` as the repository and `publish.yml` as the workflow filename. Enter `npm-publish` as the environment, and allow `npm publish`, not only staged publishes.
 3. Once a release has published this way, set **Publishing access** to **Require two-factor authentication and disallow tokens**, so no token can publish the package.
+
+The publish job runs in the `npm-publish` environment, which GitHub creates the first time a release uses it. To add a gate in front of npm, open **Settings**, then **Environments**, then `npm-publish` on GitHub, add yourself as a required reviewer, and limit its deployment tags to `v*`. The run then waits for an approval before anything reaches npm. npm only accepts a publish from that environment because the trusted publisher names it, so a job that skips the environment can't publish.
 
 0.2.0 was published by hand, without provenance, because the job's old `NPM_TOKEN` secret had lost publish rights. The secret isn't used any more and can be deleted.
 

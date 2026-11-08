@@ -2,12 +2,13 @@
 // project, and runs the installed CLI. Catches what tests against the source tree
 // can't: a file left out of the package, a broken bin, or an ESM resolution error.
 //
-//   tsx scripts/smoke-tarball.ts [--offline]
+//   tsx scripts/smoke-tarball.ts [--offline] [--keep <dir>]
 //
 // --offline skips the one command that needs a network (health preview).
+// --keep copies the tarball it tested into <dir> when every check passes, so a release publishes exactly that file.
 
 import { execFile, spawn } from "node:child_process";
-import { mkdirSync, mkdtempSync, readdirSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -76,6 +77,9 @@ function startMcp(cwd: string): Promise<string[]> {
 
 async function main(): Promise<number> {
   const offline = process.argv.includes("--offline");
+  const keepAt = process.argv.indexOf("--keep");
+  const keep = keepAt === -1 ? undefined : process.argv[keepAt + 1];
+  if (keepAt !== -1 && (!keep || keep.startsWith("--"))) throw new Error("--keep needs a directory");
   const work = mkdtempSync(join(tmpdir(), "mc-tarball-"));
   const { failures, check } = checker();
 
@@ -112,7 +116,13 @@ async function main(): Promise<number> {
   }
 
   console.log(failures.length ? `\n${failures.length} check(s) failed` : "\nThe packed tarball works");
-  return failures.length ? 1 : 0;
+  if (failures.length) return 1;
+  if (keep) {
+    mkdirSync(keep, { recursive: true });
+    copyFileSync(join(work, pack!.filename), join(keep, pack!.filename));
+    console.log(`Kept ${join(keep, pack!.filename)}`);
+  }
+  return 0;
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
