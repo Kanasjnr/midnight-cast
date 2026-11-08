@@ -26,6 +26,8 @@ export interface Example {
 export interface ExamplesIndex {
   repo: string;
   commit: string;
+  /** The ledger the code at that commit targets, e.g. "9". */
+  ledger: string;
   /** The toolchain the examples are pinned to at that commit, from their README. */
   toolchain: Record<string, string>;
   examples: Example[];
