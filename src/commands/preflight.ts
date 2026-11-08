@@ -187,7 +187,9 @@ export function unshieldedWallet(
   // Which unregistered UTXOs the upgrade reset, worded for how many there are.
   const resetNote = () => {
     const all = reset === night.length - registered;
-    const subject = reset === 1 ? (all && registered === 0 ? "It was" : "1 unregistered UTXO was") : all ? `All ${reset} unregistered UTXOs were` : `${reset} unregistered UTXOs were`;
+    const alone = all && registered === 0;
+    const subject =
+      reset === 1 ? (alone ? "It was" : "1 unregistered UTXO was") : alone ? "They were all" : all ? `All ${reset} unregistered UTXOs were` : `${reset} unregistered UTXOs were`;
     return `${subject} created before the Ledger 9 upgrade, which reset every DUST registration`;
   };
   if (registered === 0) {
