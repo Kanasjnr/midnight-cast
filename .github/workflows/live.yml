@@ -236,6 +236,53 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: npm run examples-index -- --check
 
+  runbooks-index:
+    name: Runbooks index (service desk)
+    if: github.event_name != 'workflow_dispatch' || inputs.network == 'all'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci --ignore-scripts
+
+      # A change to the service desk's lookup table is shipped in a patch, not a reason to block a release, so
+      # this never fails the run. A scheduled run keeps one `runbooks` issue with the rows that differ.
+      - name: Compare the bundled runbook strings with the service desk's lookup table on main
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
+          SCHEDULED: ${{ github.event_name == 'schedule' }}
+        run: |
+          code=0
+          npm run --silent runbooks-index -- --check > runbooks.txt 2>&1 || code=$?
+          cat runbooks.txt
+          open=$(gh issue list --repo "$GITHUB_REPOSITORY" --label runbooks --state open --json number --jq '.[0].number // empty')
+          if [ "$code" = 0 ] && [ -n "$open" ] && [ "$SCHEDULED" = true ]; then
+            gh issue close "$open" --repo "$GITHUB_REPOSITORY" --comment "The bundled runbook strings match the service desk's lookup table again."
+          elif [ "$code" = 2 ]; then
+            echo "::warning title=Runbooks not compared::$(head -1 runbooks.txt)"
+          elif [ "$code" = 1 ]; then
+            echo "::warning title=Runbooks moved on::The service desk's lookup table differs from src/data/runbooks.json. Run npm run runbooks-index and ship it in a patch."
+            if [ "$SCHEDULED" = true ]; then
+              gh label create runbooks --repo "$GITHUB_REPOSITORY" --color C5DEF5 --description "The service desk's runbooks moved on" 2>/dev/null || true
+              { echo "The service desk's runbooks index on main no longer matches the strings \`decode\` bundles. Run \`npm run runbooks-index\`, review the diff, and ship it in a patch."; echo; echo '```'; cat runbooks.txt; echo '```'; } > body.md
+              if [ -n "$open" ]; then
+                gh issue edit "$open" --repo "$GITHUB_REPOSITORY" --body-file body.md
+              else
+                gh issue create --repo "$GITHUB_REPOSITORY" --title "Runbooks: the service desk's lookup table moved on" --label runbooks --body-file body.md
+              fi
+            fi
+          fi
+
   response-shapes:
     name: Response shapes (preview, preprod, mainnet)
     if: github.event_name != 'workflow_dispatch' || inputs.network == 'all'
