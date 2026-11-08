@@ -223,13 +223,14 @@ decode
 
 program
   .command("rpc <method> [params] [network]")
-  .description("Call a JSON-RPC method on the node (params as JSON array)")
+  .description("Call a read-only JSON-RPC method on the node (params as JSON array)")
+  .option("--allow-write", "Also send methods that aren't known to be read-only, which may submit or change node state")
   .action(
     async (
       method: string,
       params: string | undefined,
       network: string | undefined,
-      _opts,
+      opts: { allowWrite?: boolean },
       cmd,
     ) => {
       const split = splitRpcPositionalArgs(params, network);
@@ -241,6 +242,7 @@ program
             split.network,
             resolveFlags(cmd),
             globalOpts(cmd),
+            { allowWrite: opts.allowWrite === true },
           ),
         cmd,
       );
