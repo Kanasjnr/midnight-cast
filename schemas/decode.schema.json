@@ -430,6 +430,50 @@
             ]
           }
         },
+        "runbooks": {
+          "type": "array",
+          "description": "The service desk's runbook for each error string its lookup table lists that this message contains, longest match first, each runbook once",
+          "items": {
+            "type": "object",
+            "required": [
+              "matched",
+              "runbooks"
+            ],
+            "properties": {
+              "matched": {
+                "type": "string",
+                "description": "The error text that matched, its parts joined by \" … \""
+              },
+              "runbooks": {
+                "type": "array",
+                "description": "The runbooks the row names, the one to read first first",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "title",
+                    "url"
+                  ],
+                  "properties": {
+                    "title": {
+                      "type": "string"
+                    },
+                    "url": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "when": {
+                "type": "string",
+                "description": "The row's context, when it says more than the strings: where the error comes from, or when it applies"
+              },
+              "advice": {
+                "type": "string",
+                "description": "Which runbook applies when, when the row names more than one or says more than its link"
+              }
+            }
+          }
+        },
         "warnings": {
           "type": "array",
           "items": {
