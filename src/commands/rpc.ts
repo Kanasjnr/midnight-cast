@@ -34,6 +34,7 @@ export async function rpcCommand(
     return {
       ok: false,
       error: `${method} isn't on rpc's list of read-only methods, so it wasn't sent.`,
+      errorKind: "not_read_only",
       hint: "midnight-cast explain --json lists the read-only methods under the rpc command. To send a method that may submit or change node state, pass --allow-write.",
       exitCode: 1,
     };

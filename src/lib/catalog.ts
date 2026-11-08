@@ -39,8 +39,9 @@ const EXIT_CODES = {
   "2": "Usage error: unknown command or option, or a missing argument",
 };
 
-const ERROR_KINDS: Record<NetworkErrorKind | "usage" | "rate_limited", string> = {
+const ERROR_KINDS: Record<NetworkErrorKind | "usage" | "rate_limited" | "not_read_only", string> = {
   usage: "The command line was invalid",
+  not_read_only: "rpc refused a method that isn't on its read-only list, without sending it; pass --allow-write to send it",
   rate_limited: "The MCP server's limit on network calls was reached; wait and retry",
   dns: "The host name doesn't resolve",
   refused: "Nothing is listening at the URL",
