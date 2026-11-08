@@ -72,7 +72,7 @@
         },
         "resetByUpgrade": {
           "type": "integer",
-          "description": "Unshielded addresses on a network whose node runs Ledger 9: NIGHT UTXOs created before the upgrade and not registered now. The ledger 8 to 9 fork reset their registration, so they need registering again"
+          "description": "Unshielded addresses on a network past the Ledger 9 upgrade (its node runs runtime spec 2001100 or later): unregistered NIGHT UTXOs created before the upgrade, whose registration the ledger 8 to 9 fork reset, so they need registering again. 0 when none were; absent on a network that hasn't upgraded"
         },
         "complete": {
           "type": "boolean",
