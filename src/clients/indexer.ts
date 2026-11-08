@@ -475,7 +475,9 @@ export async function unshieldedHoldings(
             transactions++;
             lastId = Math.max(lastId, event.transaction.id);
             const createdProtocolVersion = event.transaction.protocolVersion;
-          for (const utxo of event.createdUtxos) held.set(key(utxo), createdProtocolVersion === undefined ? utxo : { ...utxo, createdProtocolVersion });
+            for (const utxo of event.createdUtxos) {
+              held.set(key(utxo), createdProtocolVersion === undefined ? utxo : { ...utxo, createdProtocolVersion });
+            }
             for (const utxo of event.spentUtxos) held.delete(key(utxo));
           }
           if (caughtUp()) finish({ complete: true });
