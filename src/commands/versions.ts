@@ -21,6 +21,8 @@ import { settle } from "../lib/settle.js";
 import { examplesVerdict } from "../lib/examples-report.js";
 import { examplesToolchainChecks } from "../lib/examples-toolchain.js";
 import { loadExamplesIndex } from "../lib/examples-index.js";
+import { ledgerMajor } from "../lib/network-names.js";
+import { networkTitle } from "../lib/blockfrost.js";
 
 export async function versionsCommand(
   networkArg: string | undefined,
@@ -80,6 +82,22 @@ export async function versionsCommand(
   // Advice beside the matrix: the toolchain Midnight's examples are known to work with.
   const index = flags.local !== false ? loadExamplesIndex() : undefined;
   const toolchainChecks = index ? examplesToolchainChecks(index.toolchain, { dir: projectDir, packages: local.localPackages }) : [];
+  // The examples' toolchain is advice for their ledger only: a project on another ledger needs other versions.
+  const networkLedger = ledgerMajor(expected.ledger);
+  const otherLedger = index && networkLedger !== undefined && networkLedger !== Number(index.ledger);
+  const examplesToolchain =
+    index && toolchainChecks.length
+      ? otherLedger
+        ? {
+            repo: index.repo,
+            commit: index.commit,
+            ledger: index.ledger,
+            toolchain: index.toolchain,
+            checks: [],
+            note: `Midnight's examples target Ledger ${index.ledger}, and ${networkTitle(endpoints.network)} runs Ledger ${networkLedger}, so the project isn't compared with them. The matrix checks above are the ones for this network.`,
+          }
+        : { repo: index.repo, commit: index.commit, ledger: index.ledger, toolchain: index.toolchain, checks: toolchainChecks }
+      : undefined;
   const { localPackageChecks } = local;
   const allOk =
     checks.every((c) => c.ok) &&
@@ -106,7 +124,7 @@ export async function versionsCommand(
     checks,
     ...local,
     examples: await examples,
-    ...(index && toolchainChecks.length ? { examplesToolchain: { repo: index.repo, commit: index.commit, toolchain: index.toolchain, checks: toolchainChecks } } : {}),
+    ...(examplesToolchain ? { examplesToolchain } : {}),
     allOk,
   };
 

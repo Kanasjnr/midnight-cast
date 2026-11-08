@@ -208,6 +208,7 @@
       "required": [
         "repo",
         "commit",
+        "ledger",
         "toolchain",
         "checks"
       ],
@@ -217,6 +218,10 @@
         },
         "commit": {
           "type": "string"
+        },
+        "ledger": {
+          "type": "string",
+          "description": "The ledger the examples' code targets"
         },
         "toolchain": {
           "type": "object",
@@ -252,6 +257,10 @@
               }
             }
           }
+        },
+        "note": {
+          "type": "string",
+          "description": "Why the project isn't compared, when the network runs another ledger than the examples' code; checks is then empty"
         }
       }
     }
