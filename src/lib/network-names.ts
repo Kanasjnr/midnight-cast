@@ -16,3 +16,20 @@ export const ledgerMajor = (ledger: string | undefined) => {
   const major = Number(ledger?.split(".")[0]);
   return ledger && Number.isInteger(major) ? major : undefined;
 };
+
+/**
+ * The ledger major a network runs: the matrix's ledger for the runtime spec its node reports, so an upgrade
+ * the network's own row hasn't caught up with still counts, and that row's ledger when no row has the spec or
+ * the node couldn't be read.
+ */
+export function networkLedgerMajor(
+  networks: Record<string, { ledger?: string; runtimeSpec?: number }>,
+  network: string,
+  liveSpec: number | undefined,
+): number | undefined {
+  const live = liveSpec === undefined ? undefined : Object.values(networks).find((n) => n.runtimeSpec === liveSpec)?.ledger;
+  return ledgerMajor(live ?? networks[network]?.ledger);
+}
+
+/** The first runtime spec on Ledger 9: mainnet's block 3346138 runs 1000300 and the fork block after it 2001100. */
+export const LEDGER_9_FIRST_SPEC = 2001100;

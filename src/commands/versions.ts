@@ -21,7 +21,7 @@ import { settle } from "../lib/settle.js";
 import { examplesVerdict } from "../lib/examples-report.js";
 import { examplesToolchainChecks } from "../lib/examples-toolchain.js";
 import { loadExamplesIndex } from "../lib/examples-index.js";
-import { ledgerMajor } from "../lib/network-names.js";
+import { networkLedgerMajor } from "../lib/network-names.js";
 import { networkTitle } from "../lib/blockfrost.js";
 
 export async function versionsCommand(
@@ -82,10 +82,7 @@ export async function versionsCommand(
   // Advice beside the matrix: the toolchain Midnight's examples are known to work with.
   const index = flags.local !== false ? loadExamplesIndex() : undefined;
   // The examples' toolchain is advice for their ledger only: a project on another ledger needs other versions.
-  // The network's ledger is the one the matrix gives for the runtime spec its node reports, so an upgrade the
-  // matrix's own row hasn't caught up with still counts; the row's ledger when no row has that spec.
-  const liveLedger = Object.values(matrix.networks).find((n) => n.runtimeSpec === live.runtimeSpecVersion)?.ledger;
-  const networkLedger = ledgerMajor(liveLedger ?? expected.ledger);
+  const networkLedger = networkLedgerMajor(matrix.networks, endpoints.network, live.runtimeSpecVersion);
   const otherLedger = index !== undefined && networkLedger !== undefined && networkLedger !== Number(index.ledger);
   const toolchainChecks = index && !otherLedger ? examplesToolchainChecks(index.toolchain, { dir: projectDir, packages: local.localPackages }) : [];
   const declaresToolchain = Object.keys(local.localPackages ?? {}).some((name) => /midnight-js-|testkit-js|wallet-sdk/.test(name));
