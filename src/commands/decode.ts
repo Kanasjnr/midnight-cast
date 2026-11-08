@@ -464,18 +464,26 @@ function decodeRaw(raw: string, options: DecodeOptions): EmitResult {
     appendDecodeResult(parts, sections, decodeKnownMessage(message, options), options.json);
   }
 
+  // The service desk's runbook for each error string it lists, beside whatever decoded.
+  const runbooks = matchRunbooks(raw, { network: options.network });
+
   // Only a single token can be a bare code or ledger name; a sentence isn't one.
   if (parts.length === 0 && /^\S+$/.test(raw.trim())) {
     const fallbackLedger = decodeLedger(raw.trim(), options);
     if (fallbackLedger.ok) {
       appendDecodeResult(parts, sections, fallbackLedger, options.json);
-    } else if (fallbackLedger.error) {
+    } else if (fallbackLedger.error && runbooks.length === 0) {
+      // A word a runbook knows, such as EBADENGINE, isn't an unknown ledger code.
       failures.push(fallbackLedger.error);
     }
   }
 
-  // The service desk's runbook for each error string it lists, beside whatever decoded.
-  const runbooks = matchRunbooks(raw);
+  // When only a runbook knows the error, the routing hint it would otherwise get still applies: a runbook string
+  // can match text from another tool, and some rows hold only in a context, such as on a faucet page.
+  if (parts.length === 0 && runbooks.length > 0) {
+    const hint = otherErrorRouterHint(raw) ?? normalOnNetwork(raw, options.network);
+    if (hint) failures.push(hint);
+  }
 
   if (parts.length === 0 && runbooks.length === 0) {
     return fail(
@@ -525,7 +533,7 @@ function decodeRaw(raw: string, options: DecodeOptions): EmitResult {
 
 /** Each matched row: the runbook to read, the others it names, and when the row applies. */
 function describeRunbooks(matches: RunbookMatch[]): string[] {
-  const lines = ["Midnight's service desk has a runbook for this:"];
+  const lines = ["Midnight's service desk has a runbook for this. Symptoms overlap, so confirm the runbook's cause before acting:"];
   for (const match of matches) {
     const [first, ...others] = match.runbooks;
     if (!first) continue;
