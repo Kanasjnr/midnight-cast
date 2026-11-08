@@ -21,7 +21,24 @@ describe("rpcCommand", () => {
     expect(result.ok).toBe(false);
     expect(result.error).toContain("author_submitExtrinsic isn't on rpc's list of read-only methods");
     expect(result.hint).toContain("--allow-write");
+    expect(result.errorKind).toBe("not_read_only");
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("says nothing about --allow-write when the call isn't sent", async () => {
+    const { value, warnings } = await withOwnWarnings(() =>
+      rpcCommand("author_submitExtrinsic", "not-json", "preview", {}, { json: true }, { allowWrite: true }),
+    );
+    expect(value.error).toContain("Invalid JSON params");
+    expect(warnings).toEqual([]);
+  });
+
+  it("retries a read-only method after a dropped connection", async () => {
+    const fetchMock = vi.fn().mockRejectedValueOnce(new Error("ECONNRESET")).mockResolvedValue(answer("2.1.101"));
+    vi.stubGlobal("fetch", fetchMock);
+    const result = await rpcCommand("system_version", undefined, "preview", {}, { json: true });
+    expect(result.ok).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it("sends it with --allow-write, with a warning and no retry", async () => {
