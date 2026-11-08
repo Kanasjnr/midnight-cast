@@ -16,9 +16,7 @@
   },
   "migration": {
     "pr": 88,
-    "title": "examples: move to the Ledger 9 stack (Midnight.js 5.0.0, wallet SDK 2.0.0, Compact 0.36.0)",
     "url": "https://github.com/midnightntwrk/midnight-examples/pull/88",
-    "fromLedger": "8",
     "examples": {
       "battleship": [
         {

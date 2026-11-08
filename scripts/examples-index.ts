@@ -8,7 +8,7 @@
 // its symbol at the pinned commit and fills in the lines, link and excerpt. --check exits 1 if
 // the committed index differs from what the pinned commit renders, and notes when the
 // repository's main branch has moved past the pin, so the pin gets reviewed. To move the pin,
-// change COMMIT (and LEDGER, if the examples moved ledger), run the script, and review the diff.
+// change COMMIT (and LEDGER and MIGRATION_PR, if the examples moved ledger), run the script, and review the diff.
 
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
@@ -21,8 +21,8 @@ const REPO = "midnightntwrk/midnight-examples";
 export const COMMIT = "377495c5efbd5b1f3123f5aee2776c3694b05eda";
 // The ledger the code at COMMIT targets. Set it with COMMIT: midnight-examples#88 moved the examples to Ledger 9.
 export const LEDGER = "9";
-// The pull request that moved the examples to LEDGER from the ledger before it: a worked migration for each example.
-// Set it with LEDGER, or leave it undefined when the pin didn't move ledger.
+// The pull request that moved the examples onto LEDGER: a worked migration for each example. Keep it when COMMIT
+// moves within the same ledger, since projects on the ledger before are still behind; change it with LEDGER.
 export const MIGRATION_PR: number | undefined = 88;
 const MAX_EXCERPT_LINES = 24;
 
@@ -294,11 +294,12 @@ export async function buildIndex(): Promise<ExamplesIndex> {
 }
 
 /**
- * What the migration pull request changed in each example's own code: its contract, package.json and the
- * non-test files under src/, each linked to its diff. UI code, tests, docs and lockfiles are left out.
+ * What the migration pull request changed in each example's own code: package.json and the source under
+ * contract/ and src/, each linked to its diff. UI code, tests, docs and lockfiles are left out. Only what a merged
+ * pull request can't change is kept, so its title, which anyone can edit, isn't.
  */
 async function readMigration(pr: number): Promise<ExamplesMigration> {
-  const meta = JSON.parse(await fetchGitHub(`https://api.github.com/repos/${REPO}/pulls/${pr}`)) as { title: string; merged_at: string | null };
+  const meta = JSON.parse(await fetchGitHub(`https://api.github.com/repos/${REPO}/pulls/${pr}`)) as { merged_at: string | null };
   if (!meta.merged_at) throw new Error(`${REPO}#${pr} isn't merged`);
   const paths: string[] = [];
   for (let page = 1; ; page++) {
@@ -306,15 +307,16 @@ async function readMigration(pr: number): Promise<ExamplesMigration> {
     paths.push(...files.map((f) => f.filename));
     if (files.length < 100) break;
   }
-  const own = /^examples\/([^/]+)\/(package\.json|contract\/[^/]+\.(?:compact|ts)|src\/(?!test\/)[^/]+\.ts)$/;
+  const own = /^examples\/([^/]+)\/(?:package\.json|(?:contract|src)\/(?:[^/]+\/)*[^/]+\.(?:compact|ts))$/;
+  const test = /\/(?:test|tests|__tests__)\/|\.(?:test|spec)\.ts$/;
   const examples: ExamplesMigration["examples"] = {};
   for (const path of paths.sort()) {
     const name = own.exec(path)?.[1];
-    if (!name || !EXAMPLES.some((e) => e.name === name)) continue;
+    if (!name || test.test(path) || !EXAMPLES.some((e) => e.name === name)) continue;
     const anchor = createHash("sha256").update(path).digest("hex");
     (examples[name] ??= []).push({ path, url: `https://github.com/${REPO}/pull/${pr}/files#diff-${anchor}` });
   }
-  return { pr, title: meta.title, url: `https://github.com/${REPO}/pull/${pr}`, fromLedger: String(Number(LEDGER) - 1), examples };
+  return { pr, url: `https://github.com/${REPO}/pull/${pr}`, examples };
 }
 
 async function main(): Promise<number> {

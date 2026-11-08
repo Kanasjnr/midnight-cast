@@ -37,10 +37,7 @@ export interface ExamplesIndex {
 
 export interface ExamplesMigration {
   pr: number;
-  title: string;
   url: string;
-  /** The ledger the examples moved from. */
-  fromLedger: string;
   /** Each example's own changed code, linked to its diff in the pull request. */
   examples: Record<string, Array<{ path: string; url: string }>>;
 }
