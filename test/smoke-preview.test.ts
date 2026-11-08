@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { parseEnvelope } from "./schema.js";
 import { loadDataJson } from "../src/lib/data-path.js";
 import { loadSupportMatrix } from "../src/lib/versions.js";
+import { READ_ONLY_RPC_METHODS } from "../src/lib/rpc-methods.js";
 
 const execFileAsync = promisify(execFile);
 const integration = process.env.INTEGRATION === "1";
@@ -29,6 +30,13 @@ async function runMn(
 }
 
 describe.skipIf(!integration)("smoke (live preview)", () => {
+  it("preview's node serves every method rpc treats as read-only", async () => {
+    const { code, stdout } = await runMn(["rpc", "rpc_methods", "preview", "--json"]);
+    expect(code).toBe(0);
+    const served = new Set((parseEnvelope(stdout) as { data: { result: { methods: string[] } } }).data.result.methods);
+    expect(READ_ONLY_RPC_METHODS.filter((m) => !served.has(m))).toEqual([]);
+  });
+
   it("midnight-cast ping preview", async () => {
     const { code, stdout } = await runMn(["ping", "preview", "--json"]);
     expect(code).toBe(0);

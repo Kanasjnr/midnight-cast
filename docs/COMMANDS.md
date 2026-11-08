@@ -335,7 +335,7 @@ extrinsicsRoot: 0x3a61ec7982b80286f7908e90b481548e9f07240f80fb2dbd9f02205b05f493
 
 ## `midnight-cast rpc <method> [params]`
 
-Raw JSON-RPC call to the configured node.
+Raw JSON-RPC call to the configured node, for read-only methods.
 
 ```bash
 midnight-cast rpc chain_getHeader
@@ -345,6 +345,12 @@ midnight-cast rpc system_version
 ```
 
 `params` must be a JSON array (or omitted for `[]`).
+
+`rpc` sends only methods on its list of one-shot reads: the `chain_`, `state_`, `childstate_`, `archive_v1_` and `chainSpec_v1_` queries, `midnight_`, `sidechain_` and `systemParameters_` methods, and `system_version`, `system_health` and the other `system_` reads. `midnight-cast explain --json` gives the full list, as `readOnlyMethods` on the `rpc` command. Any other method is refused before it is sent, with exit code 1 and the error kind `not_read_only`: anything that submits a transaction, signs, or changes keys, peers, log filters or offchain storage; subscriptions, which need a WebSocket; and reads Substrate marks unsafe, which public nodes refuse, such as `system_dryRun`, `state_getPairs` and `state_queryStorage`.
+
+| Option | Description |
+|--------|-------------|
+| `--allow-write` | Also send methods that aren't on the list, with a warning. They may submit or change node state, and are never retried. Public nodes refuse most of them anyway |
 
 ---
 

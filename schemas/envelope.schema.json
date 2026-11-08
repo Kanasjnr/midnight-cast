@@ -67,6 +67,7 @@
                 null,
                 "usage",
                 "rate_limited",
+                "not_read_only",
                 "dns",
                 "refused",
                 "timeout",
