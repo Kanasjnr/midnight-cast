@@ -46,7 +46,8 @@ describe("getTransaction's field mapping", () => {
   it("reads the fee and the zswap indexes from the fields the indexer hasn't deprecated", async () => {
     answer({ ...common, __typename: "RegularTransaction", fee: "123", zswapStartIndex: 10, zswapEndIndex: 14 });
     const tx = await getTransaction(indexer, { hash: "abc" });
-    expect(tx).toMatchObject({ fees: { paidFees: "123", estimatedFees: "123" }, startIndex: 10, endIndex: 14 });
+    expect(tx).toMatchObject({ startIndex: 10, endIndex: 14 });
+    expect(tx!.fees).toEqual({ paidFees: "123" });
     expect(formatTransactionHuman(tx!)).toContain("Fees:     paid=123\n");
     expect(formatTransactionHuman(tx!)).toContain("ZswapIdx: 10 → 14");
   });

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/main/schemas/examples-verdict.schema.json",
+  "$id": "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/v0.2.2/schemas/examples-verdict.schema.json",
   "title": "Whether Midnight's examples pass on a node version",
   "description": "From the regression reports in midnightntwrk/midnight-examples. status is passed when every test passed, failures when some failed (read verdict and knownIssues), and unverified when there is no usable report for the node version. source says where the report came from and how old it is.",
   "type": "object",

@@ -19,7 +19,7 @@ import { loadDataJson } from "../lib/data-path.js";
 import { resolveSupportMatrix } from "../lib/upstream-matrix.js";
 import { loadConfigFile } from "../config.js";
 import { NETWORK_NAMES } from "../networks.js";
-import { envelopeOf, fail, withOwnWarnings, type EmitResult } from "../output.js";
+import { SCHEMA_VERSION, envelopeOf, fail, withOwnWarnings, type EmitResult } from "../output.js";
 import { RateLimiter, callsPerMinute } from "./rate-limit.js";
 import { runAsMcpCall } from "../lib/surface.js";
 
@@ -51,7 +51,7 @@ export function allowedNetworks(
 }
 
 const envelopeSchema = z.object({
-  schemaVersion: z.literal(1),
+  schemaVersion: z.literal(SCHEMA_VERSION),
   ok: z.boolean(),
   command: z.string().nullable(),
   network: z.string().nullable(),

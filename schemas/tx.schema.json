@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/main/schemas/tx.schema.json",
+  "$id": "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/v0.2.2/schemas/tx.schema.json",
   "title": "tx data",
   "type": "object",
   "required": [
@@ -60,17 +60,11 @@
     "fees": {
       "type": "object",
       "required": [
-        "paidFees",
-        "estimatedFees"
+        "paidFees"
       ],
       "properties": {
         "paidFees": {
           "type": "string"
-        },
-        "estimatedFees": {
-          "type": "string",
-          "description": "The same as paidFees, since the indexer deprecates its estimate in favour of the fee paid. It will be removed in schemaVersion 2.",
-          "deprecated": true
         }
       }
     },

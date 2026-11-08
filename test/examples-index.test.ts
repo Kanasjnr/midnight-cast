@@ -6,11 +6,12 @@ import { findExamples, loadExamplesIndex, words } from "../src/lib/examples-inde
 import { COMMIT, locate, readToolchain } from "../scripts/examples-index.js";
 import { toolCallFor } from "../src/lib/next-steps.js";
 import { schemaErrors } from "./schema.js";
+import { SCHEMA_VERSION } from "../src/output.js";
 
 const index = loadExamplesIndex();
 // A full envelope around a command's result, as the CLI prints it.
 const envelope = (result: { ok: boolean; data?: unknown; error?: string }) => ({
-  schemaVersion: 1,
+  schemaVersion: SCHEMA_VERSION,
   ok: result.ok,
   command: "examples",
   network: null,

@@ -47,7 +47,7 @@
     "binaries": "tsx scripts/build-binaries.ts",
     "smoke:binary": "tsx scripts/smoke-binary.ts",
     "smoke:images": "tsx scripts/smoke-images.ts",
-    "version": "tsx scripts/sync-server-json.ts && tsx scripts/agent-files.ts"
+    "version": "tsx scripts/sync-server-json.ts && tsx scripts/sync-schema-ids.ts && tsx scripts/agent-files.ts"
   },
   "keywords": [
     "midnight",
