@@ -187,6 +187,17 @@ describe("MCP server", () => {
     expect(missing.envelope.error?.message).toMatch(/No such directory/);
   });
 
+  it("compares a project with Midnight's examples only on the ledger they target", async () => {
+    const { mkdtempSync, writeFileSync } = await import("node:fs");
+    const project = mkdtempSync(join(tmpdir(), "mc-project-"));
+    writeFileSync(join(project, "package.json"), JSON.stringify({ dependencies: { "@midnight-ntwrk/midnight-js-contracts": "4.1.1" } }));
+    const preprod = (await call("versions", { network: "preprod", projectDir: project })).envelope.data as { examplesToolchain: object };
+    expect(preprod.examplesToolchain).toMatchObject({ ledger: "9", checks: [], note: expect.stringContaining("Preprod runs Ledger 8") });
+    const mainnet = (await call("versions", { network: "mainnet", projectDir: project })).envelope.data as { examplesToolchain: object };
+    expect(mainnet.examplesToolchain).toMatchObject({ ledger: "9", checks: [expect.objectContaining({ label: "midnight-js", ok: false })] });
+    expect(mainnet.examplesToolchain).not.toHaveProperty("note");
+  });
+
   it("never echoes the Blockfrost project ID", async () => {
     const { text, envelope } = await call("versions", { network: "mainnet", checkLocalPackages: false });
     expect(envelope.ok).toBe(true);
