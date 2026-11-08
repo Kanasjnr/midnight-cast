@@ -16,6 +16,11 @@ tDUST vs DUST
   - tDUST: test tokens on preprod/preview (faucet).
   - DUST: fee token on the ledger; registration and spend proofs must match network rules.
 
+Ledger 9 upgrade
+  - The ledger 8 to 9 fork wipes DUST state. NIGHT UTXOs created before it lose their
+    registration, and the indexer reports them as not registered: register them again,
+    even if they were registered before. Preview was reset with the upgrade instead.
+
 Indexer vs node
   - The node applies ledger rules (Custom N errors on bad proofs).
   - The indexer exposes dustLedgerEvents via GraphQL subscription (v4 has no HTTP query).
