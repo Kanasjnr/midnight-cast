@@ -42,7 +42,7 @@ describe("the service desk's runbooks in decode", () => {
     expect(data.decodings.map((d) => d.kind)).toContain("ledger");
     expect(data.runbooks.map((r) => r.matched)).toEqual(["1010: Invalid Transaction: Custom error:"]);
     const text = decodeCommand([], { raw: "values inserted non-linearly into dust generation tree" }).data as string;
-    expect(text).toContain("Midnight's service desk has a runbook for this:");
+    expect(text).toContain("Midnight's service desk has a runbook for this. Symptoms overlap");
     expect(text).toContain("also Moving to Blockfrost");
   });
 
@@ -51,6 +51,26 @@ describe("the service desk's runbooks in decode", () => {
     expect(matchRunbooks("in the same scope, another binding found for x")).toEqual([]);
     expect(matchRunbooks("insufficient funds: could not balance dust")).toEqual([]);
     expect(decodeCommand([], { raw: "nothing Midnight about this" }).ok).toBe(false);
+  });
+
+  it("leaves out rows for other networks, and keeps decode's hints beside a runbook-only answer", () => {
+    const titles = (raw: string, network?: string) =>
+      ((decodeCommand([], { json: true, raw, ...(network ? { network } : {}) }).data as { runbooks: Array<{ runbooks: Array<{ title: string }> }> }).runbooks ?? []).flatMap((m) => m.runbooks.map((r) => r.title));
+    const night = index.runbooks["contract-native-night-mainnet-runbook"]!.title;
+    expect(titles("1010: Invalid Transaction: Custom error: 194", "mainnet")).toContain(night);
+    expect(titles("1010: Invalid Transaction: Custom error: 194", "preview")).not.toContain(night);
+    const proving = decodeCommand([], { json: true, raw: "Error: Failed to prove transaction: proof server returned 500" });
+    expect((proving.data as { warnings: string[] }).warnings).toEqual([expect.stringContaining("proof-server")]);
+    const word = decodeCommand([], { json: true, raw: "EBADENGINE" }).data as object;
+    expect(word).not.toHaveProperty("warnings");
+    expect(titles("Cannot find module '@midnight-ntwrk/ledger-v7'")).toEqual([index.runbooks["sdk-ai-generated-code-errors-runbook"]!.title]);
+  });
+
+  it("names each runbook once across rows", () => {
+    const matches = matchRunbooks("Transaction submission error, then 1000:: Normal Closure");
+    const urls = matches.flatMap((m) => m.runbooks.map((r) => r.url));
+    expect(urls).toHaveLength(new Set(urls).size);
+    expect(urls).toContain(index.runbooks["wallet-preprod-sync-runbook"]!.url);
   });
 });
 
@@ -61,6 +81,11 @@ describe("reading the runbooks index", () => {
     expect(parseErrorCell("`A` … `B` (from `tool`)")).toEqual({ match: [["A", "B"]], when: "A … B (from tool)" });
     expect(parseErrorCell("`A` with `B` or `C`")).toEqual({ match: [["A"]], when: "A with B or C" });
     expect(parseErrorCell("No error: `f` never returns")).toEqual({ match: [], when: "No error: f never returns" });
+    expect(parseErrorCell("`Cannot find module 'x/wallet'` (or `ledger-v7`, `zswap`)").match).toEqual([
+      ["Cannot find module 'x/wallet'"],
+      ["Cannot find module 'x/ledger-v7'"],
+      ["Cannot find module 'x/zswap'"],
+    ]);
   });
 
   it("links each row to the runbooks in the index, and refuses a row that links one the index doesn't list", () => {
@@ -87,5 +112,8 @@ describe("reading the runbooks index", () => {
       { match: [["empty"]], when: "empty on Preprod", runbooks: ["funds-runbook", "sync-runbook"], advice: "Funds (if new: Sync)" },
     ]);
     expect(() => parseRunbooksReadme(readme.replace("| [Funds](funds-runbook/funds-runbook.md) | y |\n", ""), "abc")).toThrow(/doesn't list/);
+    // A heading that only starts the same isn't the section, and an escaped pipe is a pipe.
+    const tricky = `## Indexer notes\n| a | b |\n|---|---|\n| x | y |\n\n${readme.replace("`stuck`", "`exit 1 \\| signal`")}`;
+    expect(parseRunbooksReadme(tricky, "abc").lookups[0]).toEqual({ match: [["exit 1 | signal"]], runbooks: ["sync-runbook"] });
   });
 });
