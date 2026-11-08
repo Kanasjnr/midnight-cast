@@ -19,7 +19,7 @@ import { EXPLAIN_VERSIONS } from "../lib/next-steps.js";
 import { resolveSupportMatrix } from "../lib/upstream-matrix.js";
 import { settle } from "../lib/settle.js";
 import { examplesVerdict } from "../lib/examples-report.js";
-import { examplesToolchainChecks } from "../lib/examples-toolchain.js";
+import { examplesToolchainChecks, examplesUpgrade } from "../lib/examples-toolchain.js";
 import { loadExamplesIndex } from "../lib/examples-index.js";
 import { networkLedgerMajor } from "../lib/network-names.js";
 import { networkTitle } from "../lib/blockfrost.js";
@@ -94,6 +94,10 @@ export async function versionsCommand(
           ledger: index.ledger,
           toolchain: index.toolchain,
           checks: toolchainChecks,
+          ...(() => {
+            const upgrade = otherLedger ? undefined : examplesUpgrade(index, toolchainChecks, projectDir);
+            return upgrade ? { upgrade } : {};
+          })(),
           ...(otherLedger
             ? {
                 note: `Midnight's examples target Ledger ${index.ledger}, and ${networkTitle(endpoints.network)} runs Ledger ${networkLedger}, so the project isn't compared with them. The matrix checks above are the ones for this network.`,

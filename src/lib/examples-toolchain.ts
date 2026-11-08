@@ -3,7 +3,8 @@
 // checks, not part of them, since a project can be right on other versions.
 
 import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
+import type { ExamplesIndex } from "./examples-index.js";
 import { packageBaseName } from "./npm-scope.js";
 import { compareVersions, type VersionCheck } from "./versions.js";
 
@@ -167,4 +168,33 @@ export function examplesToolchainChecks(
     if (ok !== undefined) checks.push({ label: "node.js", expected: node, live: declared, ok, note: ok ? "admits the examples' Node.js" : `the official examples run Node.js ${node}` });
   }
   return checks.filter((c): c is VersionCheck => !!c);
+}
+
+export interface ExamplesUpgrade {
+  pr: number;
+  title: string;
+  url: string;
+  /** The example whose changes to follow: the one that shares a contract file name with the project, or hello-world. */
+  example: string;
+  files: Array<{ path: string; url: string }>;
+}
+
+/**
+ * Where to see the move to the examples' ledger done, for a project whose midnight-js is a major version behind
+ * them: the migration pull request and what it changed in the example closest to the project.
+ */
+export function examplesUpgrade(index: ExamplesIndex, checks: VersionCheck[], dir: string): ExamplesUpgrade | undefined {
+  const migration = index.migration;
+  const js = checks.find((c) => c.label === "midnight-js");
+  if (!migration || !js || js.ok) return undefined;
+  const target = Number(js.expected.split(".")[0]);
+  const majors = js.live.split(", ").map((spec) => Number(/(\d+)/.exec(spec)?.[1]));
+  if (!majors.length || majors.some((major) => !(major < target))) return undefined;
+  const contracts = new Set(findPragmas(dir).map((p) => basename(p.file)));
+  const example =
+    Object.keys(migration.examples).find((name) => migration.examples[name]!.some((f) => f.path.endsWith(".compact") && contracts.has(basename(f.path)))) ??
+    "hello-world";
+  const files = migration.examples[example];
+  if (!files) return undefined;
+  return { pr: migration.pr, title: migration.title, url: migration.url, example, files };
 }
