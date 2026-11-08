@@ -9,7 +9,8 @@ import { checkEndpoints, narrowDown } from "../lib/next-steps.js";
 import { settle } from "../lib/settle.js";
 import { inMcpCall } from "../lib/surface.js";
 import { resolveSupportMatrix } from "../lib/upstream-matrix.js";
-import { fetchLiveVersions, isNewerPatch, proofServerMatches } from "../lib/versions.js";
+import { fetchLiveVersions, isNewerPatch, proofServerMatches, type MatrixNetwork } from "../lib/versions.js";
+import { ledgerMajor } from "../lib/network-names.js";
 import type { EmitResult, GlobalOptions, NextStep } from "../output.js";
 import { fail } from "../output.js";
 import { runServiceChecks, type ServiceResult } from "./ping.js";
@@ -36,6 +37,8 @@ export interface PreflightWallet {
   /** Unshielded addresses: NIGHT UTXOs held, and how many are registered for DUST generation. */
   nightUtxos?: number;
   registeredUtxos?: number;
+  /** Unshielded addresses: NIGHT UTXOs created before the Ledger 9 upgrade, whose registration it reset. */
+  resetByUpgrade?: number;
   /** Unshielded addresses: false when the history couldn't be read in time, so the totals may be short. */
   complete?: boolean;
   /** Cardano reward addresses: whether they're registered, and the DUST generated so far. */
@@ -137,14 +140,43 @@ export function proofServerCheck(services: ServiceResult[], url: string | undefi
   return { name: "proof-server", ok: true, detail: `answers at ${url}${row.version ? ` and runs ${row.version}${newer}` : ""}` };
 }
 
+/**
+ * When the network's node runs Ledger 9, the first runtime spec on it. The ledger 8 to 9 fork wipes DUST state, and
+ * the indexer then reports every UTXO created before it as unregistered. The ledger comes from the matrix row with
+ * the node's spec, so a network counts as upgraded as soon as its node is, before its own row says so.
+ */
+export function dustResetSince(networks: Record<string, MatrixNetwork>, liveSpec: number | undefined): number | undefined {
+  const rows = Object.values(networks);
+  if (liveSpec === undefined || ledgerMajor(rows.find((n) => n.runtimeSpec === liveSpec)?.ledger) !== 9) return undefined;
+  return Math.min(...rows.filter((n) => ledgerMajor(n.ledger) === 9 && n.runtimeSpec !== undefined).map((n) => n.runtimeSpec!));
+}
+
 /** The wallet check for a Midnight unshielded address, from the UTXOs it holds. */
-export function unshieldedWallet(address: string, holdings: UnshieldedHoldings, faucet: string | undefined): { wallet: PreflightWallet; check: PreflightCheck } {
+export function unshieldedWallet(
+  address: string,
+  holdings: UnshieldedHoldings,
+  faucet: string | undefined,
+  resetSince?: number,
+): { wallet: PreflightWallet; check: PreflightCheck } {
   const night = holdings.utxos.filter((u) => u.tokenType === NIGHT_TOKEN_TYPE);
   const stars = night.reduce((sum, u) => sum + BigInt(u.value), 0n);
   const registered = night.filter((u) => u.registeredForDustGeneration).length;
+  const reset =
+    resetSince === undefined
+      ? 0
+      : night.filter((u) => !u.registeredForDustGeneration && u.createdProtocolVersion !== undefined && u.createdProtocolVersion < resetSince).length;
   const amount = formatUnits(stars, STARS_PER_NIGHT, 6);
   const utxos = `${night.length} UTXO${night.length === 1 ? "" : "s"}`;
-  const wallet: PreflightWallet = { address, kind: "unshielded", night: amount, nightUtxos: night.length, registeredUtxos: registered, complete: holdings.complete };
+  const wallet: PreflightWallet = {
+    address,
+    kind: "unshielded",
+    night: amount,
+    nightUtxos: night.length,
+    registeredUtxos: registered,
+    ...(reset ? { resetByUpgrade: reset } : {}),
+    complete: holdings.complete,
+  };
+  const predate = `${reset === night.length ? (reset === 1 ? "It predates" : "They all predate") : `${reset} of them predate`} the Ledger 9 upgrade, which reset every DUST registration`;
   const longer = inMcpCall() ? "" : "; run it again with a longer --timeout";
   const partial = holdings.complete ? "" : ` (read ${holdings.transactions} transactions before the timeout, so this may be short${longer})`;
   const check = (ok: boolean, detail: string): PreflightCheck => ({ name: "wallet", ok, detail });
@@ -155,12 +187,19 @@ export function unshieldedWallet(address: string, holdings: UnshieldedHoldings, 
     return { wallet, check: check(false, `no NIGHT at this address. Fund it${faucet ? ` from the faucet (${faucet})` : " from the network's faucet"}`) };
   }
   if (registered === 0) {
+    if (reset) {
+      return {
+        wallet,
+        check: check(false, `${amount} NIGHT in ${utxos}, none registered for DUST generation${partial}, so it can't pay fees. ${predate}: register it for DUST again from the wallet, even if it was registered before`),
+      };
+    }
     return { wallet, check: check(false, `${amount} NIGHT in ${utxos}, none registered for DUST generation${partial}, so it can't pay fees. Register it for DUST from the wallet`) };
   }
   const which = registered === night.length ? "all" : `${registered}`;
+  const lost = reset ? ` ${predate}, so register them again to have them generate DUST too.` : "";
   return {
     wallet,
-    check: check(true, `${amount} NIGHT in ${utxos}, ${which} registered for DUST generation${partial}. DUST builds up after registration, so a wallet registered moments ago may need to wait`),
+    check: check(true, `${amount} NIGHT in ${utxos}, ${which} registered for DUST generation${partial}.${lost} DUST builds up after registration, so a wallet registered moments ago may need to wait`),
   };
 }
 
@@ -197,9 +236,11 @@ export async function preflightCommand(
   if (kind && "error" in kind) return usage(kind.error);
 
   let expected: string | undefined;
+  let matrixNetworks: Record<string, MatrixNetwork> = {};
   try {
     // A local devnet or a custom network has no matrix row, and is still worth checking.
-    expected = (await resolveSupportMatrix({ offline: flags.offline, refresh: flags.refreshMatrix })).matrix.networks[network]?.proofServer;
+    matrixNetworks = (await resolveSupportMatrix({ offline: flags.offline, refresh: flags.refreshMatrix })).matrix.networks;
+    expected = matrixNetworks[network]?.proofServer;
   } catch (err) {
     return fail(err);
   }
@@ -242,7 +283,7 @@ export async function preflightCommand(
     } else {
       const result =
         kind?.kind === "unshielded"
-          ? unshieldedWallet(address, outcome.value as UnshieldedHoldings, run?.faucet)
+          ? unshieldedWallet(address, outcome.value as UnshieldedHoldings, run?.faucet, dustResetSince(matrixNetworks, live.ok ? live.value.runtimeSpecVersion : undefined))
           : cardanoWallet(address, (outcome.value as DustStatus[])[0]);
       wallet = result.wallet;
       checks.push(result.check);
@@ -263,9 +304,11 @@ export async function preflightCommand(
   const next: NextStep[] = [
     ...(networkFailed ? narrowDown(network, flags, { services: servicesDown, sync: !servicesDown }) : []),
     ...(networkFailed && servicesDown ? checkEndpoints(network, flags) : []),
-    ...(wallet && failing.some((c) => c.name === "wallet")
-      ? [{ command: "midnight-cast explain dust", reason: "How NIGHT generates DUST, and registering for it" }]
-      : []),
+    ...(wallet?.resetByUpgrade
+      ? [{ command: "midnight-cast explain dust", reason: "Why the Ledger 9 upgrade reset DUST registrations, and registering again" }]
+      : wallet && failing.some((c) => c.name === "wallet")
+        ? [{ command: "midnight-cast explain dust", reason: "How NIGHT generates DUST, and registering for it" }]
+        : []),
   ];
   const errorKind = failing.find((c) => c.errorKind)?.errorKind;
   return {
