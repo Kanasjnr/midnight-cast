@@ -416,6 +416,15 @@
       "match": [
         [
           "Cannot find module '@midnight-ntwrk/wallet'"
+        ],
+        [
+          "Cannot find module '@midnight-ntwrk/ledger-v7'"
+        ],
+        [
+          "Cannot find module '@midnight-ntwrk/ledger'"
+        ],
+        [
+          "Cannot find module '@midnight-ntwrk/zswap'"
         ]
       ],
       "when": "Cannot find module '@midnight-ntwrk/wallet' (or ledger-v7, ledger, zswap)",
