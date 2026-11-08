@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Tests & CI
+- npm publishing runs from a job that checks out and installs nothing. The release's tarball job keeps the tarball its Linux Node 24 run packed and tested (`npm run smoke:tarball -- --keep <dir>`), and the publish job downloads that file, checks it is midnight-cast at the release tag's version, and runs `npm publish <tarball> --ignore-scripts`. Before, the job that could get npm's OIDC token also ran `npm ci` and the build, so any dependency's install script ran while it could publish as midnight-cast. The job runs in the `npm-publish` environment, which the npm trusted publisher names and a maintainer can protect with a required reviewer and a `v*` tag rule (see docs/RELEASING.md)
+- The tarball and binary jobs install dependencies with `npm ci --ignore-scripts`, so no install script can change the files that are published and attested. esbuild, the only dependency with one, works without it
+- Build provenance for the binaries is recorded by its own job, which only downloads the archives and attests them. The job that installs dependencies to write `SHA256SUMS` no longer has an OIDC token
+
 ## 0.2.2 (7 November 2026)
 
 A patch release for Ledger 9, now live on preview and mainnet (preprod stays on Ledger 8). The support matrix carries each network's ledger, so `versions`, `health` and the live checks stop reporting false mismatches on the upgraded networks, and `decode` stops telling Ledger 9 users to downgrade Compact. The error-code map is still ledger 8.1.3's; on preview and mainnet `decode` says so until a map for node 2.1.101 follows. Nothing breaks: the JSON stays at `schemaVersion` 1.
