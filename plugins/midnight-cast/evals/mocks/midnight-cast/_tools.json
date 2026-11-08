@@ -1684,7 +1684,7 @@
     {
       "name": "decode",
       "title": "midnight-cast decode",
-      "description": "Explain a Midnight error. Paste the whole message from a wallet, node, toolkit or Blockfrost: 1010 rejections, Custom(N) ledger codes, pallet errors, JSON-RPC codes and known tooling messages are recognised. A bare code such as 170 works too.",
+      "description": "Explain a Midnight error. Paste the whole message from a wallet, node, toolkit or Blockfrost: 1010 rejections, Custom(N) ledger codes, pallet errors, JSON-RPC codes and known tooling messages are recognised, and the error strings Midnight's service desk has a runbook for are linked to it. A bare code such as 170 works too.",
       "inputSchema": {
         "type": "object",
         "properties": {

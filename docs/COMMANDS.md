@@ -424,6 +424,18 @@ Auto-detects and decodes everything it finds in one pasted error:
 
 Hex codes need the `0x` prefix, "ledger N" counts only as "ledger error N" or "ledger code N", and single-word ledger names such as `Transaction` aren't matched in free text, since they also appear in ordinary error messages ("Invalid Transaction").
 
+**Midnight's service desk runbooks.** The service desk ([midnightntwrk/servicedesk](https://github.com/midnightntwrk/servicedesk/tree/main/runbooks)) keeps a runbook for each recurring problem, and its index lists the exact error strings each one covers. `decode --raw` searches a pasted error for those strings and links each runbook it finds (`runbooks` in JSON), alongside whatever else decodes, so an error only a runbook knows, such as `values inserted non-linearly into dust generation tree` or `EBADENGINE`, is answered too:
+
+```text
+Midnight's service desk has a runbook for this. Symptoms overlap, so confirm the runbook's cause before acting:
+  "values inserted non-linearly into dust generation tree": Wallet sync stuck after the indexer changed
+    https://github.com/midnightntwrk/servicedesk/blob/main/runbooks/wallet-sync-cursor-indexer-mismatch-runbook/wallet-sync-cursor-indexer-mismatch-runbook.md
+    also Moving to Blockfrost, beyond the docs migration guide: https://github.com/midnightntwrk/servicedesk/blob/main/runbooks/indexer-blockfrost-migration-runbook/indexer-blockfrost-migration-runbook.md
+    Cursor mismatch (and Blockfrost if the app just switched)
+```
+
+Strings are matched exactly, case included, and a row with several parts needs them in order. `when` gives the row's context where it says more, such as "on Mainnet", and `advice` which runbook applies when a row names more than one; symptoms overlap, so confirm the runbook's cause before acting. A runbook is listed once, under the longest string that matched it. With `--network`, a row whose context names only other networks, such as "on Mainnet" for preview, is left out. When only a runbook knows the error, `decode` still gives the routing hint it would give an unrecognised one, such as the proof-server hint for `Failed to prove transaction`, since a string can come from another tool. Only the strings and links ship with midnight-cast: the links point at each runbook on the service desk's `main`, so a runbook's edits reach you without an update. `npm run runbooks-index` rebuilds `src/data/runbooks.json` from the index, and the live checks keep a `runbooks` issue open while the bundled strings differ from it, so a new runbook or row ships in the next patch.
+
 Where Midnight's examples show the fix, a decoding links that code, at the examples index's pinned commit (`examples` in JSON, `Code:` lines otherwise). The examples target Ledger 9, so when the network runs another ledger (with `--network`, that network; without it, any public network), `examplesNote` (`Note:`) says so, once per decoding. `explain` and `examples` give the same note and take `--network` too:
 - stale-DUST errors (170, 171, 196) link hello-world's wallet sync;
 - a fee beyond the available DUST (138) links private-party's DUST sponsorship;

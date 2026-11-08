@@ -284,7 +284,7 @@ export function createMcpServer(options: McpOptions): McpServer {
   tool(
     "decode",
     "decode",
-    "Explain a Midnight error. Paste the whole message from a wallet, node, toolkit or Blockfrost: 1010 rejections, Custom(N) ledger codes, pallet errors, JSON-RPC codes and known tooling messages are recognised. A bare code such as 170 works too.",
+    "Explain a Midnight error. Paste the whole message from a wallet, node, toolkit or Blockfrost: 1010 rejections, Custom(N) ledger codes, pallet errors, JSON-RPC codes and known tooling messages are recognised, and the error strings Midnight's service desk has a runbook for are linked to it. A bare code such as 170 works too.",
     OFFLINE,
     {
       message: z.string().min(1).max(16_384).describe("The error message or code"),

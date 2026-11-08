@@ -12,10 +12,11 @@ npm run live-check -- preview
 BLOCKFROST_PREPROD_PROJECT_ID=<preprod project id> npm run live-check -- preprod
 BLOCKFROST_MAINNET_PROJECT_ID=<mainnet project id> npm run live-check -- mainnet
 npm run error-codes
+npm run runbooks-index -- --check
 BLOCKFROST_PREPROD_PROJECT_ID=<preprod project id> BLOCKFROST_MAINNET_PROJECT_ID=<mainnet project id> npm run fixtures -- --check
 ```
 
-The live checks compare each network with `src/data/support-matrix.json` and with the matrix Midnight publishes. Update the bundled matrix for anything they report as drift, and set its `updated` field to the current month. `npm run error-codes` compares `src/data/error-codes.json` with the node source at the release mainnet runs. `npm run fixtures -- --check` compares live responses and the indexer schemas with `test/fixtures/`; if it reports drift, re-record with `npm run fixtures`, review the diff, and fix any parser it affects.
+The live checks compare each network with `src/data/support-matrix.json` and with the matrix Midnight publishes. Update the bundled matrix for anything they report as drift, and set its `updated` field to the current month. `npm run error-codes` compares `src/data/error-codes.json` with the node source at the release mainnet runs. `npm run runbooks-index -- --check` compares the bundled runbook strings with the service desk's lookup table on `main`; if it differs, run `npm run runbooks-index` and review the diff. `npm run fixtures -- --check` compares live responses and the indexer schemas with `test/fixtures/`; if it reports drift, re-record with `npm run fixtures`, review the diff, and fix any parser it affects.
 
 Then run `midnight-cast versions <network>` against each network as a last look at what a user will see, and `npm run smoke:tarball` to try the package exactly as npm will ship it.
 
