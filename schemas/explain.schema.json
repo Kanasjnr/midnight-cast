@@ -74,7 +74,7 @@
           "type": "string"
         },
         "schemaVersion": {
-          "const": 1
+          "const": 2
         },
         "globalOptions": {
           "type": "array",
