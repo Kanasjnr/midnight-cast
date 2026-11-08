@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
 import { decodeCommand } from "../src/commands/decode.js";
 import { explainCommand } from "../src/commands/explain.js";
-import { ALL_REFS, examplesForLedgerCode, examplesForTopic, resolveLinks } from "../src/lib/example-links.js";
+import { ALL_REFS, examplesForLedgerCode, examplesForTopic, examplesLedgerNote, resolveLinks } from "../src/lib/example-links.js";
 import { loadExamplesIndex } from "../src/lib/examples-index.js";
 import { loadDataJson } from "../src/lib/data-path.js";
 import { formatDate, type BundledReports } from "../src/lib/examples-report.js";
@@ -121,6 +121,17 @@ describe("working code for what decode and explain identify", () => {
       "examples/hello-world/src/wallet.ts",
     ]);
     expect(decodeCommand([], { json: true, raw: "Wallet.InsufficientFunds: not enough NIGHT" }).ok).toBe(false);
+  });
+
+  it("says which ledger the linked code targets when a network runs another", () => {
+    expect(examplesLedgerNote("preprod")).toBe("This code targets Ledger 9, and Preprod runs Ledger 8, so its APIs may not match.");
+    expect(examplesLedgerNote("preview")).toBeUndefined();
+    expect(examplesLedgerNote()).toBe("This code targets Ledger 9, which Preview and Mainnet run; Preprod runs Ledger 8, so its APIs may not match there.");
+    expect(decodeCommand(["170"], { json: true, network: "preprod" }).data).toMatchObject({ examplesNote: examplesLedgerNote("preprod") });
+    expect(decodeCommand(["170"], { json: true, network: "mainnet" }).data).not.toHaveProperty("examplesNote");
+    expect(decodeCommand(["155"], { json: true, network: "preprod" }).data).not.toHaveProperty("examplesNote");
+    expect(explainCommand("dust", { json: true }).data).toMatchObject({ examplesNote: examplesLedgerNote() });
+    expect(explainCommand("1010", { json: true }).data).not.toHaveProperty("examplesNote");
   });
 
   it("names only declarations the pinned index has", () => {
