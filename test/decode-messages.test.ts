@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { decodeCommand } from "../src/commands/decode.js";
+import { LEDGER_8_ROW, withSupportMatrix } from "./support-matrix-override.js";
 
 function decodeRaw(raw: string, network?: string) {
   const result = decodeCommand([], { json: true, raw, ...(network ? { network } : {}) });
@@ -8,20 +9,37 @@ function decodeRaw(raw: string, network?: string) {
 }
 
 describe("decode --raw recognises messages from current tooling", () => {
-  it("UnsupportedBlockVersion from toolkit 1.0.0 on runtime 1.0.300", () => {
+  it("UnsupportedBlockVersion from toolkit 1.0.0 on runtime 1.0.300, from before the Ledger 9 upgrade", () => {
     const result = decodeRaw("Error: UnsupportedBlockVersion(1000300)", "preprod");
     expect(result.decodings).toEqual([
-      expect.objectContaining({ kind: "message", id: "unsupported-block-version", fix: "Upgrade the node and toolkit to 1.0.400 or later, which Preprod runs on this runtime." }),
+      expect.objectContaining({
+        kind: "message",
+        id: "unsupported-block-version",
+        description: expect.stringContaining("which Preprod ran before its Ledger 9 upgrade. Those blocks are still in the chain's history"),
+        fix: "Upgrade the node and toolkit to 2.1.101 or later, which Preprod runs now.",
+      }),
     ]);
     expect(result.next).toEqual(["midnight-cast versions preprod"]);
+  });
+
+  it("says only the networks that forked in place hold the pre-fork runtime, and nothing about other old ones", () => {
+    const [any] = decodeRaw("UnsupportedBlockVersion(1000300)").decodings;
+    expect(any).toMatchObject({ description: expect.stringContaining("which Preprod and Mainnet ran before their Ledger 9 upgrade"), fix: expect.stringContaining("which Preprod and Mainnet run now") });
+    const [preview] = decodeRaw("UnsupportedBlockVersion(1000300)", "preview").decodings;
+    expect(preview).toMatchObject({ description: expect.stringContaining("Preview was reset with the upgrade instead, so its chain has no blocks on that runtime") });
+    expect(preview!.description).not.toContain("still in the chain's history");
+    expect(decodeRaw("UnsupportedBlockVersion(42)").decodings[0]).toMatchObject({
+      description: "The tool reading the chain doesn't know runtime spec_version 42.",
+      fix: "Upgrade the node, toolkit or indexer to a release that supports this runtime.",
+    });
   });
 
   it("UnsupportedBlockVersion on the Ledger 9 runtime names the networks that run it", () => {
     expect(decodeRaw("Error: UnsupportedBlockVersion(2001100)").decodings).toEqual([
       expect.objectContaining({
         id: "unsupported-block-version",
-        description: expect.stringContaining("which Preview and Mainnet run"),
-        fix: "Upgrade the node and toolkit to 2.1.101 or later, which Preview and Mainnet run on this runtime.",
+        description: expect.stringContaining("which Preview, Preprod and Mainnet run"),
+        fix: "Upgrade the node and toolkit to 2.1.101 or later, which Preview, Preprod and Mainnet run on this runtime.",
       }),
     ]);
   });
@@ -74,68 +92,60 @@ describe("decode --raw recognises messages from current tooling", () => {
     }
   });
 
-  it("leaves Ledger 9 builds alone on Ledger 9 networks, and only advises Compact 0.31 for a network still on Ledger 8", () => {
+  it("leaves Ledger 9 builds alone on Ledger 9 networks", () => {
     const raw = '"@midnight-ntwrk/compact-runtime": "^0.21.0"';
-    // On preview and mainnet these are the normal packages, so decode doesn't claim the message.
-    for (const network of ["preview", "mainnet"]) expect(decodeRaw(raw, network).decodings, network).toEqual([]);
+    // Every network runs Ledger 9, where these are the normal packages, so decode doesn't claim the message.
+    for (const network of ["preview", "preprod", "mainnet"]) expect(decodeRaw(raw, network).decodings, network).toEqual([]);
     // Whatever Compact runtime it names: checking a project's pins against the network is versions --project-dir's job.
     expect(decodeRaw('"@midnight-ntwrk/compact-runtime": "^0.20.0" and @midnight-ntwrk/ledger-v9', "preview").decodings).toEqual([]);
     expect(decodeRaw("Error: proof failed at node_modules/@midnight-ntwrk/ledger-v9/dist/index.js:12", "preview").ok).toBe(false);
     // A paste that is only a marker says it's normal there, rather than failing as an unknown ledger name.
     for (const marker of ["ContractModuleProvider", "--feature-zkir-v3"]) {
-      const result = decodeCommand([], { json: true, raw: marker, network: "preview" });
+      const result = decodeCommand([], { json: true, raw: marker, network: "preprod" });
       expect(result.ok, marker).toBe(false);
-      expect(result.error, marker).toContain("normal on Preview: it runs Ledger 9");
+      expect(result.error, marker).toContain("normal on Preprod: it runs Ledger 9");
     }
-    const [preprod] = decodeRaw(raw, "preprod").decodings;
-    expect(preprod).toMatchObject({ description: expect.stringContaining("still runs Ledger 8"), fix: expect.stringContaining("compact update 0.31") });
-    expect(preprod!.fix).toContain("0.16.0");
     const anyNetwork = decodeRaw(raw);
     expect(anyNetwork.decodings[0]).toMatchObject({
-      description: expect.stringContaining("Preview and Mainnet run Ledger 9; Preprod still runs Ledger 8"),
-      fix: expect.stringMatching(/^On Preview and Mainnet, keep this build.*On Preprod, run compact update 0\.31.*--network/),
+      description: expect.stringContaining("Preview, Preprod and Mainnet run Ledger 9."),
+      fix: "Keep this build, and pin the Compact runtime from the support matrix.",
     });
     expect(anyNetwork.next.some((command) => command.startsWith("midnight-cast decode"))).toBe(false);
   });
 
+  it("advises Compact 0.31 only for a network whose matrix still says Ledger 8", () =>
+    withSupportMatrix({ preprod: LEDGER_8_ROW }, () => {
+      const raw = '"@midnight-ntwrk/compact-runtime": "^0.21.0"';
+      const [preprod] = decodeRaw(raw, "preprod").decodings;
+      expect(preprod).toMatchObject({ description: expect.stringContaining("still runs Ledger 8"), fix: expect.stringContaining("compact update 0.31") });
+      expect(preprod!.fix).toContain("0.16.0");
+      expect(decodeRaw(raw).decodings[0]).toMatchObject({
+        description: expect.stringContaining("Preview and Mainnet run Ledger 9; Preprod still runs Ledger 8"),
+        fix: expect.stringMatching(/^On Preview and Mainnet, keep this build.*On Preprod, run compact update 0\.31.*--network/),
+      });
+    }));
+
   it("recognises any Compact runtime from 0.20 on, not only 0.2x", () => {
     for (const raw of ['"@midnight-ntwrk/compact-runtime": "^0.30.0"', "compact-runtime@1.0.2"]) {
-      expect(decodeRaw(raw, "preprod").decodings, raw).toEqual([expect.objectContaining({ id: "compact-ledger-9" })]);
+      expect(decodeRaw(raw).decodings, raw).toEqual([expect.objectContaining({ id: "compact-ledger-9" })]);
     }
-    expect(decodeRaw('"@midnight-ntwrk/compact-runtime": "0.16.0"', "preprod").ok).toBe(false);
-    expect(decodeRaw("compact-runtime 0.16.0", "preprod").ok).toBe(false);
-    expect(decodeRaw('"@midnight-ntwrk/compact-runtime": "0.20.x"', "preprod").decodings).toEqual([expect.objectContaining({ id: "compact-ledger-9" })]);
+    expect(decodeRaw('"@midnight-ntwrk/compact-runtime": "0.16.0"').ok).toBe(false);
+    expect(decodeRaw("compact-runtime 0.16.0").ok).toBe(false);
+    expect(decodeRaw('"@midnight-ntwrk/compact-runtime": "0.20.x"').decodings).toEqual([expect.objectContaining({ id: "compact-ledger-9" })]);
   });
 
-  it("gives each network its own version when they differ", async () => {
-    const { mkdirSync, mkdtempSync, rmSync, writeFileSync } = await import("node:fs");
-    const { tmpdir } = await import("node:os");
-    const { join } = await import("node:path");
-    const dir = mkdtempSync(join(tmpdir(), "midnight-cast-decode-"));
-    const previous = process.env.XDG_CONFIG_HOME;
-    try {
-      mkdirSync(join(dir, "midnight-cast"), { recursive: true });
-      const row = { node: "2.1.101", runtimeSpec: 2001100, ledger: "9.1.0.0", indexerApi: "v4", proofServer: "9.0.0", onChainRuntime: "4.0.0" };
-      writeFileSync(
-        join(dir, "midnight-cast", "support-matrix.json"),
-        JSON.stringify({ docUrl: "x", updated: "2026-11", networks: { preview: { ...row, indexer: "4.4.200" }, mainnet: { ...row, indexer: "4.4.101" } } }),
-      );
-      process.env.XDG_CONFIG_HOME = dir;
+  it("gives each network its own version when they differ", () =>
+    withSupportMatrix({ preview: { indexer: "4.4.200" }, preprod: { runtimeSpec: 1000300 } }, () => {
       expect(decodeRaw("Unsupported node version 2001100").decodings[0]).toMatchObject({
         fix: "Upgrade the indexer to the version the network runs on this runtime: 4.4.200 or later for Preview, 4.4.101 or later for Mainnet.",
       });
-    } finally {
-      if (previous === undefined) delete process.env.XDG_CONFIG_HOME;
-      else process.env.XDG_CONFIG_HOME = previous;
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
+    }));
 
   it("tells the indexer, not the node, to upgrade when the indexer reports the runtime", () => {
     expect(decodeRaw("Unsupported node version 2001100").decodings).toEqual([
       expect.objectContaining({
         description: expect.stringContaining("An indexer built for an older runtime"),
-        fix: "Upgrade the indexer to 4.4.101 or later, which Preview and Mainnet run on this runtime.",
+        fix: "Upgrade the indexer to 4.4.101 or later, which Preview, Preprod and Mainnet run on this runtime.",
       }),
     ]);
   });

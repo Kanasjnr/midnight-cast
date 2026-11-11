@@ -7,7 +7,6 @@
     "repo": "midnightntwrk/midnight-examples",
     "commit": "377495c5efbd5b1f3123f5aee2776c3694b05eda",
     "ledger": "9",
-    "ledgerNote": "This code targets Ledger 9, which Preview and Mainnet run; Preprod runs Ledger 8, so its APIs may not match there.",
     "toolchain": {
       "Compact language (pragma)": "0.28",
       "Compact compiler (setup-compact-action)": "0.36.0",

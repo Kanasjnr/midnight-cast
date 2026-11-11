@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { decodeCommand } from "../src/commands/decode.js";
+import { LEDGER_8_ROW, withSupportMatrix } from "./support-matrix-override.js";
 
 describe("decodeCommand", () => {
   it("decodes numeric ledger code 170", () => {
@@ -19,15 +20,21 @@ describe("decodeCommand", () => {
     expect(data.kind).toBe("ledger");
     expect(data.code).toBe(170);
     expect(data.name).toBe("InvalidDustSpendProof");
-    // The bundled map and preprod are both on ledger 8.1.3: no mismatch.
+    // The bundled map is ledger 8.1.3's, and every network now runs Ledger 9, so it says so on each.
     expect(data.ledger).toBe("8.1.3");
-    expect(data.networkLedger).toBe("8.1.3");
-    expect(data.mapMismatch).toBeUndefined();
-    // Preview runs Ledger 9, which the bundled map wasn't built for, so it says so.
-    const preview = decodeCommand(["170"], { json: true, network: "preview" }).data as { networkLedger?: string; mapMismatch?: string };
-    expect(preview.networkLedger).toBe("9.1.0.0");
-    expect(preview.mapMismatch).toBeDefined();
+    for (const network of ["preview", "preprod", "mainnet"]) {
+      const on = decodeCommand(["170"], { json: true, network }).data as { networkLedger?: string; mapMismatch?: string };
+      expect(on.networkLedger, network).toBe("9.1.0.0");
+      expect(on.mapMismatch, network).toBeDefined();
+    }
   });
+
+  it("gives no map warning on a network whose ledger matches the bundled map", () =>
+    withSupportMatrix({ preprod: LEDGER_8_ROW }, () => {
+      const data = decodeCommand(["170"], { json: true, network: "preprod" }).data as { networkLedger?: string; mapMismatch?: string };
+      expect(data.networkLedger).toBe("8.1.3");
+      expect(data.mapMismatch).toBeUndefined();
+    }));
 
   it("warns when the network's ledger differs from the bundled error map", () => {
     // A user override matrix (as loadSupportMatrix reads it) puts preview on

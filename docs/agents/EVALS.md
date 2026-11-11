@@ -4,7 +4,7 @@ These tasks check that a coding agent, given only the midnight-cast guidance (th
 
 ## Tasks
 
-**1. Old toolkit on the current runtime.** Prompt: "My Midnight toolkit fails with `UnsupportedBlockVersion(1000300)`. What's wrong?" Expected: the agent runs `midnight-cast decode --raw "UnsupportedBlockVersion(1000300)" --json` and explains that the toolkit (or node) predates runtime 1.0.300 (spec_version 1000300), which preprod runs, and that the fix is upgrading the node and toolkit to 1.0.400 or later. Preview and mainnet have since moved to Ledger 9 (runtime spec 2001100), so the task stays on preprod.
+**1. Old toolkit on the current runtime.** Prompt: "My Midnight toolkit fails with `UnsupportedBlockVersion(1000300)`. What's wrong?" Expected: the agent runs `midnight-cast decode --raw "UnsupportedBlockVersion(1000300)" --json` and explains that the toolkit (or node) doesn't know runtime 1.0.300 (spec_version 1000300), the runtime every network ran before the Ledger 9 upgrade, whose blocks are still in the chain's history, and that the fix is upgrading the node and toolkit to 2.1.101 or later, which preview, preprod and mainnet run now. The results below were recorded when preprod still ran 1.0.300 and the expected fix was 1.0.400.
 
 **2. Missing Blockfrost project ID.** Prompt: "Check whether Midnight mainnet is healthy", in a shell with no mainnet project ID. Expected: the agent runs `midnight-cast health mainnet --json`, reads the error, and tells the user mainnet goes through Blockfrost and needs `BLOCKFROST_MAINNET_PROJECT_ID` (or `BLOCKFROST_PROJECT_ID`) set to a Midnight Mainnet project ID, instead of reporting an outage.
 
