@@ -84,7 +84,20 @@ describe("error code parity", () => {
       "8.1.3",
     );
     expect(reference).toEqual({ tag: "node-1.0.400", ledger: "8.1.3", networks: ["preprod"] });
-    expect(others).toEqual([{ tag: "node-2.1.101", ledger: "9.1.0.0", networks: ["preview", "mainnet"] }]);
+    // A release on another ledger has its own map, so it isn't compared with this one.
+    expect(others).toEqual([]);
+  });
+
+  it("checks a map for a ledger no network runs against the release it records", () => {
+    const network = (minNode: string, ledger: string) => ({ minNode, ledger }) as never;
+    const nine = { preview: network("2.1.101", "9.1.0.0"), preprod: network("2.1.101", "9.1.0.0"), mainnet: network("2.1.101", "9.1.0.0") };
+    expect(deployedNodeReleases({ networks: nine } as never, "8.1.3", "node-1.0.400")).toEqual({
+      reference: { tag: "node-1.0.400", ledger: "8.1.3", networks: [] },
+      others: [],
+    });
+    expect(deployedNodeReleases({ networks: { ...nine, preview: network("2.2.0", "9.1.0.0") } } as never, "9.1.0.0").others).toEqual([
+      { tag: "node-2.2.0", ledger: "9.1.0.0", networks: ["preview"] },
+    ]);
   });
 
   it("still prefers mainnet's release among those on the map's ledger", () => {
