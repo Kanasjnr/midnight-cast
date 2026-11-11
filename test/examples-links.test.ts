@@ -7,6 +7,7 @@ import { explainCommand } from "../src/commands/explain.js";
 import { ALL_REFS, examplesForLedgerCode, examplesForTopic, examplesLedgerNote, resolveLinks } from "../src/lib/example-links.js";
 import { loadExamplesIndex } from "../src/lib/examples-index.js";
 import { loadDataJson } from "../src/lib/data-path.js";
+import { loadSupportMatrix } from "../src/lib/versions.js";
 import { formatDate, type BundledReports } from "../src/lib/examples-report.js";
 import { examplesToolchainChecks, examplesUpgrade, findCompactFiles, findPragmas, nodeAdmits, satisfies } from "../src/lib/examples-toolchain.js";
 
@@ -170,26 +171,48 @@ describe("working code for what decode and explain identify", () => {
     expect(decodeCommand([], { json: true, raw: "Wallet.InsufficientFunds: not enough NIGHT" }).ok).toBe(false);
   });
 
-  it("says which ledger the linked code targets when a network runs another", () => {
-    expect(examplesLedgerNote("preprod")).toBe("This code targets Ledger 9, and Preprod runs Ledger 8, so its APIs may not match.");
-    expect(examplesLedgerNote("preview")).toBeUndefined();
-    expect(examplesLedgerNote()).toBe("This code targets Ledger 9, which Preview and Mainnet run; Preprod runs Ledger 8, so its APIs may not match there.");
-    expect(decodeCommand(["170"], { json: true, network: "preprod" }).data).toMatchObject({ examplesNote: examplesLedgerNote("preprod") });
-    expect(decodeCommand(["170"], { json: true, network: "mainnet" }).data).not.toHaveProperty("examplesNote");
-    expect(decodeCommand(["155"], { json: true, network: "preprod" }).data).not.toHaveProperty("examplesNote");
-    expect(explainCommand("dust", { json: true }).data).toMatchObject({ examplesNote: examplesLedgerNote() });
-    expect(explainCommand("1010", { json: true }).data).not.toHaveProperty("examplesNote");
-    expect(explainCommand("dust", { json: true, network: "preprod" }).data).toMatchObject({ examplesNote: examplesLedgerNote("preprod") });
-    expect(explainCommand("dust", { json: true, network: "mainnet" }).data).not.toHaveProperty("examplesNote");
-    // A network the matrix gives no ledger for gets the general note.
-    expect(examplesLedgerNote("local")).toBe(examplesLedgerNote());
+  // Every network runs Ledger 9 now, so these use a matrix override with one network still on Ledger 8.
+  const onLedger8 = <T>(work: () => T): T => {
+    const dir = join(root, "config", "midnight-cast");
+    mkdirSync(dir, { recursive: true });
+    const bundled = loadSupportMatrix();
+    const preprod = { ...bundled.networks.preprod!, node: "1.0.400", runtimeSpec: 1000300, ledger: "8.1.3", proofServer: "8.1.0" };
+    writeFileSync(join(dir, "support-matrix.json"), JSON.stringify({ ...bundled, networks: { ...bundled.networks, preprod } }));
+    try {
+      return work();
+    } finally {
+      rmSync(join(dir, "support-matrix.json"));
+    }
+  };
+
+  it("adds no ledger note while every network runs the examples' ledger", () => {
+    for (const network of [undefined, "preview", "preprod", "mainnet"]) expect(examplesLedgerNote(network), network).toBeUndefined();
+    expect(decodeCommand(["170"], { json: true, network: "preprod" }).data).not.toHaveProperty("examplesNote");
+    expect(explainCommand("dust", { json: true }).data).not.toHaveProperty("examplesNote");
   });
 
-  it("says the note once when a raw error decodes to several codes", () => {
-    const text = decodeCommand([], { raw: "Custom error: 170 then Custom error: 196", network: "preprod" }).data as string;
-    expect(text.match(/^Kind: {3}ledger/gm)).toHaveLength(2);
-    expect(text.match(/^Note: {3}This code targets/gm)).toHaveLength(1);
-  });
+  it("says which ledger the linked code targets when a network runs another", () =>
+    onLedger8(() => {
+      expect(examplesLedgerNote("preprod")).toBe("This code targets Ledger 9, and Preprod runs Ledger 8, so its APIs may not match.");
+      expect(examplesLedgerNote("preview")).toBeUndefined();
+      expect(examplesLedgerNote()).toBe("This code targets Ledger 9, which Preview and Mainnet run; Preprod runs Ledger 8, so its APIs may not match there.");
+      expect(decodeCommand(["170"], { json: true, network: "preprod" }).data).toMatchObject({ examplesNote: examplesLedgerNote("preprod") });
+      expect(decodeCommand(["170"], { json: true, network: "mainnet" }).data).not.toHaveProperty("examplesNote");
+      expect(decodeCommand(["155"], { json: true, network: "preprod" }).data).not.toHaveProperty("examplesNote");
+      expect(explainCommand("dust", { json: true }).data).toMatchObject({ examplesNote: examplesLedgerNote() });
+      expect(explainCommand("1010", { json: true }).data).not.toHaveProperty("examplesNote");
+      expect(explainCommand("dust", { json: true, network: "preprod" }).data).toMatchObject({ examplesNote: examplesLedgerNote("preprod") });
+      expect(explainCommand("dust", { json: true, network: "mainnet" }).data).not.toHaveProperty("examplesNote");
+      // A network the matrix gives no ledger for gets the general note.
+      expect(examplesLedgerNote("local")).toBe(examplesLedgerNote());
+    }));
+
+  it("says the note once when a raw error decodes to several codes", () =>
+    onLedger8(() => {
+      const text = decodeCommand([], { raw: "Custom error: 170 then Custom error: 196", network: "preprod" }).data as string;
+      expect(text.match(/^Kind: {3}ledger/gm)).toHaveLength(2);
+      expect(text.match(/^Note: {3}This code targets/gm)).toHaveLength(1);
+    }));
 
   it("leaves the note out rather than fail on a broken support-matrix override", () => {
     const dir = join(root, "config", "midnight-cast");
