@@ -191,11 +191,29 @@ describe("MCP server", () => {
     const { mkdtempSync, writeFileSync } = await import("node:fs");
     const project = mkdtempSync(join(tmpdir(), "mc-project-"));
     writeFileSync(join(project, "package.json"), JSON.stringify({ dependencies: { "@midnight-ntwrk/midnight-js-contracts": "4.1.1" } }));
-    const preprod = (await call("versions", { network: "preprod", projectDir: project })).envelope.data as { examplesToolchain: object };
-    expect(preprod.examplesToolchain).toMatchObject({ ledger: "9", checks: [], note: expect.stringContaining("Preprod runs Ledger 8") });
-    const mainnet = (await call("versions", { network: "mainnet", projectDir: project })).envelope.data as { examplesToolchain: object };
-    expect(mainnet.examplesToolchain).toMatchObject({ ledger: "9", checks: [expect.objectContaining({ label: "midnight-js", ok: false })] });
-    expect(mainnet.examplesToolchain).not.toHaveProperty("note");
+    // Every network runs the examples' ledger, so each compares the project and points it at the migration.
+    for (const network of ["preprod", "mainnet"]) {
+      const data = (await call("versions", { network, projectDir: project })).envelope.data as { examplesToolchain: object };
+      expect(data.examplesToolchain, network).toMatchObject({
+        ledger: "9",
+        checks: [expect.objectContaining({ label: "midnight-js", ok: false })],
+        upgrade: expect.objectContaining({ pr: 88, example: "hello-world" }),
+      });
+      expect(data.examplesToolchain, network).not.toHaveProperty("note");
+    }
+    // A network whose node's runtime the matrix puts on another ledger isn't compared, and says why.
+    const { readFileSync, rmSync } = await import("node:fs");
+    const matrixFile = join(process.env.XDG_CONFIG_HOME!, "midnight-cast", "support-matrix.json");
+    const bundled = JSON.parse(readFileSync(join(process.cwd(), "src", "data", "support-matrix.json"), "utf8"));
+    const onEight = Object.fromEntries(Object.entries(bundled.networks).map(([name, row]) => [name, { ...(row as object), ledger: "8.1.3" }]));
+    writeFileSync(matrixFile, JSON.stringify({ ...bundled, networks: onEight }));
+    try {
+      const other = (await call("versions", { network: "preprod", projectDir: project })).envelope.data as { examplesToolchain: object };
+      expect(other.examplesToolchain).toMatchObject({ ledger: "9", checks: [], note: expect.stringContaining("Preprod runs Ledger 8") });
+      expect(other.examplesToolchain).not.toHaveProperty("upgrade");
+    } finally {
+      rmSync(matrixFile);
+    }
   });
 
   it("never echoes the Blockfrost project ID", async () => {
