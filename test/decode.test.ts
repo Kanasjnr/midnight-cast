@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { decodeCommand } from "../src/commands/decode.js";
+import { LEDGER_8_ROW, withSupportMatrix } from "./support-matrix-override.js";
 
 describe("decodeCommand", () => {
   it("decodes numeric ledger code 170", () => {
@@ -27,6 +28,13 @@ describe("decodeCommand", () => {
       expect(on.mapMismatch, network).toBeDefined();
     }
   });
+
+  it("gives no map warning on a network whose ledger matches the bundled map", () =>
+    withSupportMatrix({ preprod: LEDGER_8_ROW }, () => {
+      const data = decodeCommand(["170"], { json: true, network: "preprod" }).data as { networkLedger?: string; mapMismatch?: string };
+      expect(data.networkLedger).toBe("8.1.3");
+      expect(data.mapMismatch).toBeUndefined();
+    }));
 
   it("warns when the network's ledger differs from the bundled error map", () => {
     // A user override matrix (as loadSupportMatrix reads it) puts preview on

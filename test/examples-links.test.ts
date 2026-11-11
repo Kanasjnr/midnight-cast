@@ -7,9 +7,9 @@ import { explainCommand } from "../src/commands/explain.js";
 import { ALL_REFS, examplesForLedgerCode, examplesForTopic, examplesLedgerNote, resolveLinks } from "../src/lib/example-links.js";
 import { loadExamplesIndex } from "../src/lib/examples-index.js";
 import { loadDataJson } from "../src/lib/data-path.js";
-import { loadSupportMatrix } from "../src/lib/versions.js";
 import { formatDate, type BundledReports } from "../src/lib/examples-report.js";
 import { examplesToolchainChecks, examplesUpgrade, findCompactFiles, findPragmas, nodeAdmits, satisfies } from "../src/lib/examples-toolchain.js";
+import { LEDGER_8_ROW, withSupportMatrix } from "./support-matrix-override.js";
 
 const root = mkdtempSync(join(tmpdir(), "examples-links-"));
 // The ledger notes read the support matrix, which a user's own override would change: use an empty config home.
@@ -171,19 +171,8 @@ describe("working code for what decode and explain identify", () => {
     expect(decodeCommand([], { json: true, raw: "Wallet.InsufficientFunds: not enough NIGHT" }).ok).toBe(false);
   });
 
-  // Every network runs Ledger 9 now, so these use a matrix override with one network still on Ledger 8.
-  const onLedger8 = <T>(work: () => T): T => {
-    const dir = join(root, "config", "midnight-cast");
-    mkdirSync(dir, { recursive: true });
-    const bundled = loadSupportMatrix();
-    const preprod = { ...bundled.networks.preprod!, node: "1.0.400", runtimeSpec: 1000300, ledger: "8.1.3", proofServer: "8.1.0" };
-    writeFileSync(join(dir, "support-matrix.json"), JSON.stringify({ ...bundled, networks: { ...bundled.networks, preprod } }));
-    try {
-      return work();
-    } finally {
-      rmSync(join(dir, "support-matrix.json"));
-    }
-  };
+  // Every network runs Ledger 9 now, so these use a matrix override with preprod still on Ledger 8.
+  const onLedger8 = <T>(work: () => T) => withSupportMatrix({ preprod: LEDGER_8_ROW }, work);
 
   it("adds no ledger note while every network runs the examples' ledger", () => {
     for (const network of [undefined, "preview", "preprod", "mainnet"]) expect(examplesLedgerNote(network), network).toBeUndefined();

@@ -11,6 +11,7 @@ import { replayFetch } from "../scripts/fixtures.js";
 import { readFixture } from "../scripts/record-fixtures.js";
 import { BUILTIN_NETWORKS } from "../src/networks.js";
 import { schemaErrors } from "./schema.js";
+import { bundledMatrix } from "./support-matrix-override.js";
 
 const SECRET = "nightmainnetMCPSECRET0001";
 const fixture = readFixture("preprod")!;
@@ -202,9 +203,10 @@ describe("MCP server", () => {
       expect(data.examplesToolchain, network).not.toHaveProperty("note");
     }
     // A network whose node's runtime the matrix puts on another ledger isn't compared, and says why.
-    const { readFileSync, rmSync } = await import("node:fs");
+    const { rmSync } = await import("node:fs");
+    // The server's own config home, which also holds its Blockfrost project IDs, so the shared override helper can't swap it.
     const matrixFile = join(process.env.XDG_CONFIG_HOME!, "midnight-cast", "support-matrix.json");
-    const bundled = JSON.parse(readFileSync(join(process.cwd(), "src", "data", "support-matrix.json"), "utf8"));
+    const bundled = bundledMatrix();
     const onEight = Object.fromEntries(Object.entries(bundled.networks).map(([name, row]) => [name, { ...(row as object), ledger: "8.1.3" }]));
     writeFileSync(matrixFile, JSON.stringify({ ...bundled, networks: onEight }));
     try {
