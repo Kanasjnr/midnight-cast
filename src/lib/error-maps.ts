@@ -25,39 +25,69 @@ export interface ErrorCodesFile {
   codes: Record<string, ErrorCodeEntry>;
 }
 
-const FILES = ["error-codes-ledger-9.json", "error-codes.json"];
+/** The bundled maps, newest first. */
+export const ERROR_MAP_FILES = ["error-codes-ledger-9.json", "error-codes.json"];
 
 let cached: ErrorCodesFile[] | undefined;
-export const ledgerMaps = (): ErrorCodesFile[] => (cached ??= FILES.map((file) => loadDataJson<ErrorCodesFile>(file)));
+export const ledgerMaps = (): ErrorCodesFile[] => (cached ??= ERROR_MAP_FILES.map((file) => loadDataJson<ErrorCodesFile>(file)));
 
-/** The map for the network's ledger. Without a network, or for one whose ledger has no map, the newest. */
+/** The ledger major the network runs, by its matrix row, or undefined when the matrix doesn't say. */
+const networkMajor = (network: string) => ledgerMajor(loadSupportMatrix().networks[network]?.ledger);
+
+/** The map for the network's ledger. Without a network, or for one whose ledger has no map or isn't known, the newest. */
 export function ledgerMapFor(network?: string): ErrorCodesFile {
   const maps = ledgerMaps();
-  const major = network ? ledgerMajor(loadSupportMatrix().networks[network]?.ledger) : undefined;
+  const major = network ? networkMajor(network) : undefined;
   return maps.find((map) => major !== undefined && ledgerMajor(map.ledger) === major) ?? maps[0]!;
 }
 
+/** Whether the matrix says which ledger the network runs; when it doesn't, decode reads the newest map and says so. */
+export const knowsLedger = (network: string): boolean => networkMajor(network) !== undefined;
+
 /** Whether the network runs a ledger none of the maps covers, such as a newer one. */
 export function noMapForNetwork(network: string): boolean {
-  const major = ledgerMajor(loadSupportMatrix().networks[network]?.ledger);
+  const major = networkMajor(network);
   return major !== undefined && !ledgerMaps().some((map) => ledgerMajor(map.ledger) === major);
 }
 
-const lastPart = (name: string) => name.split("::").at(-1)!;
+/** The last part of a qualified name: NullifierAlreadyPresent from ZswapInvalid::NullifierAlreadyPresent or Zswap.Invalid.NullifierAlreadyPresent. */
+export const lastPart = (name: string): string => name.split(/::|\./).at(-1)!;
+
+const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /**
- * One name per code to look for in free text: the last part of a qualified name, as errors print it
- * (NullifierAlreadyPresent), when no other code shares it, and the whole name otherwise.
+ * A pattern for the code's name in free text, as the node prints errors. A qualified name whose last part other
+ * codes share needs its qualifier before it, as in ZswapInvalid(MerkleTreeError) or ZswapInvalid::MerkleTreeError;
+ * one whose last part is its own is found bare. A catch-all, such as 145 FeeCalculation, matches only when no
+ * variant follows it, so FeeCalculation(OutsideTimeToDismiss) is 231 alone. Short or single-word names, which
+ * appear in ordinary text ("Invalid Transaction"), aren't looked for.
  */
-export function matchableNames(map: ErrorCodesFile): Record<string, string> {
-  const counts = new Map<string, number>();
-  for (const entry of Object.values(map.codes)) counts.set(lastPart(entry.name), (counts.get(lastPart(entry.name)) ?? 0) + 1);
-  return Object.fromEntries(
-    Object.entries(map.codes).map(([code, entry]) => [code, counts.get(lastPart(entry.name)) === 1 ? lastPart(entry.name) : entry.name]),
-  );
+function namePattern(entry: ErrorCodeEntry, shared: boolean): RegExp | undefined {
+  const parts = entry.name.split("::");
+  const last = parts.at(-1)!;
+  const distinctive = last.length >= 10 && (last.match(/[A-Z]/g) ?? []).length >= 2;
+  if (entry.nodeName === "Unknown") return new RegExp(`\\b${escape(entry.name)}\\b(?!\\s*[(:.{])`);
+  if (parts.length > 1 && shared) {
+    // The qualifier as the node may print it, with an Error or ErrorCode suffix, then up to three separators.
+    const qualifier = parts.slice(0, -1).map(escape).join("\\W{1,3}");
+    return new RegExp(`\\b${qualifier}\\w*\\W{1,3}${escape(last)}\\b`);
+  }
+  if (!distinctive) return undefined;
+  // A bare name other codes share as a variant isn't that variant: MerkleTreeError alone, not ZswapInvalid(MerkleTreeError).
+  return new RegExp(`${shared ? "(?<!\\w\\(\\s?|::|\\w\\s?\\{\\s?)" : ""}\\b${escape(last)}\\b`);
 }
 
-/** The code with this name: the whole name, or its last part when only one code has it. */
+/** The map's codes whose names appear in the text, longest name first, each once. */
+export function findCodesInText(text: string, map: ErrorCodesFile): string[] {
+  const counts = new Map<string, number>();
+  for (const entry of Object.values(map.codes)) counts.set(lastPart(entry.name), (counts.get(lastPart(entry.name)) ?? 0) + 1);
+  return Object.entries(map.codes)
+    .sort(([, a], [, b]) => b.name.length - a.name.length)
+    .filter(([, entry]) => namePattern(entry, counts.get(lastPart(entry.name))! > 1)?.test(text))
+    .map(([code]) => code);
+}
+
+/** The code with this name in the map: the whole name, or its last part when only one code has it. */
 export function findLedgerByName(name: string, map: ErrorCodesFile): string | null {
   const wanted = name.replace(/\s+/g, "").toLowerCase();
   const exact = Object.entries(map.codes).find(([, entry]) => entry.name.toLowerCase() === wanted);
