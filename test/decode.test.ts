@@ -59,6 +59,36 @@ describe("decodeCommand", () => {
     expect(decodeCommand(["239"], { json: true, network: "preview" }).data as object).not.toHaveProperty("otherLedgers");
   });
 
+  it("still decodes the names Ledger 9 retired, by argument and in a pasted error", () => {
+    for (const [name, code] of [["TransactionApplicationError", 182], ["EffectsCheckFailure", 186]] as const) {
+      const data = decodeCommand([name], { json: true, network: "mainnet" }).data as { code: number; ledger: string; retired?: object };
+      expect(data, name).toMatchObject({ code, ledger: "8.1.3", retired: expect.any(Object) });
+    }
+    const pasted = decodeCommand([], { json: true, raw: "Error: TransactionApplicationError(IntentTtlExpired)" }).data as { decodings: Array<{ code?: number }> };
+    expect(pasted.decodings.map((d) => d.code)).toEqual(expect.arrayContaining([228, 182]));
+  });
+
+  it("finds names in pasted errors the way the node prints them", () => {
+    const codes = (raw: string) => (decodeCommand([], { json: true, raw }).data as { decodings: Array<{ code?: number }> }).decodings.map((d) => d.code);
+    // A catch-all isn't claimed when a variant follows it, and a shared last part needs its qualifier.
+    // The retired Ledger 8 code reads the same text, so it's listed too, with the note that says it's retired.
+    expect(codes("Error: FeeCalculation(OutsideTimeToDismiss)")).toEqual([231, 168]);
+    expect(codes("Error: FeeCalculation(OutsideTimeToDismiss)")).not.toContain(145);
+    expect(codes("Error: ZswapInvalid(MerkleTreeError)")).toEqual([250]);
+    expect(codes("Error: ReplayProtectionViolation(IntentAlreadyExists)")).toEqual([244, 193]);
+  });
+
+  it("says when a code is read with another ledger's map, and for a network whose ledger isn't known", () =>
+    withSupportMatrix({ preprod: LEDGER_8_ROW }, () => {
+      const onEight = decodeCommand(["228"], { json: true, network: "preprod" }).data as { ledger: string; notOnLedger?: { ledger: string; note: string } };
+      expect(onEight).toMatchObject({ ledger: "9.1.0.0", notOnLedger: { ledger: "8.1.3", note: expect.stringContaining("doesn't use 228") } });
+      const local = decodeCommand(["239"], { json: true, network: "local" }).data as { otherLedgersNote?: string };
+      expect(local.otherLedgersNote).toContain("On ledger 8.1.3 (node 1.0.400), 239 isn't used");
+      const text = decodeCommand(["182"], { network: "mainnet" }).data as string;
+      expect(text).toContain("Map:    ledger 8.1.3 (mainnet, updated 2026-10)\n");
+      expect((decodeCommand(["FeeCalculation"], { json: true }).data as { otherLedgersNote: string }).otherLedgersNote).toContain("FeeCalculation is 168");
+    }));
+
   it("finds a Ledger 9 code by its full name or by a last part only one code has", () => {
     expect((decodeCommand(["NullifierAlreadyPresent"], { json: true }).data as { code: number }).code).toBe(239);
     expect((decodeCommand(["TransactionApplication::IntentTtlExpired"], { json: true }).data as { code: number }).code).toBe(228);

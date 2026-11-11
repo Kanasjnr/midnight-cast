@@ -3,8 +3,8 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { join } from "node:path";
 import { parseEnvelope } from "./schema.js";
-import { loadDataJson } from "../src/lib/data-path.js";
 import { loadSupportMatrix } from "../src/lib/versions.js";
+import { ledgerMapFor, noMapForNetwork } from "../src/lib/error-maps.js";
 import { READ_ONLY_RPC_METHODS } from "../src/lib/rpc-methods.js";
 
 const execFileAsync = promisify(execFile);
@@ -121,14 +121,14 @@ describe.skipIf(!integration)("smoke (live preview)", () => {
     };
     expect(parsed.data.name).toBe("InvalidDustSpendProof");
     expect(parsed.data.network).toBe("preview");
-    // Read from the bundled data rather than pinned, so a ledger upgrade doesn't break the smoke run.
-    // The error map and the network can be on different ledgers during a rollout, and decode says so.
-    const mapLedger = loadDataJson<{ ledger: string }>("error-codes.json").ledger;
+    // Read from the bundled data rather than pinned, so a ledger upgrade doesn't break the smoke run: decode reads
+    // the code with the map for preview's ledger, and warns only when no bundled map covers that ledger.
+    const mapLedger = ledgerMapFor("preview").ledger;
     const networkLedger = loadSupportMatrix().networks.preview!.ledger;
     const data = parsed.data as { ledger: string; networkLedger?: string; mapMismatch?: string };
     expect(data.ledger).toBe(mapLedger);
     expect(data.networkLedger).toBe(networkLedger);
-    if (mapLedger === networkLedger) expect(data.mapMismatch).toBeUndefined();
-    else expect(data.mapMismatch).toContain(networkLedger);
+    if (noMapForNetwork("preview")) expect(data.mapMismatch).toContain(networkLedger);
+    else expect(data.mapMismatch).toBeUndefined();
   });
 });
