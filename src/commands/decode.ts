@@ -1,5 +1,7 @@
 import { describeLinks, examplesForLedgerCode, examplesLedgerNote, resolveLinks } from "../lib/example-links.js";
 import { matchRunbooks, type RunbookMatch } from "../lib/runbooks.js";
+import { runs } from "../lib/network-names.js";
+import { findLedgerByName, ledgerMapFor, ledgerMaps, matchableNames, noMapForNetwork, type ErrorCodesFile } from "../lib/error-maps.js";
 import { loadDataJson } from "../lib/data-path.js";
 import {
   findLedgerCodesByName,
@@ -22,14 +24,6 @@ interface ErrorCodeEntry {
   name: string;
   description: string;
   fix: string;
-}
-
-interface ErrorCodesFile {
-  docUrl: string;
-  ledger?: string;
-  updated?: string;
-  source?: string;
-  codes: Record<string, ErrorCodeEntry>;
 }
 
 interface PalletVariant {
@@ -140,29 +134,31 @@ function parseLedgerCodeInput(input: string): string | null {
   return null;
 }
 
-function findLedgerByName(name: string, data: ErrorCodesFile): string | null {
-  const normalized = name.replace(/\s+/g, "");
-  for (const [code, entry] of Object.entries(data.codes)) {
-    if (entry.name.toLowerCase() === normalized.toLowerCase()) {
-      return code;
-    }
-  }
-  return null;
-}
-
-function ledgerMapMismatch(
-  options: DecodeOptions,
-  data: ErrorCodesFile,
-): string | undefined {
-  if (!options.network || !data.ledger) return undefined;
+/** A warning when the network runs a ledger none of the bundled maps covers, so the code may mean something else. */
+function ledgerMapMismatch(options: DecodeOptions, data: ErrorCodesFile): string | undefined {
+  if (!options.network || !noMapForNetwork(options.network)) return undefined;
   const row = loadSupportMatrix().networks[options.network];
-  if (!row?.ledger || row.ledger === data.ledger) return undefined;
   return (
-    `Warning: bundled error map is ledger ${data.ledger}, but ${options.network} ` +
-    `matrix expects ledger ${row.ledger}. Code names/fixes may be wrong — ` +
+    `Warning: the bundled error maps cover ledgers ${ledgerMaps().map((m) => m.ledger).join(" and ")}, but ${options.network} ` +
+    `runs ledger ${row?.ledger}. This uses ledger ${data.ledger}'s map, so code names and fixes may be wrong; ` +
     `refresh from ${data.docUrl}`
   );
 }
+
+/** What a code means on the other ledgers' maps, where that differs: another name, or no such code. */
+function otherLedgers(code: string, data: ErrorCodesFile): Array<{ ledger: string; nodeTag?: string; name: string | null }> {
+  const lastPart = (name: string) => name.split("::").at(-1)!;
+  const own = data.codes[code]!.name;
+  return ledgerMaps()
+    .filter((map) => map !== data)
+    .flatMap((map) => {
+      const other = map.codes[code]?.name;
+      if (other && lastPart(other) === lastPart(own)) return [];
+      return [{ ledger: map.ledger, ...(map.nodeTag ? { nodeTag: map.nodeTag } : {}), name: other ?? null }];
+    });
+}
+
+const nodeOf = (map: ErrorCodesFile) => (map.nodeTag ? `node ${map.nodeTag.replace(/^node-/, "")}` : `ledger ${map.ledger}`);
 
 function ledgerMapMeta(options: DecodeOptions, data: ErrorCodesFile): string | undefined {
   if (!data.updated) return undefined;
@@ -183,7 +179,7 @@ function ledgerMapMeta(options: DecodeOptions, data: ErrorCodesFile): string | u
     const networks = Object.entries(loadSupportMatrix().networks)
       .filter(([name, row]) => row.ledger === data.ledger && name !== "local")
       .map(([name]) => name);
-    const on = networks.length ? `the ledger ${networks.join(" and ")} ${networks.length > 1 ? "run" : "runs"}` : "no public network's ledger";
+    const on = networks.length ? `the ledger ${runs(networks)}` : "no public network's ledger";
     return `Map:    ledger ${data.ledger} (${on}; updated ${data.updated}; pass --network to check yours)`;
   }
 
@@ -191,12 +187,20 @@ function ledgerMapMeta(options: DecodeOptions, data: ErrorCodesFile): string | u
 }
 
 function decodeLedger(input: string, options: DecodeOptions): EmitResult {
-  const data = loadDataJson<ErrorCodesFile>("error-codes.json");
+  const networkMap = ledgerMapFor(options.network);
   const numericKey = parseLedgerCodeInput(input);
   let code: string | null = numericKey;
+  let data = networkMap;
 
   if (!code) {
-    code = findLedgerByName(input, data);
+    code = findLedgerByName(input, networkMap);
+  }
+
+  // A code the network's ledger retired, such as 182 on Ledger 9, is read with the map for the ledger that used it.
+  const retired = code ? networkMap.retired?.[code] : undefined;
+  if (code && !networkMap.codes[code]) {
+    const older = ledgerMaps().find((map) => map !== networkMap && map.codes[code!]);
+    if (older) data = older;
   }
 
   if (!code || !data.codes[code]) {
@@ -204,6 +208,14 @@ function decodeLedger(input: string, options: DecodeOptions): EmitResult {
   }
 
   const entry = data.codes[code]!;
+  const retiredNote = retired
+    ? `Ledger ${networkMap.ledger} (${nodeOf(networkMap)}) doesn't return ${code}: it retired ${retired.name}, and returns ${retired.replacedBy.length > 1 ? `${retired.replacedBy.slice(0, -1).join(", ")} or ${retired.replacedBy.at(-1)}` : retired.replacedBy[0]} instead, each for one of its cases. This is what ${code} meant on ledger ${data.ledger} (${nodeOf(data)}).`
+    : undefined;
+  // Without a network, say where the other ledger's map reads the code differently.
+  const elsewhere = !options.network && !retired ? otherLedgers(code, data) : [];
+  const elsewhereNote = elsewhere
+    .map((o) => `On ledger ${o.ledger}${o.nodeTag ? ` (${o.nodeTag.replace(/^node-/, "node ")})` : ""}, ${o.name ? `${code} is ${o.name}` : `${code} isn't used`}; pass --network for the ledger your network runs.`)
+    .join(" ");
   const ledgerMeta = ledgerMapMeta(options, data);
   const mapMismatch = ledgerMapMismatch(options, data);
   const related = relatedNoteFor(code, options.network);
@@ -224,6 +236,8 @@ function decodeLedger(input: string, options: DecodeOptions): EmitResult {
       : undefined,
     mapUpdated: data.updated,
     ...(mapMismatch ? { mapMismatch } : {}),
+    ...(retiredNote ? { retired: { on: networkMap.ledger, replacedBy: retired!.replacedBy, note: retiredNote } } : {}),
+    ...(elsewhere.length ? { otherLedgers: elsewhere, otherLedgersNote: elsewhereNote } : {}),
     ...(related ? { relatedHint: related.hint } : {}),
     ...(examples.length ? { examples } : {}),
     ...(examplesNote ? { examplesNote } : {}),
@@ -241,6 +255,8 @@ function decodeLedger(input: string, options: DecodeOptions): EmitResult {
     `Name:   ${entry.name}`,
     `Desc:   ${entry.description}`,
     `Fix:    ${entry.fix}`,
+    ...(retiredNote ? [`Ledger: ${retiredNote}`] : []),
+    ...(elsewhereNote ? [`Ledger: ${elsewhereNote}`] : []),
     ...(related ? [`Hint:   ${related.hint}`] : []),
     ...describeLinks(examples).map((l) => `Code:   ${l}`),
     ...(examplesNote ? [`Note:   ${examplesNote}`] : []),
@@ -423,13 +439,7 @@ function decodeRaw(raw: string, options: DecodeOptions): EmitResult {
     );
   }
   const parsed = parseRawErrorMessage(raw);
-  const ledgerData = loadDataJson<ErrorCodesFile>("error-codes.json");
-  const nameCodes = findLedgerCodesByName(
-    raw,
-    Object.fromEntries(
-      Object.entries(ledgerData.codes).map(([code, entry]) => [code, entry.name]),
-    ),
-  );
+  const nameCodes = findLedgerCodesByName(raw, matchableNames(ledgerMapFor(options.network)));
   const ledgerCodes = [
     ...new Set([...parsed.ledgerCodes, ...nameCodes]),
   ];
