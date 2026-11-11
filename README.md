@@ -67,13 +67,13 @@ Network: preprod
 Healthy: yes
 
 Services:
-  rpc: OK (668ms)
-  indexer: OK (1215ms)
-  proof-server: OK (1053ms) (optional) — version=8.1.0 (matches matrix 8.1.0)
+  rpc: OK (1277ms)
+  indexer: OK (763ms)
+  proof-server: OK (1002ms) (optional) — version=9.0.0 (matches matrix 9.0.0)
 
 Sync:
-  RPC height:      2805470
-  Indexer height:  2805468
+  RPC height:      3374303
+  Indexer height:  3374301
   Delta:           2 (threshold 100)
   In sync:         yes
 ```
