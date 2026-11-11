@@ -10,6 +10,8 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { SupportMatrixFile } from "../src/lib/versions.js";
+import { ERROR_MAP_FILES, lastPart } from "../src/lib/error-maps.js";
+import { ledgerMajor } from "../src/lib/network-names.js";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -65,7 +67,7 @@ export function requireCodeTable(source: string, where: string): CodeTable {
 // The node prefixes the (de)serialization variants, and its enums qualify the Ledger 9 ones, which the map names
 // as Midnight's docs do (ZswapInvalid::NullifierAlreadyPresent); either way the last part is compared.
 function sameName(ours: string, node: string): boolean {
-  const name = ours.split("::").at(-1)!;
+  const name = lastPart(ours);
   return node === name || node === `Deserialization${name}` || node === `Serialization${name}`;
 }
 
@@ -78,8 +80,7 @@ export function compare(
   // nodeName is the node's own name where the map shows a clearer one, as for the catch-all Unknown variants.
   const ourCodes = new Map(Object.entries(ours).map(([code, entry]) => [Number(code), entry.nodeName ?? entry.name]));
   const shown = new Map(Object.entries(ours).map(([code, entry]) => [Number(code), entry.name]));
-  // Midnight Expert qualifies the same names with dots (Zswap.Invalid.NullifierAlreadyPresent).
-  const lastPart = (name: string) => name.split(/::|\./).at(-1)!;
+  // Midnight Expert qualifies the same names with dots (Zswap.Invalid.NullifierAlreadyPresent), which lastPart reads too.
   const ledgerEntries = expert.filter(
     (e) => e.source === "midnight-node" && /^\d{1,3}$/.test(e.code) && Number(e.code) <= 255,
   );
@@ -148,16 +149,25 @@ export function deployedNodeReleases(
     byTag.set(tag, release);
   }
   const releases = [...byTag.values()];
+  // A map covers its ledger's major, as decode reads it: the 9.1.0.0 map serves a network on 9.1.1.0 too.
+  const onLedger = (r: NodeRelease) => mapLedger !== undefined && ledgerMajor(r.ledger) === ledgerMajor(mapLedger);
   const reference =
     // Among the releases on the map's ledger, mainnet's still comes first.
-    releases.find((r) => r.ledger === mapLedger && r.networks.includes(REFERENCE_NETWORK)) ??
-    releases.find((r) => mapLedger !== undefined && r.ledger === mapLedger) ??
+    releases.find((r) => onLedger(r) && r.networks.includes(REFERENCE_NETWORK)) ??
+    releases.find(onLedger) ??
     // A map for a ledger no network runs any more is checked against the release it was built from.
     (mapNodeTag && mapLedger ? { tag: mapNodeTag, ledger: mapLedger, networks: [] } : undefined) ??
     releases.find((r) => r.networks.includes(REFERENCE_NETWORK));
   if (!reference) throw new Error(`The support matrix has no ${REFERENCE_NETWORK} entry`);
   // Other releases on the same ledger are compared with it; one on another ledger has its own map.
-  return { reference, others: releases.filter((r) => r !== reference && (mapLedger === undefined || r.ledger === mapLedger)) };
+  return { reference, others: releases.filter((r) => r !== reference && (mapLedger === undefined || onLedger(r))) };
+}
+
+/** Networks on a ledger none of the maps covers, such as a newer one: decode would read their codes with the wrong map. */
+export function uncoveredReleases(matrix: SupportMatrixFile, mapLedgers: string[]): NodeRelease[] {
+  const covered = new Set(mapLedgers.map(ledgerMajor));
+  const { reference, others } = deployedNodeReleases(matrix);
+  return [reference, ...others].filter((r) => !covered.has(ledgerMajor(r.ledger)));
 }
 
 export function tableDifference(reference: CodeTable, other: CodeTable): { added: number[]; removed: number[] } {
@@ -195,7 +205,6 @@ async function fetchNodeTable(release: NodeRelease): Promise<CodeTable | undefin
   return undefined;
 }
 
-export const MAP_FILES = ["error-codes.json", "error-codes-ledger-9.json"];
 
 async function checkMap(file: string, matrix: SupportMatrixFile, expert: ExpertEntry[]): Promise<boolean> {
   const map = JSON.parse(readFileSync(join(root, "src", "data", file), "utf8")) as {
@@ -234,9 +243,15 @@ async function main(): Promise<number> {
   if (!expertText) throw new Error("Midnight Expert catalog not found at the pinned ref");
   const expert = (JSON.parse(expertText) as { entries: ExpertEntry[] }).entries;
   let drift = false;
-  for (const file of MAP_FILES) {
-    if (drift) console.log("");
+  const ledgers: string[] = [];
+  for (const [i, file] of ERROR_MAP_FILES.entries()) {
+    if (i > 0) console.log("");
+    ledgers.push((JSON.parse(readFileSync(join(root, "src", "data", file), "utf8")) as { ledger: string }).ledger);
     drift = (await checkMap(file, matrix, expert)) || drift;
+  }
+  for (const release of uncoveredReleases(matrix, ledgers)) {
+    console.log(`\n${release.networks.join(", ")} run ${release.tag} on ledger ${release.ledger}, which no bundled error map covers: add one.`);
+    drift = true;
   }
   return drift ? 1 : 0;
 }
