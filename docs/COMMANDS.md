@@ -454,13 +454,15 @@ Where Midnight's examples show the fix, a decoding links that code, at the examp
 
 Other codes link nothing, rather than code that only looks related. The wallet's "Insufficient Funds: could not balance dust" (`Wallet.InsufficientFunds`), the failure the examples' UI explains to new users, decodes as a known message that links the UI's explanation, the sponsorship and the wallet sync.
 
-Some ledger codes carry a related hint. `OutOfDustValidityWindow` (171) notes the indexer bug fixed in 4.3.4 and 4.3.5, which rejected the first transaction of a block. `TransactionApplicationError` (182) notes the node 1.0.300 bug that halts a fresh mainnet sync at block #1788979, fixed in node 1.0.400. The deserialization codes (0–11) note that ledger 8.1.2 rejects non-canonical encodings, and that ledger 8.1.3 (node 1.0.400) also rejects contract call transcripts with non-canonical field values or `noop 0`.
+Some ledger codes carry a related hint. `OutOfDustValidityWindow` (171) notes the indexer bug fixed in 4.3.4 and 4.3.5, which rejected the first transaction of a block. `TransactionApplicationError` (182, a ledger 8.1.3 code) notes the node 1.0.300 bug that halts a fresh mainnet sync at block #1788979, fixed in node 1.0.400. The deserialization codes (0–11) note that ledger 8.1.2 rejects non-canonical encodings, and that ledger 8.1.3 (node 1.0.400) also rejects contract call transcripts with non-canonical field values or `noop 0`.
+
+**Error maps per ledger.** Ledger codes change between node releases, so `decode` bundles one map per ledger: ledger 9.1.0.0's for node 2.1.x, which preview, preprod and mainnet run, from Midnight's [error-codes docs](https://docs.midnight.network/nodes/error-codes), and ledger 8.1.3's for node 1.0.x. With `--network` it reads the code with the map for that network's ledger, so a network whose support-matrix row says Ledger 8, such as a custom one, gets the 8.1.3 map; without it, or for a network the matrix gives no ledger for, such as `local`, Ledger 9's, with a note where the other ledger reads the code differently. A code read with another ledger's map says so (`notOnLedger`). Node 2.1.x splits broad codes into specific ones, so a code it retired, such as 182 `TransactionApplicationError`, is read with the 8.1.3 map and names the codes that replace it (`retired`: 228, 229 or 230). Without `--network`, a code that means something else or nothing on the other ledger says so (`otherLedgers`), as for 239 `ZswapInvalid::NullifierAlreadyPresent`, which ledger 8.1.3 doesn't use. Ledger 9 names are qualified as in the docs; a name's last part, such as `NullifierAlreadyPresent`, finds it when only one code has that part. In a pasted error a shared last part needs its qualifier, as the node prints it (`ZswapInvalid(MerkleTreeError)`), and a retired Ledger 8 name that reads the same, such as `FeeCalculation(OutsideTimeToDismiss)`, is listed too, marked retired. `mapMismatch` warns when a network runs a ledger none of the maps covers.
 
 ### Shorthand
 
 ```bash
 midnight-cast decode 170
-midnight-cast decode 170 --network preview    # ledger map uses preview row (8.1.0 vs 8.0.3)
+midnight-cast decode 170 --network preview    # the error map for the ledger preview runs
 midnight-cast decode 0xaa
 midnight-cast decode InvalidDustSpendProof
 midnight-cast decode 1010
@@ -475,9 +477,9 @@ Example output:
 ```text
 Kind:   ledger (Custom 170)
 Name:   InvalidDustSpendProof
-Desc:   DUST spend proof verification failed
-Fix:    Regenerate DUST spend proof
-Map:    ledger 8.1.0 (preview, updated 2026-06)
+Desc:   The DUST fee spend proof failed node verification: it was proven against a DUST state the chain has already advanced past, …
+Fix:    Sync the wallet's DUST state to the current chain tip before submitting. …
+Map:    ledger 9.1.0.0 (preview, updated 2026-11)
 Docs:   https://docs.midnight.network/nodes/error-codes
 ```
 
@@ -494,7 +496,7 @@ midnight-cast decode jsonrpc -32602
 | Form | Purpose |
 |------|---------|
 | `--raw <message>` | Parse full error string (1010, Custom N, pallet) |
-| `--network <name>` | Stamp ledger map from matrix row (preview vs preprod) |
+| `--network <name>` | Read ledger codes with the error map for the network's ledger |
 | `ledger <code>` | `Custom(N)` / LedgerApiError (0–255); shows map ledger version |
 | `pallet <index> <variant>` | `DispatchError::Module` |
 | `1010` | Substrate Invalid Transaction envelope guide |

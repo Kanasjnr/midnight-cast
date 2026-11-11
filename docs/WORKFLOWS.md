@@ -178,7 +178,7 @@ midnight-cast decode 181
 midnight-cast versions preprod
 ```
 
-Each of 179–181 shows related transcript/proof codes in the decode hint. Use `--network preview` or `--network preprod` so the ledger map matches the target environment.
+Each of 179–181 shows related transcript/proof codes in the decode hint. Use `--network` so the code is read with the error map for the target network's ledger.
 
 From your dApp directory (reads `package.json` and compares to matrix **package pins**):
 

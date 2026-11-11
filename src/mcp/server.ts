@@ -22,6 +22,7 @@ import { NETWORK_NAMES } from "../networks.js";
 import { SCHEMA_VERSION, envelopeOf, fail, withOwnWarnings, type EmitResult } from "../output.js";
 import { RateLimiter, callsPerMinute } from "./rate-limit.js";
 import { runAsMcpCall } from "../lib/surface.js";
+import { ledgerMapFor, ledgerMaps } from "../lib/error-maps.js";
 
 export interface McpOptions {
   version: string;
@@ -389,7 +390,9 @@ export function createMcpServer(options: McpOptions): McpServer {
     },
     (uri) => {
       const catalog = {
-        ledger: loadDataJson("error-codes.json"),
+        // The map for the ledger the public networks run, and every bundled map, newest first.
+        ledger: ledgerMapFor(),
+        ledgers: ledgerMaps(),
         pallets: loadDataJson("pallet-errors.json"),
         jsonRpc: loadDataJson("jsonrpc-errors.json"),
       };
