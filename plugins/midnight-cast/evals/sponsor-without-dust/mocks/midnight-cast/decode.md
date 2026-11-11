@@ -50,8 +50,7 @@
             ],
             "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/hello-world/src/wallet.ts#L67-L73"
           }
-        ],
-        "examplesNote": "This code targets Ledger 9, and Preprod runs Ledger 8, so its APIs may not match."
+        ]
       }
     ],
     "runbooks": [

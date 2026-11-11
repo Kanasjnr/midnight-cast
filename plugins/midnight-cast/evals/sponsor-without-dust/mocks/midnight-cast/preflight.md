@@ -19,7 +19,7 @@ error: true
       {
         "name": "proof-server",
         "ok": true,
-        "detail": "answers at https://proof-server.preprod.midnight.network and runs 8.1.0"
+        "detail": "answers at https://proof-server.preprod.midnight.network and runs 9.0.0"
       },
       {
         "name": "wallet",
@@ -33,6 +33,7 @@ error: true
       "night": "750",
       "nightUtxos": 2,
       "registeredUtxos": 0,
+      "resetByUpgrade": 0,
       "complete": true
     }
   },
