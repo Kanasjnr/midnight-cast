@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/main/schemas/dust-event.schema.json",
+  "$id": "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/v0.2.2/schemas/dust-event.schema.json",
   "title": "dust-event data",
   "type": "object",
   "required": [

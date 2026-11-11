@@ -1,7 +1,7 @@
 import type { EmitResult, GlobalOptions } from "../output.js";
 import type { Catalog } from "../lib/catalog.js";
 import { fail, success } from "../output.js";
-import { describeLinks, examplesForTopic } from "../lib/example-links.js";
+import { describeLinks, examplesForTopic, examplesLedgerNote } from "../lib/example-links.js";
 import { loadExamplesIndex } from "../lib/examples-index.js";
 import { formatDate, type BundledReports } from "../lib/examples-report.js";
 import { loadDataJson } from "../lib/data-path.js";
@@ -15,6 +15,11 @@ DUST on Midnight
 tDUST vs DUST
   - tDUST: test tokens on preprod/preview (faucet).
   - DUST: fee token on the ledger; registration and spend proofs must match network rules.
+
+Ledger 9 upgrade
+  - The ledger 8 to 9 fork wipes DUST state. NIGHT UTXOs created before it lose their
+    registration, and the indexer reports them as not registered: register them again,
+    even if they were registered before. Preview was reset with the upgrade instead.
 
 Indexer vs node
   - The node applies ledger rules (Custom N errors on bad proofs).
@@ -144,7 +149,7 @@ const HELP_BY_TOPIC: Record<(typeof TOPICS)[number], string | (() => string)> = 
 
 export function explainCommand(
   topic: string | undefined,
-  options: GlobalOptions,
+  options: GlobalOptions & { network?: string },
   catalog?: () => Catalog,
 ): EmitResult {
   if (topic === undefined) {
@@ -165,10 +170,13 @@ export function explainCommand(
   }
   const text = typeof help === "function" ? help() : help;
   const examples = examplesForTopic(key);
+  const examplesNote = examples.length ? examplesLedgerNote(options.network) : undefined;
 
   if (options.json) {
-    return success({ topic: key, text, ...(examples.length ? { examples } : {}) });
+    return success({ topic: key, text, ...(examples.length ? { examples } : {}), ...(examplesNote ? { examplesNote } : {}) });
   }
 
-  return success(examples.length ? `${text}\n\nWorking code from Midnight's examples:\n${describeLinks(examples).map((l) => `  ${l}`).join("\n")}` : text);
+  if (!examples.length) return success(text);
+  const links = describeLinks(examples).map((l) => `  ${l}`);
+  return success([text, "", "Working code from Midnight's examples:", ...links, ...(examplesNote ? [`  ${examplesNote}`] : [])].join("\n"));
 }

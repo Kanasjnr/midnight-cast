@@ -14,7 +14,6 @@
     "url": "https://github.com/Kanasjnr/midnight-cast/issues"
   },
   "bin": {
-    "mn": "dist/cli.js",
     "midnight-cast": "dist/cli.js"
   },
   "files": [
@@ -42,13 +41,14 @@
     "error-codes": "tsx scripts/error-code-parity.ts",
     "examples-reports": "tsx scripts/examples-reports.ts",
     "examples-index": "tsx scripts/examples-index.ts",
+    "runbooks-index": "tsx scripts/runbooks-index.ts",
     "fixtures": "tsx scripts/record-fixtures.ts",
     "smoke:tarball": "tsx scripts/smoke-tarball.ts",
     "agent-files": "tsx scripts/agent-files.ts",
     "binaries": "tsx scripts/build-binaries.ts",
     "smoke:binary": "tsx scripts/smoke-binary.ts",
     "smoke:images": "tsx scripts/smoke-images.ts",
-    "version": "tsx scripts/sync-server-json.ts && tsx scripts/agent-files.ts"
+    "version": "tsx scripts/sync-server-json.ts && tsx scripts/sync-schema-ids.ts && tsx scripts/agent-files.ts"
   },
   "keywords": [
     "midnight",

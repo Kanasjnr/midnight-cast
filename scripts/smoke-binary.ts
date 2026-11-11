@@ -9,7 +9,7 @@
 // wget or curl, because the installer downloads with whichever is there.
 
 import { execFile, execFileSync, spawn } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, symlinkSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
@@ -172,13 +172,14 @@ async function installerChecks(
   const servers = await Promise.all([serve(good, docker ? "0.0.0.0" : "127.0.0.1"), serve(bad, docker ? "0.0.0.0" : "127.0.0.1")]);
   try {
     const [goodUrl, badUrl] = servers.map(({ port }) => `http://${docker ? "host.docker.internal" : "127.0.0.1"}:${port}`);
-    const installed = await install(goodUrl!, join(work, "installed"), docker);
+    const installed = await install(goodUrl!, join(work, "installed"), docker, { oldAlias: true });
     check(
-      installed.code === 0 && installed.versions.length === 2 && installed.versions.every((line) => line === version),
-      `${windows ? "install.ps1" : "install.sh"} installs midnight-cast and mn ${version}`,
+      installed.code === 0 && installed.versions.length === 1 && installed.versions[0] === version && !installed.oldAlias,
+      `${windows ? "install.ps1" : "install.sh"} installs midnight-cast ${version} and removes the old mn alias`,
     );
     if (installed.code !== 0) showStderr({ stderr: installed.output });
-    else if (installed.versions.length !== 2) showStderr({ stderr: `installed, but --version printed: ${JSON.stringify(installed.versions)}\n${installed.output}` });
+    else if (installed.oldAlias) showStderr({ stderr: `installed, but the old mn alias is still there\n${installed.output}` });
+    else if (installed.versions.length !== 1) showStderr({ stderr: `installed, but --version printed: ${JSON.stringify(installed.versions)}\n${installed.output}` });
     const tampered = await install(badUrl!, join(work, "not-installed"), docker);
     check(
       tampered.code !== 0 && /doesn't match its checksum/.test(tampered.output) && !tampered.versions.length,
@@ -193,17 +194,28 @@ async function install(
   url: string,
   dir: string,
   docker: string | undefined,
-): Promise<{ code: number; output: string; versions: string[] }> {
+  seed: { oldAlias?: boolean } = {},
+): Promise<{ code: number; output: string; versions: string[]; oldAlias: boolean }> {
   if (docker) {
-    // A fresh container, as a minimal CI image would be: busybox wget, no curl.
+    // A fresh container, as a minimal CI image would be: busybox wget, no curl. With oldAlias it starts with
+    // the mn alias an install before 0.3.0 left, which the installer removes.
     const target = "/opt/midnight-cast";
-    const script = `sh /install.sh && ${target}/midnight-cast --version && ${target}/mn --version`;
+    const aliasLeft = "the old mn alias is still there";
+    const setup = seed.oldAlias ? `mkdir -p ${target} && ln -s midnight-cast ${target}/mn && ` : "";
+    const script = `${setup}sh /install.sh && ${target}/midnight-cast --version && if test -L ${target}/mn; then echo "${aliasLeft}"; fi`;
     const result = await exec("docker", [
       "run", "--rm", "--add-host=host.docker.internal:host-gateway",
       "-e", `MIDNIGHT_CAST_DOWNLOAD_URL=${url}`, "-e", `MIDNIGHT_CAST_INSTALL_DIR=${target}`,
       "-v", `${join(root, "install.sh")}:/install.sh:ro`, docker, "sh", "-c", script,
     ]);
-    return { code: result.code, output: result.stdout + result.stderr, versions: versionLines(result.stdout) };
+    return { code: result.code, output: result.stdout + result.stderr, versions: versionLines(result.stdout), oldAlias: result.stdout.includes(aliasLeft) };
+  }
+  // The alias an install before 0.3.0 left, which the installer removes.
+  const alias = join(dir, windows ? "mn.cmd" : "mn");
+  if (seed.oldAlias) {
+    mkdirSync(dir, { recursive: true });
+    if (windows) writeFileSync(alias, '@"%~dp0midnight-cast.exe" %*\r\n');
+    else symlinkSync("midnight-cast", alias);
   }
   const env = { MIDNIGHT_CAST_DOWNLOAD_URL: url, MIDNIGHT_CAST_INSTALL_DIR: dir };
   const result = windows
@@ -212,17 +224,22 @@ async function install(
       await exec("powershell", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", join(root, "install.ps1")], { env: { ...env, PSModulePath: undefined } })
     : await exec("sh", [join(root, "install.sh")], { env });
   const output = result.stdout + result.stderr;
-  if (result.code !== 0) return { code: result.code, output, versions: [] };
+  if (result.code !== 0) return { code: result.code, output, versions: [], oldAlias: lstatExists(alias) };
   const binary = join(dir, windows ? "midnight-cast.exe" : "midnight-cast");
   const versions: string[] = [];
   if (existsSync(binary)) versions.push((await exec(binary, ["--version"])).stdout.trim());
-  // mn.cmd is a batch file, which only cmd.exe runs. Node would escape the quotes as \", which cmd.exe doesn't read.
-  const mn = windows
-    ? await exec("cmd.exe", ["/d", "/s", "/c", `""${join(dir, "mn.cmd")}" --version"`], { verbatim: true })
-    : await exec(join(dir, "mn"), ["--version"]);
-  if (mn.code === 0) versions.push(mn.stdout.trim());
-  return { code: result.code, output, versions };
+  return { code: result.code, output, versions, oldAlias: lstatExists(alias) };
 }
+
+// lstat, so a symlink counts even when what it points to is missing.
+const lstatExists = (path: string) => {
+  try {
+    lstatSync(path);
+    return true;
+  } catch {
+    return false;
+  }
+};
 
 const versionLines = (stdout: string) => stdout.split("\n").map((l) => l.trim()).filter((l) => /^\d+\.\d+\.\d+/.test(l));
 

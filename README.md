@@ -12,8 +12,6 @@ npx midnight-cast@latest health preview
 
 Preview needs nothing else. Preprod and mainnet go through Blockfrost and need a free project ID for each; see [Quick start](#quick-start).
 
-> **Note:** midnight-cast also installs a short alias, `mn`, which runs the same commands. Other global CLIs (e.g. `@mermaid-js/mermaid-cli`, `midnight-wallet-cli`) install an `mn` too, so these docs, the hints and the JSON output always say `midnight-cast`.
-
 ```bash
 midnight-cast health preview
 ```
@@ -69,13 +67,13 @@ Network: preprod
 Healthy: yes
 
 Services:
-  rpc: OK (668ms)
-  indexer: OK (1215ms)
-  proof-server: OK (1053ms) (optional) — version=8.1.0 (matches matrix 8.1.0)
+  rpc: OK (1277ms)
+  indexer: OK (763ms)
+  proof-server: OK (1002ms) (optional) — version=9.0.0 (matches matrix 9.0.0)
 
 Sync:
-  RPC height:      2805470
-  Indexer height:  2805468
+  RPC height:      3374303
+  Indexer height:  3374301
   Delta:           2 (threshold 100)
   In sync:         yes
 ```
@@ -115,11 +113,11 @@ Example output:
 
 ```text
 Checks:
-  node: expected=>=1.0.400 live=1.0.400 → OK (recommended 1.0.400)
-  runtimeSpec: expected=1000300 live=1000300 → OK (node runtime spec_version vs matrix)
+  node: expected=>=2.1.101 live=2.1.101 → OK (recommended 2.1.101)
+  runtimeSpec: expected=2001100 live=2001100 → OK (node runtime spec_version vs matrix)
   indexer-api: expected=v4 live=v4 → OK (from configured indexer URL path)
-  protocolVersion: expected=1000300 live=1000300 → OK (RPC specVersion vs indexer latest block)
-  proof-server: expected=8.1.0 live=8.1.0 → OK (GET /version on configured proof server URL)
+  protocolVersion: expected=2001100 live=2001100 → OK (RPC specVersion vs indexer latest block)
+  proof-server: expected=9.0.0 live=9.0.0 → OK (GET /version on configured proof server URL)
 
 Summary: live stack matches matrix checks ✓
 ```
@@ -203,7 +201,7 @@ A sandbox or CI image without Node.js can run the same server from the [standalo
 
 ### What an agent can and can't do with it
 
-- Every MCP tool only reads, and each is marked read-only to the client. None signs or submits a transaction, and none needs a wallet, a key or a seed. The CLI's `rpc` command, which passes any JSON-RPC method to a node, isn't an MCP tool.
+- Every MCP tool only reads, and each is marked read-only to the client. None signs or submits a transaction, and none needs a wallet, a key or a seed. The CLI's `rpc` command isn't an MCP tool, and it sends only read-only JSON-RPC methods unless you pass `--allow-write`.
 - `MIDNIGHT_CAST_NETWORKS` limits which networks the model may query, for example `preview,preprod`.
 - Tools that reach a network are rate limited, 30 calls a minute by default (`MIDNIGHT_CAST_MAX_CALLS_PER_MINUTE`), so a looping agent can't exhaust public endpoints or a Blockfrost plan.
 - The only secrets it holds are optional Blockfrost project IDs for preprod and mainnet. They're sent only to Blockfrost and redacted from every response, so the model never sees them.
@@ -230,7 +228,7 @@ claude plugin install midnight-cast@midnight-cast
 | midnight-cast bug or something not working | [GitHub Issues](https://github.com/Kanasjnr/midnight-cast/issues) |
 | New command or feature idea | [GitHub Issues](https://github.com/Kanasjnr/midnight-cast/issues) (feature request) |
 
-`midnight-cast decode --raw "…"` auto-detects 1010 envelopes, `Custom(N)`, ledger error names, pallet module errors, and JSON-RPC codes from one pasted error. Use `--network` so the ledger map matches preview vs preprod. Pallet `Transaction` hints point to inner `Custom(N)`, and codes 179–181 show grouped transcript context. For missing codes or protocol questions, use Discord and the [Midnight docs](https://docs.midnight.network/).
+`midnight-cast decode --raw "…"` auto-detects 1010 envelopes, `Custom(N)`, ledger error names, pallet module errors, and JSON-RPC codes from one pasted error. Use `--network` so the code is read with the error map for that network's ledger. Pallet `Transaction` hints point to inner `Custom(N)`, and codes 179–181 show grouped transcript context. For missing codes or protocol questions, use Discord and the [Midnight docs](https://docs.midnight.network/).
 
 ## Documentation
 

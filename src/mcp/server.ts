@@ -19,9 +19,10 @@ import { loadDataJson } from "../lib/data-path.js";
 import { resolveSupportMatrix } from "../lib/upstream-matrix.js";
 import { loadConfigFile } from "../config.js";
 import { NETWORK_NAMES } from "../networks.js";
-import { envelopeOf, fail, withOwnWarnings, type EmitResult } from "../output.js";
+import { SCHEMA_VERSION, envelopeOf, fail, withOwnWarnings, type EmitResult } from "../output.js";
 import { RateLimiter, callsPerMinute } from "./rate-limit.js";
 import { runAsMcpCall } from "../lib/surface.js";
+import { ledgerMapFor, ledgerMaps } from "../lib/error-maps.js";
 
 export interface McpOptions {
   version: string;
@@ -51,7 +52,7 @@ export function allowedNetworks(
 }
 
 const envelopeSchema = z.object({
-  schemaVersion: z.literal(1),
+  schemaVersion: z.literal(SCHEMA_VERSION),
   ok: z.boolean(),
   command: z.string().nullable(),
   network: z.string().nullable(),
@@ -284,7 +285,7 @@ export function createMcpServer(options: McpOptions): McpServer {
   tool(
     "decode",
     "decode",
-    "Explain a Midnight error. Paste the whole message from a wallet, node, toolkit or Blockfrost: 1010 rejections, Custom(N) ledger codes, pallet errors, JSON-RPC codes and known tooling messages are recognised. A bare code such as 170 works too.",
+    "Explain a Midnight error. Paste the whole message from a wallet, node, toolkit or Blockfrost: 1010 rejections, Custom(N) ledger codes, pallet errors, JSON-RPC codes and known tooling messages are recognised, and the error strings Midnight's service desk has a runbook for are linked to it. A bare code such as 170 works too.",
     OFFLINE,
     {
       message: z.string().min(1).max(16_384).describe("The error message or code"),
@@ -389,7 +390,9 @@ export function createMcpServer(options: McpOptions): McpServer {
     },
     (uri) => {
       const catalog = {
-        ledger: loadDataJson("error-codes.json"),
+        // The map for the ledger the public networks run, and every bundled map, newest first.
+        ledger: ledgerMapFor(),
+        ledgers: ledgerMaps(),
         pallets: loadDataJson("pallet-errors.json"),
         jsonRpc: loadDataJson("jsonrpc-errors.json"),
       };

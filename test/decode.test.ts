@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { decodeCommand } from "../src/commands/decode.js";
+import { LEDGER_8_ROW, withSupportMatrix } from "./support-matrix-override.js";
 
 describe("decodeCommand", () => {
   it("decodes numeric ledger code 170", () => {
@@ -19,50 +20,82 @@ describe("decodeCommand", () => {
     expect(data.kind).toBe("ledger");
     expect(data.code).toBe(170);
     expect(data.name).toBe("InvalidDustSpendProof");
-    // The bundled map and preprod are both on ledger 8.1.3: no mismatch.
-    expect(data.ledger).toBe("8.1.3");
-    expect(data.networkLedger).toBe("8.1.3");
-    expect(data.mapMismatch).toBeUndefined();
-    // Preview runs Ledger 9, which the bundled map wasn't built for, so it says so.
-    const preview = decodeCommand(["170"], { json: true, network: "preview" }).data as { networkLedger?: string; mapMismatch?: string };
-    expect(preview.networkLedger).toBe("9.1.0.0");
-    expect(preview.mapMismatch).toBeDefined();
+    // Every network runs Ledger 9, so each reads the Ledger 9 map, with no warning.
+    expect(data.ledger).toBe("9.1.0.0");
+    for (const network of ["preview", "preprod", "mainnet"]) {
+      const on = decodeCommand(["170"], { json: true, network }).data as { ledger: string; networkLedger?: string; mapMismatch?: string };
+      expect(on, network).toMatchObject({ ledger: "9.1.0.0", networkLedger: "9.1.0.0" });
+      expect(on.mapMismatch, network).toBeUndefined();
+    }
   });
 
-  it("warns when the network's ledger differs from the bundled error map", () => {
-    // A user override matrix (as loadSupportMatrix reads it) puts preview on
-    // a ledger the bundled map wasn't built for.
-    const dir = mkdtempSync(join(tmpdir(), "midnight-cast-decode-"));
-    const previous = process.env.XDG_CONFIG_HOME;
-    try {
-      mkdirSync(join(dir, "midnight-cast"), { recursive: true });
-      writeFileSync(
-        join(dir, "midnight-cast", "support-matrix.json"),
-        JSON.stringify({
-          docUrl: "https://example.com",
-          updated: "2026-10",
-          networks: {
-            preview: {
-              node: "1.0.300",
-              ledger: "9.0.0",
-              indexer: "4.3.5",
-              indexerApi: "v4",
-              proofServer: "8.0.3",
-              onChainRuntime: "3.0.0",
-            },
-          },
-        }),
-      );
-      process.env.XDG_CONFIG_HOME = dir;
-      const result = decodeCommand(["170"], { json: true, network: "preview" });
-      const data = result.data as { networkLedger?: string; mapMismatch?: string };
-      expect(data.networkLedger).toBe("9.0.0");
-      expect(data.mapMismatch).toContain("9.0.0");
-    } finally {
-      if (previous === undefined) delete process.env.XDG_CONFIG_HOME;
-      else process.env.XDG_CONFIG_HOME = previous;
-      rmSync(dir, { recursive: true, force: true });
+  it("reads a network still on Ledger 8 with the 8.1.3 map", () =>
+    withSupportMatrix({ preprod: LEDGER_8_ROW }, () => {
+      const data = decodeCommand(["170"], { json: true, network: "preprod" }).data as { ledger: string; networkLedger?: string; mapMismatch?: string };
+      expect(data).toMatchObject({ ledger: "8.1.3", networkLedger: "8.1.3" });
+      expect(data.mapMismatch).toBeUndefined();
+      expect((decodeCommand(["182"], { json: true, network: "preprod" }).data as object)).not.toHaveProperty("retired");
+    }));
+
+  it("warns when a network runs a ledger none of the bundled maps covers", () =>
+    withSupportMatrix({ preview: { ledger: "10.0.0" } }, () => {
+      const data = decodeCommand(["170"], { json: true, network: "preview" }).data as { ledger: string; mapMismatch?: string };
+      expect(data.ledger).toBe("9.1.0.0");
+      expect(data.mapMismatch).toContain("cover ledgers 9.1.0.0 and 8.1.3, but preview runs ledger 10.0.0");
+    }));
+
+  it("explains a code Ledger 9 retired, with the codes that replaced it", () => {
+    const data = decodeCommand(["182"], { json: true, network: "mainnet" }).data as { name: string; ledger: string; retired: { on: string; replacedBy: number[]; note: string } };
+    expect(data).toMatchObject({ name: "TransactionApplicationError", ledger: "8.1.3", retired: { on: "9.1.0.0", replacedBy: [228, 229, 230] } });
+    expect(data.retired.note).toContain("returns 228, 229 or 230 instead");
+  });
+
+  it("says, without a network, when a code means something else or nothing on the other ledger", () => {
+    const fresh = decodeCommand(["239"], { json: true }).data as { name: string; otherLedgers: unknown[]; otherLedgersNote: string };
+    expect(fresh).toMatchObject({ name: "ZswapInvalid::NullifierAlreadyPresent", otherLedgers: [{ ledger: "8.1.3", nodeTag: "node-1.0.400", name: null }] });
+    expect(fresh.otherLedgersNote).toContain("On ledger 8.1.3 (node 1.0.400), 239 isn't used");
+    // The same name on both, such as a narrowed code or one that didn't change, gets no note.
+    for (const code of ["103", "170"]) expect(decodeCommand([code], { json: true }).data as object, code).not.toHaveProperty("otherLedgers");
+    expect(decodeCommand(["239"], { json: true, network: "preview" }).data as object).not.toHaveProperty("otherLedgers");
+  });
+
+  it("still decodes the names Ledger 9 retired, by argument and in a pasted error", () => {
+    for (const [name, code] of [["TransactionApplicationError", 182], ["EffectsCheckFailure", 186]] as const) {
+      const data = decodeCommand([name], { json: true, network: "mainnet" }).data as { code: number; ledger: string; retired?: object };
+      expect(data, name).toMatchObject({ code, ledger: "8.1.3", retired: expect.any(Object) });
     }
+    const pasted = decodeCommand([], { json: true, raw: "Error: TransactionApplicationError(IntentTtlExpired)" }).data as { decodings: Array<{ code?: number }> };
+    expect(pasted.decodings.map((d) => d.code)).toEqual(expect.arrayContaining([228, 182]));
+  });
+
+  it("finds names in pasted errors the way the node prints them", () => {
+    const codes = (raw: string) => (decodeCommand([], { json: true, raw }).data as { decodings: Array<{ code?: number }> }).decodings.map((d) => d.code);
+    // A catch-all isn't claimed when a variant follows it, and a shared last part needs its qualifier.
+    // The retired Ledger 8 code reads the same text, so it's listed too, with the note that says it's retired.
+    expect(codes("Error: FeeCalculation(OutsideTimeToDismiss)")).toEqual([231, 168]);
+    expect(codes("Error: FeeCalculation(OutsideTimeToDismiss)")).not.toContain(145);
+    expect(codes("Error: ZswapInvalid(MerkleTreeError)")).toEqual([250]);
+    expect(codes("Error: ReplayProtectionViolation(IntentAlreadyExists)")).toEqual([244, 193]);
+  });
+
+  it("says when a code is read with another ledger's map, and for a network whose ledger isn't known", () =>
+    withSupportMatrix({ preprod: LEDGER_8_ROW }, () => {
+      const onEight = decodeCommand(["228"], { json: true, network: "preprod" }).data as { ledger: string; notOnLedger?: { ledger: string; note: string } };
+      expect(onEight).toMatchObject({ ledger: "9.1.0.0", notOnLedger: { ledger: "8.1.3", note: expect.stringContaining("doesn't use 228") } });
+      const local = decodeCommand(["239"], { json: true, network: "local" }).data as { otherLedgersNote?: string };
+      expect(local.otherLedgersNote).toContain("On ledger 8.1.3 (node 1.0.400), 239 isn't used");
+      const text = decodeCommand(["182"], { network: "mainnet" }).data as string;
+      expect(text).toContain("Map:    ledger 8.1.3 (mainnet, updated 2026-10)\n");
+      expect((decodeCommand(["FeeCalculation"], { json: true }).data as { otherLedgersNote: string }).otherLedgersNote).toContain("FeeCalculation is 168");
+    }));
+
+  it("finds a Ledger 9 code by its full name or by a last part only one code has", () => {
+    expect((decodeCommand(["NullifierAlreadyPresent"], { json: true }).data as { code: number }).code).toBe(239);
+    expect((decodeCommand(["TransactionApplication::IntentTtlExpired"], { json: true }).data as { code: number }).code).toBe(228);
+    // IntentTtlExpired alone could be 228, 242 or 245.
+    expect(decodeCommand(["IntentTtlExpired"], { json: true }).ok).toBe(false);
+    const raw = decodeCommand([], { json: true, raw: "Error: ZswapInvalid NullifierAlreadyPresent at block 12" }).data as { decodings: Array<{ code?: number }> };
+    expect(raw.decodings.map((d) => d.code)).toContain(239);
   });
 
   it("uses the minimum node, and doesn't guess Ledger 8 for a network the matrix gives no ledger", () => {

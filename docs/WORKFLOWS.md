@@ -52,13 +52,13 @@ Network: preprod
 Healthy: yes
 
 Services:
-  rpc: OK (668ms)
-  indexer: OK (1215ms)
-  proof-server: OK (1053ms) (optional) — version=8.1.0 (matches matrix 8.1.0)
+  rpc: OK (1277ms)
+  indexer: OK (763ms)
+  proof-server: OK (1002ms) (optional) — version=9.0.0 (matches matrix 9.0.0)
 
 Sync:
-  RPC height:      2805470
-  Indexer height:  2805468
+  RPC height:      3374303
+  Indexer height:  3374301
   Delta:           2 (threshold 100)
   In sync:         yes
 ```
@@ -178,7 +178,7 @@ midnight-cast decode 181
 midnight-cast versions preprod
 ```
 
-Each of 179–181 shows related transcript/proof codes in the decode hint. Use `--network preview` or `--network preprod` so the ledger map matches the target environment.
+Each of 179–181 shows related transcript/proof codes in the decode hint. Use `--network` so the code is read with the error map for the target network's ledger.
 
 From your dApp directory (reads `package.json` and compares to matrix **package pins**):
 
@@ -187,17 +187,17 @@ cd my-midnight-app
 midnight-cast versions preprod
 ```
 
-Look for **Local package checks** — `ledger-v8`, `compact-runtime`, `onchain-runtime-v3`, `midnight-js-indexer-public-data-provider` vs matrix.
+Look for **Local package checks** — `ledger-v9`, `compact-runtime`, `onchain-runtime-v4`, `midnight-js-indexer-public-data-provider` vs matrix.
 
 Example output:
 
 ```text
 Checks:
-  node: expected=>=1.0.400 live=1.0.400 → OK (recommended 1.0.400)
-  runtimeSpec: expected=1000300 live=1000300 → OK (node runtime spec_version vs matrix)
+  node: expected=>=2.1.101 live=2.1.101 → OK (recommended 2.1.101)
+  runtimeSpec: expected=2001100 live=2001100 → OK (node runtime spec_version vs matrix)
   indexer-api: expected=v4 live=v4 → OK (from configured indexer URL path)
-  protocolVersion: expected=1000300 live=1000300 → OK (RPC specVersion vs indexer latest block)
-  proof-server: expected=8.1.0 live=8.1.0 → OK (GET /version on configured proof server URL)
+  protocolVersion: expected=2001100 live=2001100 → OK (RPC specVersion vs indexer latest block)
+  proof-server: expected=9.0.0 live=9.0.0 → OK (GET /version on configured proof server URL)
 
 Summary: live stack matches matrix checks ✓
 ```

@@ -11,6 +11,7 @@ import { replayFetch } from "../scripts/fixtures.js";
 import { readFixture } from "../scripts/record-fixtures.js";
 import { BUILTIN_NETWORKS } from "../src/networks.js";
 import { schemaErrors } from "./schema.js";
+import { bundledMatrix } from "./support-matrix-override.js";
 
 const SECRET = "nightmainnetMCPSECRET0001";
 const fixture = readFixture("preprod")!;
@@ -185,6 +186,36 @@ describe("MCP server", () => {
     expect(empty.envelope.data).toMatchObject({ localProject: { packageJson: false } });
     const missing = await call("versions", { network: "preprod", projectDir: join(project, "nope") });
     expect(missing.envelope.error?.message).toMatch(/No such directory/);
+  });
+
+  it("compares a project with Midnight's examples only on the ledger they target", async () => {
+    const { mkdtempSync, writeFileSync } = await import("node:fs");
+    const project = mkdtempSync(join(tmpdir(), "mc-project-"));
+    writeFileSync(join(project, "package.json"), JSON.stringify({ dependencies: { "@midnight-ntwrk/midnight-js-contracts": "4.1.1" } }));
+    // Every network runs the examples' ledger, so each compares the project and points it at the migration.
+    for (const network of ["preprod", "mainnet"]) {
+      const data = (await call("versions", { network, projectDir: project })).envelope.data as { examplesToolchain: object };
+      expect(data.examplesToolchain, network).toMatchObject({
+        ledger: "9",
+        checks: [expect.objectContaining({ label: "midnight-js", ok: false })],
+        upgrade: expect.objectContaining({ pr: 88, example: "hello-world" }),
+      });
+      expect(data.examplesToolchain, network).not.toHaveProperty("note");
+    }
+    // A network whose node's runtime the matrix puts on another ledger isn't compared, and says why.
+    const { rmSync } = await import("node:fs");
+    // The server's own config home, which also holds its Blockfrost project IDs, so the shared override helper can't swap it.
+    const matrixFile = join(process.env.XDG_CONFIG_HOME!, "midnight-cast", "support-matrix.json");
+    const bundled = bundledMatrix();
+    const onEight = Object.fromEntries(Object.entries(bundled.networks).map(([name, row]) => [name, { ...(row as object), ledger: "8.1.3" }]));
+    writeFileSync(matrixFile, JSON.stringify({ ...bundled, networks: onEight }));
+    try {
+      const other = (await call("versions", { network: "preprod", projectDir: project })).envelope.data as { examplesToolchain: object };
+      expect(other.examplesToolchain).toMatchObject({ ledger: "9", checks: [], note: expect.stringContaining("Preprod runs Ledger 8") });
+      expect(other.examplesToolchain).not.toHaveProperty("upgrade");
+    } finally {
+      rmSync(matrixFile);
+    }
   });
 
   it("never echoes the Blockfrost project ID", async () => {

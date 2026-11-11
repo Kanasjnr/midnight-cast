@@ -1,12 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/main/schemas/examples.schema.json",
+  "$id": "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/v0.2.2/schemas/examples.schema.json",
   "title": "examples data",
   "description": "Midnight's official examples (midnightntwrk/midnight-examples) at one pinned commit. Without a topic, examples lists them all; with one, matches holds the best few, each with the files and lines that show the topic.",
   "type": "object",
   "required": [
     "repo",
     "commit",
+    "ledger",
     "toolchain"
   ],
   "properties": {
@@ -15,6 +16,14 @@
     },
     "commit": {
       "type": "string"
+    },
+    "ledger": {
+      "type": "string",
+      "description": "The ledger the examples' code at that commit targets, e.g. \"9\""
+    },
+    "ledgerNote": {
+      "type": "string",
+      "description": "Which public networks run another ledger than the examples' code targets, when any do"
     },
     "toolchain": {
       "type": "object",

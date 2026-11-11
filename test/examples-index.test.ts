@@ -6,11 +6,12 @@ import { findExamples, loadExamplesIndex, words } from "../src/lib/examples-inde
 import { COMMIT, locate, readToolchain } from "../scripts/examples-index.js";
 import { toolCallFor } from "../src/lib/next-steps.js";
 import { schemaErrors } from "./schema.js";
+import { SCHEMA_VERSION } from "../src/output.js";
 
 const index = loadExamplesIndex();
 // A full envelope around a command's result, as the CLI prints it.
 const envelope = (result: { ok: boolean; data?: unknown; error?: string }) => ({
-  schemaVersion: 1,
+  schemaVersion: SCHEMA_VERSION,
   ok: result.ok,
   command: "examples",
   network: null,
@@ -34,7 +35,8 @@ describe("Midnight's examples", () => {
         expect(file.lines[1]).toBeGreaterThanOrEqual(file.lines[0]);
       }
     }
-    expect(index.toolchain).toMatchObject({ "Compact language (pragma)": "0.23", "@midnight-ntwrk/midnight-js-*": "4.1.1" });
+    expect(index.ledger).toBe("9");
+    expect(index.toolchain).toMatchObject({ "Compact language (pragma)": "0.28", "@midnight-ntwrk/midnight-js-*": "5.0.0" });
   });
 
   it("finds the example that shows a topic, asked in a person's words", () => {

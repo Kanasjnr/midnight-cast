@@ -119,28 +119,28 @@ Network: preprod
 Healthy: yes
 
 Services:
-  rpc: OK (668ms)
-  indexer: OK (1215ms)
-  proof-server: OK (1053ms) (optional) — version=8.1.0 (matches matrix 8.1.0)
+  rpc: OK (1277ms)
+  indexer: OK (763ms)
+  proof-server: OK (1002ms) (optional) — version=9.0.0 (matches matrix 9.0.0)
 
 Sync:
-  RPC height:      2805470
-  Indexer height:  2805468
+  RPC height:      3374303
+  Indexer height:  3374301
   Delta:           2 (threshold 100)
   In sync:         yes
 
 Versions:
-  Matrix updated:  2026-10
-  node: OK (expected >=1.0.400, live 1.0.400)
-  runtimeSpec: OK (expected 1000300, live 1000300)
+  Matrix:          Midnight's published matrix (cached 13m ago)
+  node: OK (expected >=2.1.101, live 2.1.101)
+  runtimeSpec: OK (expected 2001100, live 2001100)
   indexer-api: OK (expected v4, live v4)
-  protocolVersion: OK (expected 1000300, live 1000300)
-  proof-server: OK (expected 8.1.0, live 8.1.0)
+  protocolVersion: OK (expected 2001100, live 2001100)
+  proof-server: OK (expected 9.0.0, live 9.0.0)
 
-Midnight's examples: 202 passed, 1 failed on node 1.0.400 (preprod, 30 Sep 2026).
-  Their verdict: No Node 1.0.400 regression found.
-  Report: https://github.com/midnightntwrk/midnight-examples/blob/main/reports/node-1.0.400-regression.json
+Midnight's examples: not verified for this network: no examples report for node 2.1.101 yet (cached 13m ago).
 ```
+
+When Midnight's examples have published a report for the node a network runs, that line gives their result instead, for example on preprod's node 1.0.400: "Midnight's examples: 202 passed, 1 failed on node 1.0.400 (preprod, 30 Sep 2026)", with their verdict and a link to the report.
 
 **Exit code:** `0` when RPC and indexer are up and optional CI flags pass. Version mismatches are **warnings** unless `--fail-on-mismatch` is set. Proof server failure does not fail health by itself.
 
@@ -168,6 +168,7 @@ midnight-cast preflight preprod --proof-server http://127.0.0.1:6300 --address s
 - **wallet**, with `--address`:
   - For an unshielded address, the indexer replays the address's transactions until it has caught up. The check then counts the NIGHT UTXOs it holds now, and how many are registered for DUST generation. NIGHT is the unshielded token type `00…00` (`UnshieldedTokenType(HashOutput([0u8; 32]))` in midnight-ledger), shown in NIGHT at 1,000,000 STAR each.
   - With no NIGHT, it points at the faucet. With NIGHT but none registered for DUST, it says the wallet can't pay fees until it registers. DUST builds up after registration, so a wallet registered moments ago may still need to wait.
+  - The ledger 8 to 9 fork wipes DUST state, and the indexer then reports every NIGHT UTXO created before it as not registered. On a network past the upgrade (its node runs runtime spec 2001100, the spec mainnet's fork block runs, or later; its own matrix row when the node can't be read), the check counts the unregistered NIGHT UTXOs created under an earlier protocol version (`wallet.resetByUpgrade`, 0 when there are none), says the upgrade reset their registration and that they need registering again, even if they were registered before, and suggests `explain dust`. Preview was reset with the upgrade and mainnet held no native NIGHT before it, so this is for preprod once it upgrades.
   - A busy address can take longer than `--timeout` to replay. The totals are then marked as possibly short, and a read that found no NIGHT before the timeout says so rather than sending you to the faucet.
   - For a Cardano reward address it uses the same indexer query as `dust-status`, and fails while no DUST has been generated yet.
   - The wallet is read alongside the other checks, and not at all if the indexer is down. An indexer error is reported as such, never as an empty wallet.
@@ -181,12 +182,11 @@ Example output:
 Preflight: preprod
 
   OK   network      the RPC and indexer answer, and the indexer is 2 blocks from the node
-  OK   proof server answers at https://proof-server.preprod.midnight.network and runs 8.1.0
-  FAIL wallet       no NIGHT at this address. Fund it from the faucet (https://midnight-tmnight-preprod.nethermind.dev/)
-
-Expect, from Midnight's examples run on preprod (30 Sep 2026): a new wallet's first sync took about 67 minutes; restoring one from a pre-seed bundle took 105-123 seconds.
-  https://github.com/midnightntwrk/midnight-examples/blob/main/reports/node-1.0.400-regression.json
+  OK   proof server answers at https://proof-server.preprod.midnight.network and runs 9.0.0
+  FAIL wallet       no NIGHT at this address. Fund it from the network's faucet
 ```
+
+With a report for the node the network runs, an `Expect` line follows, for example from the examples' run on preprod's node 1.0.400 (30 Sep 2026): "a new wallet's first sync took about 67 minutes; restoring one from a pre-seed bundle took 105-123 seconds".
 
 It works on `local` and on networks from `config.toml` too; without a support matrix row it doesn't check the proof server's version.
 
@@ -268,17 +268,28 @@ The published matrix updates only what the endpoints can't reveal: the indexer, 
 - It is `unverified`, with a `reason`, when the node version has no report (it is never matched to an older one), when the report ran a different runtime `spec_version` or another network, or when it has no passing tests. The runs are on preprod, so mainnet and preview show the preprod run for context but stay unverified: the same node on another network isn't what the examples tested.
 - The report is fetched for that exact version with a 3-second timeout and cached like the published matrix: six hours, a week as a fallback, and no retry for an hour after a failure. A report that says it's about a different node version is rejected. Offline, or when nothing can be fetched, the summaries bundled with this release are used, and a cached copy older than them is ignored. `source` says which was used, and how old it is. Reading the report never fails `versions` or `health`; a problem shows as `unverified` with the reason.
 
-**Against Midnight's examples:** next to the matrix checks, `versions` compares the project with the toolchain Midnight's examples are pinned to, a set known to compile and pass its tests together (`examplesToolchain` in JSON). It covers the `midnight-js-*` packages, `testkit-js`, the wallet SDK, the `pragma language_version` in the project's `.compact` files (only in a directory with a `package.json`, four levels deep, build output, dot directories and `node_modules` skipped; a constraint such as `>= 0.16 && <= 0.20` must admit the examples' language) and the Node.js version in `.nvmrc` or `engines`. It checks only what the project declares, and it's advice: a difference doesn't change `allOk` or the exit code, since a project can be right on other versions. For example: "wallet-sdk: examples=1.2.0 project=1.0.4 → DIFFERS (the official examples run 1.2.0)".
+**Against Midnight's examples:** next to the matrix checks, `versions` compares the project with the toolchain Midnight's examples are pinned to, a set known to compile and pass its tests together (`examplesToolchain` in JSON). It covers the `midnight-js-*` packages, `testkit-js`, the wallet SDK, the `pragma language_version` in the project's `.compact` files (only in a directory with a `package.json`, four levels deep, build output, dot directories and `node_modules` skipped; a constraint such as `>= 0.16 && <= 0.20` must admit the examples' language) and the Node.js version in `.nvmrc` or `engines`. It checks only what the project declares, and it's advice: a difference doesn't change `allOk` or the exit code, since a project can be right on other versions. For example: "wallet-sdk: examples=2.0.0 project=1.0.4 → DIFFERS (the official examples run 2.0.0)". A `midnight-js-*` package the examples pin on its own, such as `midnight-js-network-id` at `5.0.0-rc.5`, is checked against that pin, and a prerelease pin matches only a spec that names it. The examples target one ledger (`ledger`, Ledger 9 today), so on a network that runs another, such as a local devnet still on Ledger 8, `versions` doesn't compare the project with them and says why in `note`, with `checks` empty. The network's ledger is the one the matrix gives for the runtime spec its node reports, so an upgrade counts as soon as the node runs it.
+
+**Upgrading with the examples:** when a project has a `midnight-js-*` package a major version behind the examples, on a network that runs their ledger, `versions` points at the examples' own move to that ledger, midnightntwrk/midnight-examples#88 (Midnight.js 5.0.0, wallet SDK 2.0.0, Compact 0.36.0), as `examplesToolchain.upgrade`. It lists what that pull request changed in the example closest to the project, its `package.json` and non-test source under `contract/` and `src/`, each linked to its diff: the example that shares the most contract file names with the project, or hello-world. Any `midnight-js-*` package counts, including one the examples pin on their own, such as `midnight-js-network-id`, and so does a project halfway through the move. A worked migration of the same code, step by step:
+
+```text
+  To upgrade, see the examples' own move to Ledger 9, midnightntwrk/midnight-examples#88:
+    https://github.com/midnightntwrk/midnight-examples/pull/88
+  What it changed in private-party:
+    examples/private-party/contract/private-party.compact: https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-d738…
+    examples/private-party/src/sponsor.ts: https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-00f0…
+    …
+```
 
 Example output:
 
 ```text
 Checks:
-  node: expected=>=1.0.400 live=1.0.400 → OK (recommended 1.0.400)
-  runtimeSpec: expected=1000300 live=1000300 → OK (node runtime spec_version vs matrix)
+  node: expected=>=2.1.101 live=2.1.101 → OK (recommended 2.1.101)
+  runtimeSpec: expected=2001100 live=2001100 → OK (node runtime spec_version vs matrix)
   indexer-api: expected=v4 live=v4 → OK (from configured indexer URL path)
-  protocolVersion: expected=1000300 live=1000300 → OK (RPC specVersion vs indexer latest block)
-  proof-server: expected=8.1.0 live=8.1.0 → OK (GET /version on configured proof server URL)
+  protocolVersion: expected=2001100 live=2001100 → OK (RPC specVersion vs indexer latest block)
+  proof-server: expected=9.0.0 live=9.0.0 → OK (GET /version on configured proof server URL)
 
 Summary: live stack matches matrix checks ✓
 ```
@@ -335,7 +346,7 @@ extrinsicsRoot: 0x3a61ec7982b80286f7908e90b481548e9f07240f80fb2dbd9f02205b05f493
 
 ## `midnight-cast rpc <method> [params]`
 
-Raw JSON-RPC call to the configured node.
+Raw JSON-RPC call to the configured node, for read-only methods.
 
 ```bash
 midnight-cast rpc chain_getHeader
@@ -345,6 +356,12 @@ midnight-cast rpc system_version
 ```
 
 `params` must be a JSON array (or omitted for `[]`).
+
+`rpc` sends only methods on its list of one-shot reads: the `chain_`, `state_`, `childstate_`, `archive_v1_` and `chainSpec_v1_` queries, `midnight_`, `sidechain_` and `systemParameters_` methods, and `system_version`, `system_health` and the other `system_` reads. `midnight-cast explain --json` gives the full list, as `readOnlyMethods` on the `rpc` command. Any other method is refused before it is sent, with exit code 1 and the error kind `not_read_only`: anything that submits a transaction, signs, or changes keys, peers, log filters or offchain storage; subscriptions, which need a WebSocket; and reads Substrate marks unsafe, which public nodes refuse, such as `system_dryRun`, `state_getPairs` and `state_queryStorage`.
+
+| Option | Description |
+|--------|-------------|
+| `--allow-write` | Also send methods that aren't on the list, with a warning. They may submit or change node state, and are never retried. Public nodes refuse most of them anyway |
 
 ---
 
@@ -410,14 +427,26 @@ Auto-detects and decodes everything it finds in one pasted error:
 - **DispatchError::Module** pallet index + error
 - **JSON-RPC** codes (e.g. `"code": -32602` or RPC error text)
 - **Known messages** from current tooling, decoded with `kind: "message"`:
-  - `UnsupportedBlockVersion(1000300)` from toolkit 1.0.0 or node 1.0.2 on runtime 1.0.300
+  - `UnsupportedBlockVersion(1000300)` from toolkit 1.0.0 or node 1.0.2 on runtime 1.0.300. Preprod and mainnet ran 1.0.300 until their in-place Ledger 9 upgrades and still hold those blocks, so `decode` says so and gives the release they run now (node 2.1.101); on preview, which was reset instead, it says the chain has no such blocks
   - Blockfrost's "Missing project token" and "Invalid project token"
   - Anything mentioning the retired `rpc.mainnet.midnight.network` or `indexer.mainnet.midnight.network`
   - Output from Compact toolchain 0.35 or later or Compact runtime 0.20 or later (`--feature-zkir-v3`, ZKIR 3.1, `ContractModuleProvider`, `ledger-v9`), which target Ledger 9. The advice follows each network's ledger in the support matrix: with `--network` set to a network still on Ledger 8 it says to run `compact update 0.31`; on a network that runs Ledger 9 these are the normal packages, so `decode` doesn't claim the message and routes the real error instead; without `--network` it says which networks run which ledger
 
 Hex codes need the `0x` prefix, "ledger N" counts only as "ledger error N" or "ledger code N", and single-word ledger names such as `Transaction` aren't matched in free text, since they also appear in ordinary error messages ("Invalid Transaction").
 
-Where Midnight's examples show the fix, a decoding links that code, at the examples index's pinned commit (`examples` in JSON, `Code:` lines otherwise):
+**Midnight's service desk runbooks.** The service desk ([midnightntwrk/servicedesk](https://github.com/midnightntwrk/servicedesk/tree/main/runbooks)) keeps a runbook for each recurring problem, and its index lists the exact error strings each one covers. `decode --raw` searches a pasted error for those strings and links each runbook it finds (`runbooks` in JSON), alongside whatever else decodes, so an error only a runbook knows, such as `values inserted non-linearly into dust generation tree` or `EBADENGINE`, is answered too:
+
+```text
+Midnight's service desk has a runbook for this. Symptoms overlap, so confirm the runbook's cause before acting:
+  "values inserted non-linearly into dust generation tree": Wallet sync stuck after the indexer changed
+    https://github.com/midnightntwrk/servicedesk/blob/main/runbooks/wallet-sync-cursor-indexer-mismatch-runbook/wallet-sync-cursor-indexer-mismatch-runbook.md
+    also Moving to Blockfrost, beyond the docs migration guide: https://github.com/midnightntwrk/servicedesk/blob/main/runbooks/indexer-blockfrost-migration-runbook/indexer-blockfrost-migration-runbook.md
+    Cursor mismatch (and Blockfrost if the app just switched)
+```
+
+Strings are matched exactly, case included, and a row with several parts needs them in order. `when` gives the row's context where it says more, such as "on Mainnet", and `advice` which runbook applies when a row names more than one; symptoms overlap, so confirm the runbook's cause before acting. A runbook is listed once, under the longest string that matched it. With `--network`, a row whose context names only other networks, such as "on Mainnet" for preview, is left out. When only a runbook knows the error, `decode` still gives the routing hint it would give an unrecognised one, such as the proof-server hint for `Failed to prove transaction`, since a string can come from another tool. Only the strings and links ship with midnight-cast: the links point at each runbook on the service desk's `main`, so a runbook's edits reach you without an update. `npm run runbooks-index` rebuilds `src/data/runbooks.json` from the index, and the live checks keep a `runbooks` issue open while the bundled strings differ from it, so a new runbook or row ships in the next patch.
+
+Where Midnight's examples show the fix, a decoding links that code, at the examples index's pinned commit (`examples` in JSON, `Code:` lines otherwise). The examples target Ledger 9, so when the network runs another ledger (with `--network`, that network; without it, any public network), `examplesNote` (`Note:`) says so, once per decoding. `explain` and `examples` give the same note and take `--network` too:
 - stale-DUST errors (170, 171, 196) link hello-world's wallet sync;
 - a fee beyond the available DUST (138) links private-party's DUST sponsorship;
 - a token balance error (126) links token-transfers' `sendToUser` circuit;
@@ -425,13 +454,15 @@ Where Midnight's examples show the fix, a decoding links that code, at the examp
 
 Other codes link nothing, rather than code that only looks related. The wallet's "Insufficient Funds: could not balance dust" (`Wallet.InsufficientFunds`), the failure the examples' UI explains to new users, decodes as a known message that links the UI's explanation, the sponsorship and the wallet sync.
 
-Some ledger codes carry a related hint. `OutOfDustValidityWindow` (171) notes the indexer bug fixed in 4.3.4 and 4.3.5, which rejected the first transaction of a block. `TransactionApplicationError` (182) notes the node 1.0.300 bug that halts a fresh mainnet sync at block #1788979, fixed in node 1.0.400. The deserialization codes (0–11) note that ledger 8.1.2 rejects non-canonical encodings, and that ledger 8.1.3 (node 1.0.400) also rejects contract call transcripts with non-canonical field values or `noop 0`.
+Some ledger codes carry a related hint. `OutOfDustValidityWindow` (171) notes the indexer bug fixed in 4.3.4 and 4.3.5, which rejected the first transaction of a block. `TransactionApplicationError` (182, a ledger 8.1.3 code) notes the node 1.0.300 bug that halts a fresh mainnet sync at block #1788979, fixed in node 1.0.400. The deserialization codes (0–11) note that ledger 8.1.2 rejects non-canonical encodings, and that ledger 8.1.3 (node 1.0.400) also rejects contract call transcripts with non-canonical field values or `noop 0`.
+
+**Error maps per ledger.** Ledger codes change between node releases, so `decode` bundles one map per ledger: ledger 9.1.0.0's for node 2.1.x, which preview, preprod and mainnet run, from Midnight's [error-codes docs](https://docs.midnight.network/nodes/error-codes), and ledger 8.1.3's for node 1.0.x. With `--network` it reads the code with the map for that network's ledger, so a network whose support-matrix row says Ledger 8, such as a custom one, gets the 8.1.3 map; without it, or for a network the matrix gives no ledger for, such as `local`, Ledger 9's, with a note where the other ledger reads the code differently. A code read with another ledger's map says so (`notOnLedger`). Node 2.1.x splits broad codes into specific ones, so a code it retired, such as 182 `TransactionApplicationError`, is read with the 8.1.3 map and names the codes that replace it (`retired`: 228, 229 or 230). Without `--network`, a code that means something else or nothing on the other ledger says so (`otherLedgers`), as for 239 `ZswapInvalid::NullifierAlreadyPresent`, which ledger 8.1.3 doesn't use. Ledger 9 names are qualified as in the docs; a name's last part, such as `NullifierAlreadyPresent`, finds it when only one code has that part. In a pasted error a shared last part needs its qualifier, as the node prints it (`ZswapInvalid(MerkleTreeError)`), and a retired Ledger 8 name that reads the same, such as `FeeCalculation(OutsideTimeToDismiss)`, is listed too, marked retired. `mapMismatch` warns when a network runs a ledger none of the maps covers.
 
 ### Shorthand
 
 ```bash
 midnight-cast decode 170
-midnight-cast decode 170 --network preview    # ledger map uses preview row (8.1.0 vs 8.0.3)
+midnight-cast decode 170 --network preview    # the error map for the ledger preview runs
 midnight-cast decode 0xaa
 midnight-cast decode InvalidDustSpendProof
 midnight-cast decode 1010
@@ -446,9 +477,9 @@ Example output:
 ```text
 Kind:   ledger (Custom 170)
 Name:   InvalidDustSpendProof
-Desc:   DUST spend proof verification failed
-Fix:    Regenerate DUST spend proof
-Map:    ledger 8.1.0 (preview, updated 2026-06)
+Desc:   The DUST fee spend proof failed node verification: it was proven against a DUST state the chain has already advanced past, …
+Fix:    Sync the wallet's DUST state to the current chain tip before submitting. …
+Map:    ledger 9.1.0.0 (preview, updated 2026-11)
 Docs:   https://docs.midnight.network/nodes/error-codes
 ```
 
@@ -465,7 +496,7 @@ midnight-cast decode jsonrpc -32602
 | Form | Purpose |
 |------|---------|
 | `--raw <message>` | Parse full error string (1010, Custom N, pallet) |
-| `--network <name>` | Stamp ledger map from matrix row (preview vs preprod) |
+| `--network <name>` | Read ledger codes with the error map for the network's ledger |
 | `ledger <code>` | `Custom(N)` / LedgerApiError (0–255); shows map ledger version |
 | `pallet <index> <variant>` | `DispatchError::Module` |
 | `1010` | Substrate Invalid Transaction envelope guide |
@@ -594,11 +625,11 @@ midnight-cast examples "verify a signature in a circuit" --json
 Example output (cut short):
 
 ```text
-Midnight's examples for "dust sponsorship" (midnightntwrk/midnight-examples at 95d4f50, pinned to Compact language 0.23, Compact compiler 0.31.1, @midnight-ntwrk/midnight-js-* 4.1.1)
+Midnight's examples for "dust sponsorship" (midnightntwrk/midnight-examples at 377495c, Ledger 9, pinned to Compact language 0.28, Compact compiler 0.36.0, @midnight-ntwrk/midnight-js-* 5.0.0)
 
 private-party: Private on-chain data, access control, and DUST sponsorship: one wallet pays the fees for another's transaction
-  Having a sponsor wallet pay the DUST fee and submit: examples/private-party/src/sponsor.ts:96-115
-    https://github.com/midnightntwrk/midnight-examples/blob/95d4f50…/examples/private-party/src/sponsor.ts#L96-L115
+  Having a sponsor wallet pay the DUST fee and submit: examples/private-party/src/sponsor.ts:97-116
+    https://github.com/midnightntwrk/midnight-examples/blob/377495c…/examples/private-party/src/sponsor.ts#L97-L116
 
     export async function sponsorAndSubmit(
     …
@@ -620,7 +651,7 @@ The index covers all twelve examples:
 
 The topics and code locations are chosen by hand. `npm run examples-index` finds each location by its declaration at the pinned commit, so the line ranges and excerpts always match the linked code. The JSON has the toolchain the examples are pinned to (Compact language and compiler, midnight-js, wallet SDK, Node.js), so you can tell when your project is on a different generation. A topic with no match exits `1`; a topic of only filler words, such as "show me code", lists every example. When an example matches as a whole but none of its files does, the JSON says so (`filesMatched: false`) and lists all of its files, and the human output shows no excerpt rather than an unrelated one.
 
-`live.yml` checks the index against its pinned commit and notes when midnight-examples has moved past it, with any toolchain change; moving the pin is a deliberate change to `COMMIT` in `scripts/examples-index.ts`.
+`live.yml` checks the index against its pinned commit and notes when midnight-examples has moved past it, with any toolchain change; moving the pin is a deliberate change to `COMMIT` in `scripts/examples-index.ts`, and to `LEDGER` beside it when the examples move to another ledger.
 
 ---
 
@@ -643,7 +674,7 @@ With `--json`, every command prints one envelope on stdout:
 
 ```json
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "ok": false,
   "command": "tip",
   "network": "preprod",

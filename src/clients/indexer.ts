@@ -369,6 +369,8 @@ export interface UnshieldedUtxo {
   registeredForDustGeneration: boolean;
   intentHash: string;
   outputIndex: number;
+  /** The protocol version of the transaction that created it, which says whether it predates a ledger upgrade. */
+  createdProtocolVersion?: number;
 }
 
 export interface UnshieldedHoldings {
@@ -384,7 +386,7 @@ export const UNSHIELDED_SUBSCRIPTION = `
     unshieldedTransactions(address: $address) {
       __typename
       ... on UnshieldedTransaction {
-        transaction { id }
+        transaction { id protocolVersion }
         createdUtxos { tokenType value registeredForDustGeneration intentHash outputIndex }
         spentUtxos { intentHash outputIndex }
       }
@@ -394,7 +396,7 @@ export const UNSHIELDED_SUBSCRIPTION = `
 `;
 
 type UnshieldedEvent =
-  | { __typename: "UnshieldedTransaction"; transaction: { id: number }; createdUtxos: UnshieldedUtxo[]; spentUtxos: Array<Pick<UnshieldedUtxo, "intentHash" | "outputIndex">> }
+  | { __typename: "UnshieldedTransaction"; transaction: { id: number; protocolVersion?: number }; createdUtxos: UnshieldedUtxo[]; spentUtxos: Array<Pick<UnshieldedUtxo, "intentHash" | "outputIndex">> }
   | { __typename: "UnshieldedTransactionsProgress"; highestTransactionId: number };
 
 const graphqlFailure = (errors: Array<{ message?: string }>) =>
@@ -472,7 +474,10 @@ export async function unshieldedHoldings(
           } else {
             transactions++;
             lastId = Math.max(lastId, event.transaction.id);
-            for (const utxo of event.createdUtxos) held.set(key(utxo), utxo);
+            const createdProtocolVersion = event.transaction.protocolVersion;
+            for (const utxo of event.createdUtxos) {
+              held.set(key(utxo), createdProtocolVersion === undefined ? utxo : { ...utxo, createdProtocolVersion });
+            }
             for (const utxo of event.spentUtxos) held.delete(key(utxo));
           }
           if (caughtUp()) finish({ complete: true });

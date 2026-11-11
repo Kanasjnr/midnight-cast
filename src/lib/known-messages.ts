@@ -1,6 +1,7 @@
 import { RETIRED, RETIRED_HOSTS, blockfrostProject, networkTitle as title } from "./blockfrost.js";
 import type { NextStep } from "../output.js";
 import { loadSupportMatrix } from "./versions.js";
+import { FORKED_IN_PLACE, LEDGER_8_LAST_SPEC, PUBLIC_NETWORKS, ledgerMajor, names, publicNetworks, runs } from "./network-names.js";
 
 export interface KnownMessage {
   id: string;
@@ -18,26 +19,14 @@ interface Pattern {
   describe: (match: RegExpMatchArray, network?: string) => KnownMessage | undefined;
 }
 
-// The public networks the general advice speaks about; a network named with --network may also come from a user's override.
-const PUBLIC_NETWORKS = ["preview", "preprod", "mainnet"];
-const publicNetworks = (matrix: Record<string, unknown>) => PUBLIC_NETWORKS.filter((name) => name in matrix);
-
-function names(networks: string[]): string {
-  const titled = networks.map(title);
-  return titled.length > 1 ? `${titled.slice(0, -1).join(", ")} and ${titled.at(-1)}` : (titled[0] ?? "");
-}
-
-const runs = (networks: string[]) => `${names(networks)} ${networks.length > 1 ? "run" : "runs"}`;
-
-/** The ledger's major version, or undefined when the matrix doesn't say. */
-const ledgerMajor = (ledger: string | undefined) => {
-  const major = Number(ledger?.split(".")[0]);
-  return ledger && Number.isInteger(major) ? major : undefined;
-};
-
 /** Each version with the networks that run it, so networks that differ aren't given one network's version. */
 /** How to upgrade, per network, so networks that differ aren't given one network's version. */
-function upgradeAdvice(component: string, networks: string[], versionOf: (network: string) => string | undefined): string | undefined {
+function upgradeAdvice(
+  component: string,
+  networks: string[],
+  versionOf: (network: string) => string | undefined,
+  when = "on this runtime",
+): string | undefined {
   const groups = new Map<string, string[]>();
   const unknown: string[] = [];
   for (const network of networks) {
@@ -48,8 +37,8 @@ function upgradeAdvice(component: string, networks: string[], versionOf: (networ
   if (!groups.size) return undefined;
   const advice =
     groups.size === 1
-      ? `Upgrade the ${component} to ${[...groups.keys()][0]} or later, which ${runs([...groups.values()][0]!)} on this runtime.`
-      : `Upgrade the ${component} to the version the network runs on this runtime: ${[...groups].map(([version, on]) => `${version} or later for ${names(on)}`).join(", ")}.`;
+      ? `Upgrade the ${component} to ${[...groups.keys()][0]} or later, which ${runs([...groups.values()][0]!)} ${when}.`
+      : `Upgrade the ${component} to the version the network runs ${when}: ${[...groups].map(([version, on]) => `${version} or later for ${names(on)}`).join(", ")}.`;
   return unknown.length ? `${advice} The support matrix gives no version for ${names(unknown)}.` : advice;
 }
 
@@ -63,22 +52,44 @@ const COMPACT_LEDGER_9 = /--feature-zkir-v3|\bZKIR 3\.1\b|ContractModuleProvider
 const PATTERNS: Pattern[] = [
   {
     test: /UnsupportedBlockVersion\((\d+)\)|unsupported node version (\d+)/i,
-    describe: (match) => {
+    describe: (match, network) => {
       const spec = Number(match[1] ?? match[2]);
       const fromIndexer = match[2] !== undefined;
       const matrix = loadSupportMatrix().networks;
-      const on = publicNetworks(matrix).filter((network) => matrix[network]?.runtimeSpec === spec);
+      const on = publicNetworks(matrix).filter((name) => matrix[name]?.runtimeSpec === spec);
       const component = fromIndexer ? "indexer" : "node and toolkit";
-      const advice = upgradeAdvice(component, on, (network) => (fromIndexer ? matrix[network]?.indexer : (matrix[network]?.minNode ?? matrix[network]?.node)));
+      const versionOf = (name: string) => (fromIndexer ? matrix[name]?.indexer : (matrix[name]?.minNode ?? matrix[name]?.node));
       const reader = fromIndexer ? "indexer" : "tool reading the chain";
-      return {
+      const base = {
         id: "unsupported-block-version",
         name: "UnsupportedBlockVersion",
+        next: [{ command: "midnight-cast versions <network>", reason: "See which versions the network expects" }],
+      };
+      // The runtime before the Ledger 9 fork, which no network runs now but whose blocks the networks that forked in
+      // place still hold: a tool syncing from genesis reads them, and the release each runs today reads them too.
+      if (!on.length && spec === LEDGER_8_LAST_SPEC) {
+        const forked = FORKED_IN_PLACE.filter((name) => name in matrix);
+        if (network && !forked.includes(network)) {
+          return {
+            ...base,
+            description: `The ${reader} doesn't know runtime spec_version ${spec}, which ${names(forked)} ran before their Ledger 9 upgrade. ${title(network)} was reset with the upgrade instead, so its chain has no blocks on that runtime: check the ${reader} is reading the network you mean.`,
+            fix: upgradeAdvice(component, [network], versionOf, "now") ?? "Upgrade it to the release the network runs now.",
+          };
+        }
+        const history = network ? [network] : forked;
+        return {
+          ...base,
+          description: `The ${reader} doesn't know runtime spec_version ${spec}, which ${names(history)} ran before ${history.length > 1 ? "their" : "its"} Ledger 9 upgrade. Those blocks are still in the chain's history, so ${fromIndexer ? "an indexer" : "a node or toolkit"} syncing from genesis reads them and needs a release that knows both runtimes.`,
+          fix: upgradeAdvice(component, history, versionOf, "now") ?? "Upgrade it to the release the network runs now.",
+        };
+      }
+      const advice = upgradeAdvice(component, on, versionOf);
+      return {
+        ...base,
         description: on.length
           ? `The ${reader} doesn't know runtime spec_version ${spec}, which ${runs(on)}. ${fromIndexer ? "An indexer" : "A node or toolkit"} built for an older runtime can't read its blocks.`
           : `The ${reader} doesn't know runtime spec_version ${spec}.`,
         fix: advice ?? "Upgrade the node, toolkit or indexer to a release that supports this runtime.",
-        next: [{ command: "midnight-cast versions <network>", reason: "See which versions the network expects" }],
       };
     },
   },

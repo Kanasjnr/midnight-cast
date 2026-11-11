@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/main/schemas/versions.schema.json",
+  "$id": "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/v0.2.2/schemas/versions.schema.json",
   "title": "versions and matrix data",
   "type": "object",
   "required": [
@@ -208,6 +208,7 @@
       "required": [
         "repo",
         "commit",
+        "ledger",
         "toolchain",
         "checks"
       ],
@@ -217,6 +218,10 @@
         },
         "commit": {
           "type": "string"
+        },
+        "ledger": {
+          "type": "string",
+          "description": "The ledger the examples' code targets"
         },
         "toolchain": {
           "type": "object",
@@ -249,6 +254,51 @@
               },
               "note": {
                 "type": "string"
+              }
+            }
+          }
+        },
+        "note": {
+          "type": "string",
+          "description": "Why the project isn't compared, when the network runs another ledger than the examples' code; checks is then empty"
+        },
+        "upgrade": {
+          "type": "object",
+          "description": "When a midnight-js package in the project is a major version behind the examples, on a network that runs their ledger: the pull request that moved the examples there, and what it changed in the example closest to the project",
+          "required": [
+            "pr",
+            "url",
+            "example",
+            "files"
+          ],
+          "properties": {
+            "pr": {
+              "type": "integer"
+            },
+            "url": {
+              "type": "string"
+            },
+            "example": {
+              "type": "string",
+              "description": "The example that shares the most contract file names with the project, or hello-world"
+            },
+            "files": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "path",
+                  "url"
+                ],
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  },
+                  "url": {
+                    "type": "string",
+                    "description": "The file's diff in the pull request"
+                  }
+                }
               }
             }
           }

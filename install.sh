@@ -89,11 +89,10 @@ tar -xzf "$tmp/$archive" -C "$tmp" midnight-cast
 mkdir -p "$dir"
 mv -f "$tmp/midnight-cast" "$dir/midnight-cast"
 chmod 755 "$dir/midnight-cast"
-# The npm package installs an mn alias too; another tool's mn is left alone.
-if [ ! -e "$dir/mn" ] || [ "$(readlink "$dir/mn" 2>/dev/null || true)" = midnight-cast ]; then
-  ln -sf midnight-cast "$dir/mn"
-else
-  echo "Left $dir/mn alone: it isn't midnight-cast's."
+# Before 0.3.0 this linked an mn alias, which clashed with other tools' mn. Remove ours; leave any other.
+if [ -L "$dir/mn" ] && [ "$(readlink "$dir/mn")" = midnight-cast ]; then
+  rm -f "$dir/mn"
+  echo "Removed the old mn alias: run midnight-cast instead."
 fi
 
 echo "Installed midnight-cast $("$dir/midnight-cast" --version) to $dir/midnight-cast"

@@ -1,15 +1,368 @@
 {
   "repo": "midnightntwrk/midnight-examples",
-  "commit": "95d4f5006f042db08cef301df68ca260a9e6be7b",
+  "commit": "377495c5efbd5b1f3123f5aee2776c3694b05eda",
+  "ledger": "9",
   "toolchain": {
-    "Compact language (pragma)": "0.23",
-    "Compact compiler (setup-compact-action)": "0.31.1",
-    "@midnight-ntwrk/midnight-js-*": "4.1.1",
-    "@midnight-ntwrk/testkit-js": "4.1.1",
-    "wallet SDK": "1.2.0",
+    "Compact language (pragma)": "0.28",
+    "Compact compiler (setup-compact-action)": "0.36.0",
+    "@midnight-ntwrk/midnight-js-*": "5.0.0",
+    "@midnight-ntwrk/midnight-js-network-id": "5.0.0-rc.5",
+    "@midnight-ntwrk/testkit-js": "5.0.0",
+    "wallet SDK": "2.0.0",
     "Node.js": "22",
-    "Yarn": "4.18.0",
-    "Vitest": "4.1.0"
+    "npm": "11.21.0",
+    "Vitest": "5.0.4",
+    "Vite": "6.4.4"
+  },
+  "migration": {
+    "pr": 88,
+    "url": "https://github.com/midnightntwrk/midnight-examples/pull/88",
+    "examples": {
+      "battleship": [
+        {
+          "path": "examples/battleship/contract/battleship.compact",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-0a65bb80c02379fa6266964c1cb08da1723dfae1ab7def4cf2ff71885f00daae"
+        },
+        {
+          "path": "examples/battleship/contract/index.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-a99d3e27ac441485164e506502ef892e4285403098645fb59783028882955698"
+        },
+        {
+          "path": "examples/battleship/contract/witnesses.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-742a3b303a7a726273ea8949e361bb0e818af9f2f77f28b30ffe93f8e824d828"
+        },
+        {
+          "path": "examples/battleship/package.json",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-87cf5a96f06a1459133d2d57e825c3975cc3e7fa71b9e7cca2fc1b96c7d30c05"
+        },
+        {
+          "path": "examples/battleship/src/config.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-e5af827f55d6b31969deffde1c1fd9c728c9da66f186f56cf3530e2a8e7d9994"
+        },
+        {
+          "path": "examples/battleship/src/providers.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-9e463c644f28e83add9e2a10151ca3df7fda0275ecd42bda105a9e18f6740dd6"
+        },
+        {
+          "path": "examples/battleship/src/wallet.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-7ef9032faf50cecfdadd3cd1e62e36ed5254ae741aceae57937335d85adc49e8"
+        }
+      ],
+      "calculator": [
+        {
+          "path": "examples/calculator/contract/calculator.compact",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-4aed94b248c94c3d71b48e6f1fe716b85abd8454fb0d5667c40717cfa8e0033c"
+        },
+        {
+          "path": "examples/calculator/contract/index.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-83aa7c9fd6bc52149983aeed710c3cb20356af25646b8c0334226b6ae4bfef3d"
+        },
+        {
+          "path": "examples/calculator/contract/witnesses.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-99aa4ec08e972c9b47633397b91c8cdf15bdbbd7199f8d98b8923f0c79630bff"
+        },
+        {
+          "path": "examples/calculator/package.json",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-ef9fab21c9140f7a68ddc08c78aad21f9f7e075e96e7fa7f78f22d459f002af3"
+        },
+        {
+          "path": "examples/calculator/src/config.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-71d60c90be530af05a2ad99c408128701dbcbe42833e89ed3d394da33f0b07d7"
+        },
+        {
+          "path": "examples/calculator/src/providers.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-7d2380b5c4b679f9d0e60d991afa84918cc46e925170d83412bdcbaaaf36b252"
+        },
+        {
+          "path": "examples/calculator/src/wallet.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-8d54a5ecd0ed3a3a9d90ee9a87dae99a98d29fa3f0a0af0d33cd77a229c3f596"
+        }
+      ],
+      "election": [
+        {
+          "path": "examples/election/contract/election.compact",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-3fbc4709e0cad665d22ec1df7833d543b12fd782f3722f942ac573005fc8309f"
+        },
+        {
+          "path": "examples/election/contract/index.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-6f93932379a54f36cc594ffedcb0dcfdb59d25aa64ac027badc4b4d3b2064d11"
+        },
+        {
+          "path": "examples/election/package.json",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-71d597f40a54ba693cff64ed0a53676cc90a39862c8fb726cbb94302cfe0b446"
+        },
+        {
+          "path": "examples/election/src/config.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-329380d0aea11a9f2114b10f4697503fce71e04c49df1d32971200d1ee8b319c"
+        },
+        {
+          "path": "examples/election/src/providers.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-0ad3c5d09389ba5165cc69c2d64b8491df44c5f5f5646c78e84055006c4ce47c"
+        },
+        {
+          "path": "examples/election/src/wallet.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-063db05f0660e83081e0b60782b88e30b07fb1f2749eb06ed9027f12f09675bb"
+        }
+      ],
+      "hello-world": [
+        {
+          "path": "examples/hello-world/contract/hello-world.compact",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-86c279c2371f2888d497745cf1b0636deaaa6b54c55da542c45760e76d89d0b0"
+        },
+        {
+          "path": "examples/hello-world/contract/index.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-8a9aef9dcd536a404adc2e5ece350d4b0bec9c89be6ac4d897aecfbc534f35f5"
+        },
+        {
+          "path": "examples/hello-world/package.json",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-9aaa1261cb9f349aff49a329e8e80a41a4938ba1bd36733bec5db3f1c2ea1878"
+        },
+        {
+          "path": "examples/hello-world/src/config.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-fba367ebc083b1fbc6fe47837f67bbf39b8d5b4f4fd4ace90f2ee46e623feba3"
+        },
+        {
+          "path": "examples/hello-world/src/providers.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-a9478844be0e1e2e8c9b68ddb6435952edc1ed88ab5ce2dae8a7c89b0fee2cd7"
+        },
+        {
+          "path": "examples/hello-world/src/wallet.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-2f9e32a9ed6fd13ae6d4faee68326890ab4c19321b0502f149ac218f3fc4f720"
+        }
+      ],
+      "private-bid": [
+        {
+          "path": "examples/private-bid/contract/index.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-d068666b7dc90d36a4b8a94592a007d465b30042610350f4ffec0b83587072ae"
+        },
+        {
+          "path": "examples/private-bid/contract/private-bid.compact",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-8f5cc1e0c09a0dbe0012286b8c0ea239d08cf0b5021d68e783469dcd46aaa4f3"
+        },
+        {
+          "path": "examples/private-bid/package.json",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-464b5555eb4c216ce05300da0a7ef7b727420abef7b187cc322a138b12e8c925"
+        },
+        {
+          "path": "examples/private-bid/src/config.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-aa9552d1cf169f78eacf00f6c1148157e63c2f409c424328fcfb2978f59580fb"
+        },
+        {
+          "path": "examples/private-bid/src/providers.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-6af75152a2cf82aa10504c189db3411342611a3ed884b364758dca3e803b7f9b"
+        },
+        {
+          "path": "examples/private-bid/src/wallet.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-fad014050c935b961ce85c89c1499e6211ba5995bb9435108378659998343a64"
+        }
+      ],
+      "private-party": [
+        {
+          "path": "examples/private-party/contract/index.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-f922c9b713322f11defa80c84b81cc4440270a2be91193bb2b757e029160660b"
+        },
+        {
+          "path": "examples/private-party/contract/private-party.compact",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-d738848540487b8bf728bc77fbad4038f5df0dae59d45f0d3fdfffbb6cbf4105"
+        },
+        {
+          "path": "examples/private-party/package.json",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-03c1fc673a686c2c9584db167f77516f8f086af5fd47a7af9482a5c38f2ae6e2"
+        },
+        {
+          "path": "examples/private-party/src/config.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-a9696696af634d55f8c30c143f251f7ff293cf6a50c789c7a6dd6170adbe7490"
+        },
+        {
+          "path": "examples/private-party/src/providers.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-0b91719fea7a4647256b44e5edd69c8a76d60c71efea15c822b0acf0418c1482"
+        },
+        {
+          "path": "examples/private-party/src/sponsor.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-00f02a8d0015145abbffe8df052c9a245c771dcb0a4491ee668299e89511b6c7"
+        },
+        {
+          "path": "examples/private-party/src/wallet.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-7f8ebab6cefd57782ba79b9df771b67486ba59544b0988d6a1010d4e385d2e3d"
+        }
+      ],
+      "private-tip-jar": [
+        {
+          "path": "examples/private-tip-jar/contract/index.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-b17fe91de6a928b30ea18c82299b02e5c149eb502564c0692543b7011e192bc0"
+        },
+        {
+          "path": "examples/private-tip-jar/contract/private-tip-jar.compact",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-ace4a5c3af5aca5e643bc9f9804d8aa6a5865e3e3ae1b232acc55235d34b4fb3"
+        },
+        {
+          "path": "examples/private-tip-jar/contract/tip-token.compact",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-06b38ddad4489c4f281a0a1a85ce537969d379cc5dfe5614cc549bd20edcdccc"
+        },
+        {
+          "path": "examples/private-tip-jar/contract/witnesses.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-c13769ddcc4fa240581565fbe688de27cbd50ad541ba7c62b25fe013c83414a5"
+        },
+        {
+          "path": "examples/private-tip-jar/package.json",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-eac679efab23ad888e68965a08f7dc81d04d0062828e72b1c0cfd1867106e594"
+        },
+        {
+          "path": "examples/private-tip-jar/src/config.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-b064b241701a26c926ceb92ea84a36f3ea22d87e9ebd7bcf0a5dc0b99b5d41ca"
+        },
+        {
+          "path": "examples/private-tip-jar/src/providers.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-3b20363bcaf96cb964250b4a2044f98b898cd33c8b73a2985427e05dc1b20a13"
+        },
+        {
+          "path": "examples/private-tip-jar/src/wallet.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-34d8e0f58ecd84bf05e797f13ced5ba5a4d4970e6cc517084ecc9ead2c8a7d2f"
+        }
+      ],
+      "secret-message": [
+        {
+          "path": "examples/secret-message/contract/index.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-a34b097fbf171550a2a65640ba1cb7f05b9df8da5f55c39bbd3e28d9342f1740"
+        },
+        {
+          "path": "examples/secret-message/contract/secret-message.compact",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-ebdea86e5a596841517dffe37a38a4bbba9aff8b8c32a4912f0ea30608198ce0"
+        },
+        {
+          "path": "examples/secret-message/package.json",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-bc0b603a433fe97db0ce6997e7a853580c156dd1b7046705a94939a59f17570f"
+        },
+        {
+          "path": "examples/secret-message/src/config.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-8e37aa21f3d58c8f301687d1e87dc39db5fd817344403639cc26348bc09112b2"
+        },
+        {
+          "path": "examples/secret-message/src/providers.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-2169f47fa8b609d926a0864321a755dd4de94b361d6aff5625cc1d4b6b922f95"
+        },
+        {
+          "path": "examples/secret-message/src/wallet.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-1cdbaed8a3f243ef72e6dcef32462dd4b11d18c7404cf8b6dd53f70c4dff64e3"
+        }
+      ],
+      "shielded-chips": [
+        {
+          "path": "examples/shielded-chips/contract/chips.compact",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-7fc07ea61f04bb8e1b7dffdd40e90cf1462ab3ebc60aa71f3627af76e96d2eef"
+        },
+        {
+          "path": "examples/shielded-chips/contract/index.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-1c1ddd0eb9d08c913cb6400e3f1857d637c78855246af32bd8eb10685a88f3e6"
+        },
+        {
+          "path": "examples/shielded-chips/contract/roulette.compact",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-867bb75c70f65cfa801dd42edd25c5b5a49510d2c6abbdcf0fb272ed43e81310"
+        },
+        {
+          "path": "examples/shielded-chips/contract/witnesses.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-2b15f1bae68007e9f10ccb0a9b0661cce89b87baf06bf48c13a605daa1611926"
+        },
+        {
+          "path": "examples/shielded-chips/package.json",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-5852c5e5e6b6b5a7be14d61ec702c935aad086baa292906faa6398d7c1ad53c5"
+        },
+        {
+          "path": "examples/shielded-chips/src/config.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-6c9e6300fd401a052266bc77c2e9e16e537e4edec6e6b349fe1e83bff283f04c"
+        },
+        {
+          "path": "examples/shielded-chips/src/providers.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-1af4f7b5f3412410d3515ba6f82008289a9abe90daefdcea15e1bc240cbbd042"
+        },
+        {
+          "path": "examples/shielded-chips/src/wallet.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-f639b424827f14a62a37fc895a1cf7b43d97b71e41d3b87fe0258607298875de"
+        }
+      ],
+      "silent-auction": [
+        {
+          "path": "examples/silent-auction/contract/index.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-e07207b255669cebbf05fa9ab8261ac76552cbc9c5066a9fb06c8d0f4c4b6ddc"
+        },
+        {
+          "path": "examples/silent-auction/contract/silent-auction.compact",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-a31e09d6d5a16214bf465e45e18fba974a5851c0fbf174ef4ae013d7d5efee49"
+        },
+        {
+          "path": "examples/silent-auction/package.json",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-84fe1f9d2cdd93b1ac190ff1b49861d1ff516c4ab10bde60ef3ea8a6e5277f8e"
+        },
+        {
+          "path": "examples/silent-auction/src/config.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-9f6e5a9866fb360a7dc5b0e1365dd6e59b001234722b44d15edb3f073c95aef9"
+        },
+        {
+          "path": "examples/silent-auction/src/providers.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-eb312b56b25404ffb2a9cd7b12a4859f5598e6e81980652531a142bc1140a3a7"
+        },
+        {
+          "path": "examples/silent-auction/src/wallet.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-88ec11321b66fe9d79772b824be784181ff44ab7f2f422a36342a7071417affd"
+        }
+      ],
+      "token-transfers": [
+        {
+          "path": "examples/token-transfers/contract/index.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-eb9cea222369f945a2c981781d45ed8a970afa7ff6627695e1b26483acdb87c0"
+        },
+        {
+          "path": "examples/token-transfers/contract/token-transfers.compact",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-312a035095ea337b4255b0b5b1ecc23c192601018bc2c6b315915670f95df587"
+        },
+        {
+          "path": "examples/token-transfers/package.json",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-c3b4a62790515f74e2b779cb484d26c88045a4301a256f138552b94cfd3fbed8"
+        },
+        {
+          "path": "examples/token-transfers/src/config.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-c68a24eee2b812130626c6be39a962883fe0af16e4b5932ac65cac618068d0b7"
+        },
+        {
+          "path": "examples/token-transfers/src/providers.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-02db6924524cb242f35504b8e66694a59cf40ea74ba5f76cac7df04f03928baf"
+        },
+        {
+          "path": "examples/token-transfers/src/wallet.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-6adfd86874de6dab0a8b80e214b6aa058b4fb35c0ee95d82757439e6c3c00c09"
+        }
+      ],
+      "zk-loan": [
+        {
+          "path": "examples/zk-loan/contract/index.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-96330f28fcc864cc76e580050d6bdd471164195f08e502c5357ff7953ad5dc0f"
+        },
+        {
+          "path": "examples/zk-loan/contract/schnorr.compact",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-89a7811f6a452dfc0b6997fae36393e4074cb9b970adf1266144f5e605b45c9d"
+        },
+        {
+          "path": "examples/zk-loan/contract/zk-loan.compact",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-699b510f70c3339927520bc801d49dbcabbd90e50fc5bef7d6f3e703dbf7cddb"
+        },
+        {
+          "path": "examples/zk-loan/package.json",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-63e831670af4aa34aaba3470a65b83468c809f4125f832c1d0fe84a155d64bce"
+        },
+        {
+          "path": "examples/zk-loan/src/config.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-236eeaa6dc903261403178933ac4e6149736392a59e3e62c37a7a00e0a7680d6"
+        },
+        {
+          "path": "examples/zk-loan/src/providers.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-14903de396aa7537a321e452dea3f6ea0b68d9989046039b94a54ad5f53d4273"
+        },
+        {
+          "path": "examples/zk-loan/src/wallet.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-1b5c8b01aca03f9e256cfba2598f92e56c4be67a4ebee77f39bbeb5655c9ffbd"
+        }
+      ]
+    }
   },
   "examples": [
     {
@@ -26,7 +379,7 @@
         "wallet sync",
         "wallet errors"
       ],
-      "url": "https://github.com/midnightntwrk/midnight-examples/tree/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/hello-world",
+      "url": "https://github.com/midnightntwrk/midnight-examples/tree/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/hello-world",
       "files": [
         {
           "path": "examples/hello-world/contract/hello-world.compact",
@@ -36,7 +389,7 @@
             5,
             7
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/hello-world/contract/hello-world.compact#L5-L7",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/hello-world/contract/hello-world.compact#L5-L7",
           "excerpt": "export circuit storeMessage(newMessage: Opaque<\"string\">): [] {\n  message = disclose(newMessage);\n}"
         },
         {
@@ -44,21 +397,21 @@
           "symbol": "it('Deploys the contract'",
           "about": "Deploying a contract with deployContract",
           "lines": [
-            177,
-            195
+            142,
+            160
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/hello-world/src/test/hw.test.ts#L177-L195",
-          "excerpt": "  it('Deploys the contract', async () => {\n    logger.info(`Creating private state...`);\n\n    const deployed: DeployedContract<Contract> =\n      await (deployContract<Contract>)(providers, {\n        compiledContract: CompiledHelloWorldContract,\n        privateStateId: PRIVATE_STATE_ID,\n        initialPrivateState: {},\n      });\n\n    logger.info(`Setting the contract address...`);\n    contractAddress = deployed.deployTxData.public.contractAddress;\n    logger.info(`Contract deployed at: ${contractAddress}`);\n    expect(contractAddress).toBeDefined();\n    expect(contractAddress.length).toBeGreaterThan(0);\n\n    const state = await queryLedger(providers);\n    expect(state.message).toEqual('');\n  });"
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/hello-world/src/test/hw.test.ts#L142-L160",
+          "excerpt": "  it('Deploys the contract', async () => {\n    logger.info(`Creating private state...`);\n\n    const deployed: DeployedContract<Contract> =\n      await deployContract(providers, {\n        compiledContract: CompiledHelloWorldContract,\n        privateStateId: PRIVATE_STATE_ID,\n        initialPrivateState: {},\n      });\n\n    logger.info(`Setting the contract address...`);\n    contractAddress = deployed.deployTxData.public.contractAddress;\n    logger.info(`Contract deployed at: ${contractAddress}`);\n    expect(contractAddress).toBeDefined();\n    expect(contractAddress.length).toBeGreaterThan(0);\n\n    const state = await queryLedger(providers);\n    expect(state.message).toEqual('');\n  });"
         },
         {
           "path": "examples/hello-world/src/providers.ts",
           "symbol": "export function buildProviders",
           "about": "Wiring up the midnight-js providers a contract needs",
           "lines": [
-            13,
-            38
+            18,
+            44
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/hello-world/src/providers.ts#L13-L38",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/hello-world/src/providers.ts#L18-L44",
           "excerpt": "export function buildProviders(\n    wallet: MidnightWalletProvider,\n    zkConfigPath: string,\n    config: NetworkConfig,\n): HelloWorldProviders {\n    const zkConfigProvider = new NodeZkConfigProvider<HelloWorldCircuits>(zkConfigPath);\n\n    return {\n        privateStateProvider: levelPrivateStateProvider({\n            privateStateStoreName: `hello-world-${Date.now()}`,\n            privateStoragePasswordProvider: () => 'Hello-World-Test-Password',\n            accountId: wallet.getCoinPublicKey(),\n        }),\n        publicDataProvider: indexerPublicDataProvider(\n            config.indexer,\n            config.indexerWS,\n        ),\n        zkConfigProvider,\n        proofProvider: httpClientProofProvider(\n            config.proofServer,\n            zkConfigProvider,\n        ),\n        walletProvider: wallet,\n        midnightProvider: wallet,\n  // …"
         },
         {
@@ -66,22 +419,22 @@
           "symbol": "export function getConfig",
           "about": "Choosing the network's endpoints (local, preview, preprod)",
           "lines": [
-            39,
-            47
+            96,
+            105
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/hello-world/src/config.ts#L39-L47",
-          "excerpt": "export function getConfig(): NetworkConfig {\n  const network = process.env['MIDNIGHT_NETWORK'] ?? 'local';\n  if (network === 'local') return LOCAL_CONFIG;\n  if (network === 'preview') return PREVIEW_CONFIG;\n  if (network === 'preprod') return preprodConfig();\n  throw new Error(\n    `Unknown network: ${network}. Supported: 'local', 'preview', 'preprod'.`,\n  );\n}"
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/hello-world/src/config.ts#L96-L105",
+          "excerpt": "export function getConfig(): NetworkConfig {\n  const network = process.env['MIDNIGHT_NETWORK'] ?? 'local';\n  if (network === 'local') return LOCAL_CONFIG;\n  if (network === 'preview') return PREVIEW_CONFIG;\n  if (network === 'preprod') return preprodConfig();\n  if (network === 'custom') return customConfig();\n  throw new Error(\n    `Unknown network: ${network}. Supported: 'local', 'preview', 'preprod', 'custom'.`,\n  );\n}"
         },
         {
           "path": "examples/hello-world/src/wallet.ts",
           "symbol": "export async function syncWallet",
           "about": "Syncing a wallet and reporting its progress",
           "lines": [
-            137,
-            185
+            67,
+            73
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/hello-world/src/wallet.ts#L137-L185",
-          "excerpt": "export async function syncWallet(\n  logger: Logger,\n  wallet: WalletFacade,\n  timeout = 300_000,\n): Promise<FacadeState> {\n  logger.info('Syncing wallet...');\n  let emissionCount = 0;\n  return Rx.firstValueFrom(\n    wallet.state().pipe(\n      Rx.tap((state: FacadeState) => {\n        emissionCount++;\n        const shielded = isProgressStrictlyComplete(state.shielded.state.progress);\n        const unshielded = isProgressStrictlyComplete(state.unshielded.progress);\n        const dust = isProgressStrictlyComplete(state.dust.state.progress);\n        logger.info(\n          `Wallet sync [${emissionCount}]: shielded=${formatProgress(state.shielded.state.progress)}, ` +\n            `unshielded=${formatProgress(state.unshielded.progress)}, dust=${formatProgress(state.dust.state.progress)}`,\n        );\n        if (!shielded) {\n          logger.debug(`  shielded.progress: ${JSON.stringify(state.shielded.state.progress)}`);\n        }\n        if (!unshielded) {\n          logger.debug(`  unshielded.progress: ${JSON.stringify(state.unshielded.progress)}`);\n        }\n  // …"
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/hello-world/src/wallet.ts#L67-L73",
+          "excerpt": "export async function syncWallet(logger: Logger, wallet: WalletFacade, timeout = 300_000): Promise<FacadeState> {\n  logger.info('Syncing wallet...');\n  const state = await testkitSyncWallet(wallet, 0, timeout);\n  logger.info('Wallet synced.');\n  await saveWalletState(logger, wallet);\n  return state;\n}"
         },
         {
           "path": "examples/hello-world/ui/src/lib/errors.ts",
@@ -91,7 +444,7 @@
             48,
             53
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/hello-world/ui/src/lib/errors.ts#L48-L53",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/hello-world/ui/src/lib/errors.ts#L48-L53",
           "excerpt": "function withHint(message: string, tag: unknown): string {\n  if (tag === \"Wallet.InsufficientFunds\" && /dust/i.test(message)) {\n    return `${message}. The wallet needs DUST to pay fees: hold NIGHT registered for DUST generation, then wait for DUST to accrue.`;\n  }\n  return message;\n}"
         }
       ]
@@ -108,7 +461,7 @@
         "uint",
         "off-chain computation"
       ],
-      "url": "https://github.com/midnightntwrk/midnight-examples/tree/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/calculator",
+      "url": "https://github.com/midnightntwrk/midnight-examples/tree/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/calculator",
       "files": [
         {
           "path": "examples/calculator/contract/calculator.compact",
@@ -118,7 +471,7 @@
             22,
             22
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/calculator/contract/calculator.compact#L22-L22",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/calculator/contract/calculator.compact#L22-L22",
           "excerpt": "witness divMod(num1: Uint<16>, num2: Uint<16>): [Uint<16>, Uint<16>];"
         },
         {
@@ -129,7 +482,7 @@
             25,
             33
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/calculator/contract/calculator.compact#L25-L33",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/calculator/contract/calculator.compact#L25-L33",
           "excerpt": "export circuit divide(num1: Uint<16>, num2: Uint<16>): [] {\n    const [quo, rem] = divMod(num1, num2);\n    assert(rem < num2 && quo * num2 + rem == num1, \"incorrect division\");\n    // `quo` comes from the divMod witness; storing it in the public ledger is a\n    // disclosure that must be declared explicitly. Writing state (rather than\n    // just returning) makes this a proof-generating, on-chain circuit like the\n    // other operations.\n    result = disclose(quo);\n}"
         }
       ]
@@ -147,18 +500,18 @@
         "hashed set membership",
         "private guest list"
       ],
-      "url": "https://github.com/midnightntwrk/midnight-examples/tree/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/private-party",
+      "url": "https://github.com/midnightntwrk/midnight-examples/tree/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/private-party",
       "files": [
         {
           "path": "examples/private-party/src/sponsor.ts",
           "symbol": "export async function sponsorAndSubmit",
           "about": "Having a sponsor wallet pay the DUST fee and submit",
           "lines": [
-            96,
-            115
+            97,
+            116
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/private-party/src/sponsor.ts#L96-L115",
-          "excerpt": "export async function sponsorAndSubmit(\n  logger: Logger,\n  sponsor: MidnightWalletProvider,\n  userTxHex: string,\n): Promise<string> {\n  // The marker triple matches `FinalizedTransaction = Transaction<SignatureEnabled, Proof, Binding>`.\n  const userTx = Transaction.deserialize<SignatureEnabled, Proof, Binding>(\n    'signature',\n    'proof',\n    'binding',\n    fromHex(userTxHex),\n  );\n\n  logger.info('[sponsor] attaching DUST fee offer...');\n  const sponsored = await sponsor.addDustFeesAndFinalize(userTx);\n\n  const txId = await sponsor.wallet.submitTransaction(sponsored);\n  logger.info(`[sponsor] submitted sponsored tx: ${txId}`);\n  return txId;\n}"
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/private-party/src/sponsor.ts#L97-L116",
+          "excerpt": "export async function sponsorAndSubmit(\n  logger: Logger,\n  sponsor: MidnightWalletProvider,\n  userTxHex: string,\n): Promise<string> {\n  // The marker triple matches `FinalizedTransaction = Transaction<SignatureEnabled, Proof, Binding>`.\n  const userTx = Transaction.deserialize<SignatureEnabled, Proof, Binding>(\n    'signature',\n    'proof',\n    'binding',\n    fromHex(userTxHex),\n  );\n\n  logger.info('[sponsor] attaching DUST fee offer...');\n  const sponsored = await sponsor.addDustFeesAndFinalize(userTx);\n\n  const txId = await sponsor.submitTx(sponsored);\n  logger.info(`[sponsor] submitted sponsored tx: ${txId}`);\n  return txId;\n}"
         },
         {
           "path": "examples/private-party/src/sponsor.ts",
@@ -166,10 +519,10 @@
           "about": "Building a call that another wallet will pay for",
           "lines": [
             65,
-            88
+            89
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/private-party/src/sponsor.ts#L65-L88",
-          "excerpt": "export async function prepareSponsoredCall<\n  C extends Contract.Any,\n  PCK extends Contract.ProvableCircuitId<C>,\n>(\n  logger: Logger,\n  user: MidnightWalletProvider,\n  providers: PartyProviders,\n  call: CallTxOptionsWithPrivateStateId<C, PCK>,\n): Promise<string> {\n  logger.info(`[user] building ${String(call.circuitId)}()...`);\n  const unsubmitted = await createUnprovenCallTx<C, PCK>(providers, call);\n\n  // Proving happens here, on the user's side — which is why the secret that\n  // authenticates the caller never reaches the sponsor.\n  logger.info(`[user] proving ${String(call.circuitId)}()...`);\n  const unboundTx = await providers.proofProvider.proveTx(unsubmitted.private.unprovenTx);\n\n  // Where a circuit moves user value — checkIn's entry fee — that value is paid\n  // from the user's own balance, here.\n  logger.info('[user] balancing own value side (no DUST) and binding...');\n  const finalized = await user.balanceOwnValueAndFinalize(unboundTx);\n\n  return toHex(finalized.serialize());\n}"
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/private-party/src/sponsor.ts#L65-L89",
+          "excerpt": "export async function prepareSponsoredCall<\n  C extends Contract.Any,\n  PCK extends Contract.ProvableCircuitId<C>,\n>(\n  logger: Logger,\n  user: MidnightWalletProvider,\n  providers: PartyProviders,\n  call: Ledger9CallTxOptionsWithPrivateStateId<C, PCK>,\n): Promise<string> {\n  logger.info(`[user] building ${String(call.circuitId)}()...`);\n  const unsubmitted = await createUnprovenCallTx<C, PCK>(providers, call);\n\n  // Proving happens here, on the user's side — which is why the secret that\n  // authenticates the caller never reaches the sponsor.\n  logger.info(`[user] proving ${String(call.circuitId)}()...`);\n  // Midnight.js 5 proof providers take and return era-tagged transaction handles.\n  const unboundTx = await providers.proofProvider.proveTx(unsubmitted.private.unprovenTx);\n\n  // Where a circuit moves user value — checkIn's entry fee — that value is paid\n  // from the user's own balance, here.\n  logger.info('[user] balancing own value side (no DUST) and binding...');\n  const finalized = await user.balanceOwnValueAndFinalize(unboundTx);\n\n  return toHex(finalized.serialize());\n  // …"
         },
         {
           "path": "examples/private-party/contract/private-party.compact",
@@ -179,7 +532,7 @@
             32,
             50
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/private-party/contract/private-party.compact#L32-L50",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/private-party/contract/private-party.compact#L32-L50",
           "excerpt": "export circuit rsvp(_address: UserAddress, _secret: Bytes<32>): [] {\n    const pubKey = getDappPublicKey(_secret);\n    // caller authentication check\n    assert(pubKey != organizer, \"Organizer cannot RSVP to the party\");\n\n    // state verification check\n    assert(partyState == PartyState.NOT_STARTED, \"The party has already started\");\n    assert(hashedPartyGoers.size() < maxListSize, \"The list is full\");\n\n    // party goer address remains private\n    const commitHash = commitAddress(_secret, _address.bytes);\n    assert(!hashedPartyGoers.member(commitHash), \"You are already on the list\");\n    hashedPartyGoers.insert(commitHash);// doesn't need disclose bc persistentCommit\n\n    if (hashedPartyGoers.size() == maxListSize) {\n        // @TODO -- In the future, emit an event to the organizer here (MIP-0002)\n        partyState = PartyState.READY;\n    }\n}"
         },
         {
@@ -190,7 +543,7 @@
             64,
             82
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/private-party/contract/private-party.compact#L64-L82",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/private-party/contract/private-party.compact#L64-L82",
           "excerpt": "export circuit checkIn(address: UserAddress, _secret: Bytes<32>): [] {\n    // state verification checks\n    assert(partyState == PartyState.STARTED, \"The party has not been started. Call the party police\");\n    assert(checkedInParty.size() < hashedPartyGoers.size(), \"All guests have already checked in\");\n\n    const commitHash = commitAddress(_secret, address.bytes);\n\n    // caller verification checks\n    assert(hashedPartyGoers.member(commitHash), \"You are not on the list\");\n    assert(!checkedInParty.member(disclose(address)), \"You have already checked in\");\n   \n    // take in unshielded payment, party goers are now public\n    receiveUnshielded(nativeToken(), entryFee as Uint<128>);\n    checkedInParty.insert(disclose(address));\n\n    if(checkedInParty.size() == maxListSize) {\n        partyState = PartyState.DOORS_CLOSED;\n    }\n}"
         },
         {
@@ -198,11 +551,11 @@
           "symbol": "circuit commitAddress",
           "about": "Committing to an address with a secret",
           "lines": [
-            113,
-            115
+            115,
+            117
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/private-party/contract/private-party.compact#L113-L115",
-          "excerpt": "circuit commitAddress(_address: Bytes<32>, _secret: Bytes<32>): Bytes<32> {\n    return persistentCommit<Bytes<32>>(_address, _secret);\n}"
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/private-party/contract/private-party.compact#L115-L117",
+          "excerpt": "circuit commitAddress(_secret: Bytes<32>, _address: Bytes<32>): Bytes<32> {\n    return persistentCommit<Bytes<32>>(_address, _secret);\n}"
         }
       ]
     },
@@ -220,7 +573,7 @@
         "shielded mint",
         "send to user"
       ],
-      "url": "https://github.com/midnightntwrk/midnight-examples/tree/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/token-transfers",
+      "url": "https://github.com/midnightntwrk/midnight-examples/tree/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/token-transfers",
       "files": [
         {
           "path": "examples/token-transfers/contract/token-transfers.compact",
@@ -230,7 +583,7 @@
             6,
             16
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/token-transfers/contract/token-transfers.compact#L6-L16",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/token-transfers/contract/token-transfers.compact#L6-L16",
           "excerpt": "export circuit mintAndReceive(amount: Uint<64>): Bytes<32> {\n    const domain = pad(32, \"simple:receive\");\n\n    const color = mintUnshieldedToken(\n        disclose(domain),\n        disclose(amount),\n        left<ContractAddress, UserAddress>(kernel.self())\n    );\n\n    return color;\n}"
         },
         {
@@ -241,7 +594,7 @@
             19,
             28
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/token-transfers/contract/token-transfers.compact#L19-L28",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/token-transfers/contract/token-transfers.compact#L19-L28",
           "excerpt": "export circuit sendToUser(amount: Uint<64>, user_addr: UserAddress): [] {\n    const domain = pad(32, \"simple:receive\");\n    const color = tokenType(disclose(domain), kernel.self());\n\n    sendUnshielded(\n        color,\n        disclose(amount) as Uint<128>,\n        right<ContractAddress, UserAddress>(disclose(user_addr))\n    );\n}"
         },
         {
@@ -252,7 +605,7 @@
             36,
             38
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/token-transfers/contract/token-transfers.compact#L36-L38",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/token-transfers/contract/token-transfers.compact#L36-L38",
           "excerpt": "export circuit receiveNightTokens(amount: Uint<128>): [] {\n   receiveUnshielded(default<Bytes<32>>, disclose(amount));\n}"
         },
         {
@@ -263,7 +616,7 @@
             40,
             46
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/token-transfers/contract/token-transfers.compact#L40-L46",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/token-transfers/contract/token-transfers.compact#L40-L46",
           "excerpt": "export circuit sendNightTokensToUser(amount: Uint<64>, user_addr: UserAddress): [] {\n    sendUnshielded(\n        default<Bytes<32>>,\n        disclose(amount) as Uint<128>,\n        right<ContractAddress, UserAddress>(disclose(user_addr))\n    );\n}"
         },
         {
@@ -274,7 +627,7 @@
             48,
             50
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/token-transfers/contract/token-transfers.compact#L48-L50",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/token-transfers/contract/token-transfers.compact#L48-L50",
           "excerpt": "export circuit receiveShieldedTokens(coin: ShieldedCoinInfo): [] {\n   receiveShielded(disclose(coin));\n}"
         },
         {
@@ -285,7 +638,7 @@
             52,
             54
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/token-transfers/contract/token-transfers.compact#L52-L54",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/token-transfers/contract/token-transfers.compact#L52-L54",
           "excerpt": "export circuit sendShieldedToUser(input: QualifiedShieldedCoinInfo, publicKey: ZswapCoinPublicKey, value: Uint<128>): ShieldedSendResult {\n  return sendShielded(disclose(input), left<ZswapCoinPublicKey, ContractAddress>(disclose(publicKey)), disclose(value));\n}"
         },
         {
@@ -296,7 +649,7 @@
             60,
             64
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/token-transfers/contract/token-transfers.compact#L60-L64",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/token-transfers/contract/token-transfers.compact#L60-L64",
           "excerpt": "export circuit mintAndSendShielded(domainSep: Bytes<32>, mintValue: Uint<64>, mintNonce: Bytes<32>, publicKey: ZswapCoinPublicKey, sendValue: Uint<128>): ShieldedSendResult {\n  const coin = mintShieldedToken(disclose(domainSep), disclose(mintValue), disclose(mintNonce), right<ZswapCoinPublicKey, ContractAddress>(kernel.self()));\n  const qualified = QualifiedShieldedCoinInfo { nonce: coin.nonce, color: coin.color, value: coin.value, mt_index: 0 as Uint<64> };\n  return sendShielded(qualified, left<ZswapCoinPublicKey, ContractAddress>(disclose(publicKey)), disclose(sendValue));\n}"
         }
       ]
@@ -314,7 +667,7 @@
         "nft",
         "reserve price"
       ],
-      "url": "https://github.com/midnightntwrk/midnight-examples/tree/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/silent-auction",
+      "url": "https://github.com/midnightntwrk/midnight-examples/tree/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/silent-auction",
       "files": [
         {
           "path": "examples/silent-auction/contract/silent-auction.compact",
@@ -324,7 +677,7 @@
             157,
             159
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/silent-auction/contract/silent-auction.compact#L157-L159",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/silent-auction/contract/silent-auction.compact#L157-L159",
           "excerpt": "circuit commitPrice(_minPrice: Uint<16>, _salt: Bytes<32>): Bytes<32> {\n    return persistentCommit<Uint<16>>(_minPrice, _salt);\n}"
         },
         {
@@ -335,7 +688,7 @@
             105,
             128
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/silent-auction/contract/silent-auction.compact#L105-L128",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/silent-auction/contract/silent-auction.compact#L105-L128",
           "excerpt": "export circuit revealWin(minPrice: Uint<16>): [] {\n    const _sk = localSk();\n    const pubKey = getDappPubKey(_sk);\n    assert(auctionOrganizer == disclose(pubKey), \"You are not the auction organizer\");\n    assert(auctionState == AuctionState.CLOSED, \"The auction is still open\");\n    \n    const _salt = localSalt();\n    const hashedPrice = commitPrice(minPrice, _salt);\n    assert(hashedPrice == hiddenPrice, \"Attempt to change min price detected, shame on you.\");\n    \n    auctionState = AuctionState.CLOSED;\n\n    // all votes are in, public price can be revealed\n    publicPrice = disclose(minPrice);\n\n    // send deposit back to organizer\n    if(highestBid < publicPrice){\n        sendUnshielded(\n            nativeToken(), \n            depositAmount as Uint<128>, \n            right<ContractAddress, UserAddress>(organizerAddress)\n        );\n    }\n}"
         },
         {
@@ -346,7 +699,7 @@
             70,
             93
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/silent-auction/contract/silent-auction.compact#L70-L93",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/silent-auction/contract/silent-auction.compact#L70-L93",
           "excerpt": "export circuit bid(bidAmount: Uint<16>): [] {\n    assert(bidders.size() < maxBids, \"Sorry, bids are full\");\n    assert(auctionState == AuctionState.OPEN, \"The auction has ended\");\n    \n    const _sk = localSk();\n    const key = getDappPubKey(_sk);\n    assert(auctionOrganizer != key, \"The auction organizer cannot bid\");\n    const pubKey = disclose(key);\n    const publicBid = disclose(bidAmount);\n\n    if(bidders.member(pubKey)){\n        assert(bidders.lookup(pubKey) < publicBid, \"New bid lower than your previous bid\");\n    }\n    bidders.insert(pubKey, publicBid);\n\n    // update highest bid if this bid is higher\n    if(publicBid > highestBid){\n        highestBid = publicBid;\n    }\n    // if maxBids has been reached, change state to closed\n    if(bidders.size() == maxBids){\n        auctionState = AuctionState.CLOSED;\n    }\n}"
         }
       ]
@@ -363,7 +716,7 @@
         "counter",
         "secret ballot"
       ],
-      "url": "https://github.com/midnightntwrk/midnight-examples/tree/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/election",
+      "url": "https://github.com/midnightntwrk/midnight-examples/tree/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/election",
       "files": [
         {
           "path": "examples/election/contract/election.compact",
@@ -373,7 +726,7 @@
             63,
             76
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/election/contract/election.compact#L63-L76",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/election/contract/election.compact#L63-L76",
           "excerpt": "export circuit commitVote(): [] {\n    assert(votingState == VotingState.OPEN, \"Voting has not opened yet\");\n    const _sk = localSk();\n    const pubKey = getDappPubKey(_sk);\n    assert(registeredVoters.member(pubKey), \"You are not registered to vote.\");\n    assert(!hashedVoteMap.member(pubKey), \"Attempt to double vote\");\n    const _currentVote = localGetVote();\n    assert(_currentVote == VoteChoice.BAD || _currentVote == VoteChoice.WORSE, \"Please provide a valid vote\");\n\n\n    const hash = commitWithSk(_currentVote as Field as Bytes<32>, _sk);\n    hashedVoteMap.insert(pubKey, hash);\n    totalVoteCount.increment(1);\n}"
         },
         {
@@ -384,7 +737,7 @@
             79,
             104
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/election/contract/election.compact#L79-L104",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/election/contract/election.compact#L79-L104",
           "excerpt": "export circuit revealVote(): [] {\n    assert(votingState == VotingState.CLOSED, \"Voting is still open\");\n\n    const _sk = localSk();\n    const pubKey = getDappPubKey(_sk);\n    // we want to check that they have already voted..\n    assert(hashedVoteMap.member(pubKey), \"You have not voted yet\");\n    assert(registeredVoters.member(pubKey), \"You are not a registered voter\");\n    assert(!revealedVoters.member(pubKey), \"You have already revealed your vote\");\n\n    const vote = localGetVote();\n    assert(vote == VoteChoice.BAD || vote == VoteChoice.WORSE, \"Please supply a valid vote\");\n\n    // here is the money\n    const hashedVote = commitWithSk(vote as Field as Bytes<32>, _sk);\n    assert(hashedVoteMap.lookup(pubKey) == hashedVote, \"Attempt to change the vote!\");\n\n    // mark this voter as revealed before counting, so the tally can't be inflated\n    revealedVoters.insert(pubKey);\n\n    if(disclose(vote) == VoteChoice.BAD){\n        candidate0VoteCounter.increment(1);\n    } else if (disclose(vote) == VoteChoice.WORSE) {\n        candidate1VoteCounter.increment(1);\n  // …"
         },
         {
@@ -395,7 +748,7 @@
             132,
             134
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/election/contract/election.compact#L132-L134",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/election/contract/election.compact#L132-L134",
           "excerpt": "circuit commitWithSk(_vote: Bytes<32>, _sk: Bytes<32>) : Bytes<32> {\n    return disclose(persistentHash<Vector<2, Bytes<32>>>([_vote, _sk]));\n}"
         }
       ]
@@ -412,7 +765,7 @@
         "ownership",
         "public key from secret"
       ],
-      "url": "https://github.com/midnightntwrk/midnight-examples/tree/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/secret-message",
+      "url": "https://github.com/midnightntwrk/midnight-examples/tree/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/secret-message",
       "files": [
         {
           "path": "examples/secret-message/contract/secret-message.compact",
@@ -422,7 +775,7 @@
             50,
             52
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/secret-message/contract/secret-message.compact#L50-L52",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/secret-message/contract/secret-message.compact#L50-L52",
           "excerpt": "export circuit hashMessageWithSeparator(_message: Bytes<32>): Bytes<32> {\n  return persistentHash<Vector<2, Bytes<32>>>([pad(32, \"secret-message:msg:\"), _message]);\n}"
         },
         {
@@ -433,7 +786,7 @@
             78,
             84
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/secret-message/contract/secret-message.compact#L78-L84",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/secret-message/contract/secret-message.compact#L78-L84",
           "excerpt": "export circuit publishMessageHashWithOwner(_ownerSecretKey: Bytes<32>): [] {\n  const secret = secretMessage();\n  const pubKey = getDappPubKey(_ownerSecretKey);\n  assert(messageOwner == default<Bytes<32>> || messageOwner == disclose(pubKey), \"You are not the owner of this message\");\n  messageOwner = disclose(pubKey);\n  messageHash = disclose(hashMessageWithDynamicSeparator(secret));\n}"
         },
         {
@@ -444,7 +797,7 @@
             86,
             88
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/secret-message/contract/secret-message.compact#L86-L88",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/secret-message/contract/secret-message.compact#L86-L88",
           "excerpt": "export circuit getDappPubKey(_ownerSecretKey: Bytes<32>): Bytes<32> {\n  return persistentHash<Vector<2, Bytes<32>>>([pad(32, \"secret-message:pk:\"), _ownerSecretKey]);\n}"
         }
       ]
@@ -463,7 +816,7 @@
         "selective disclosure",
         "admin role"
       ],
-      "url": "https://github.com/midnightntwrk/midnight-examples/tree/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/zk-loan",
+      "url": "https://github.com/midnightntwrk/midnight-examples/tree/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/zk-loan",
       "files": [
         {
           "path": "examples/zk-loan/contract/schnorr.compact",
@@ -471,20 +824,20 @@
           "about": "Verifying a Schnorr signature in a circuit",
           "lines": [
             58,
-            98
+            99
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/zk-loan/contract/schnorr.compact#L58-L98",
-          "excerpt": "  export circuit schnorrVerify<#n>(\n                   msg: Vector<n, Field>,\n                   signature: SchnorrSignature,\n                   pk: JubjubPoint\n                   ): [] {\n    const {announcement, response} = signature;\n    const cFull: Field =\n            transientHash<SchnorrHashInput<n>>(\n              SchnorrHashInput<n> { ann_x: jubjubPointX(announcement),\n                                    ann_y: jubjubPointY(announcement),\n                                    pk_x: jubjubPointX(pk),\n                                    pk_y: jubjubPointY(pk),\n                                    msg: msg }\n              );\n    // Truncate the challenge to 248 bits via witness-assisted division by 2^248.\n    // The witness provides (quotient, remainder) such that cFull == q * 2^248 + r\n    // where r : Uint<248>, guaranteeing r < 2^248 < Jubjub subgroup order.\n    // This is needed because ecMul requires scalars < JUBJUB_ORDER (~2^252.4),\n    // but transientHash returns values in BLS12-381's scalar field (~2^255).\n    const TWO_248: Field =\n            452312848583266388373324160190187140051835877600158453279131187530910662656 as Field;\n    const [q, cTruncated] = getSchnorrReduction(cFull);\n    // Bound the quotient so the reduction equation holds over the integers, not\n    // modulo the field prime. Without this, q : Field is unconstrained and a\n  // …"
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/zk-loan/contract/schnorr.compact#L58-L99",
+          "excerpt": "  export circuit schnorrVerify<#n>(\n                   msg: Vector<n, Field>,\n                   signature: SchnorrSignature,\n                   pk: JubjubPoint\n                   ): [] {\n    const {announcement, response} = signature;\n    const cFull: Field =\n            transientHash<SchnorrHashInput<n>>(\n              SchnorrHashInput<n> { ann_x: jubjubPointX(announcement),\n                                    ann_y: jubjubPointY(announcement),\n                                    pk_x: jubjubPointX(pk),\n                                    pk_y: jubjubPointY(pk),\n                                    msg: msg }\n              );\n    // Truncate the challenge to 248 bits via witness-assisted division by 2^248.\n    // The witness provides (quotient, remainder) such that cFull == q * 2^248 + r\n    // where r : Uint<248>, guaranteeing r < 2^248 < Jubjub subgroup order.\n    // transientHash returns values in BLS12-381's scalar field (~2^255); the\n    // off-chain signer truncates the same way (c % 2^248), so both sides agree.\n    const TWO_248: Field =\n            452312848583266388373324160190187140051835877600158453279131187530910662656 as Field;\n    const [q, cTruncated] = getSchnorrReduction(cFull);\n    // Bound the quotient so the reduction equation holds over the integers, not\n    // modulo the field prime. Without this, q : Field is unconstrained and a\n  // …"
         },
         {
           "path": "examples/zk-loan/contract/zk-loan.compact",
           "symbol": "circuit evaluateApplicant",
           "about": "Checking an attested score and disclosing only the decision",
           "lines": [
-            170,
-            207
+            171,
+            208
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/zk-loan/contract/zk-loan.compact#L170-L207",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/zk-loan/contract/zk-loan.compact#L171-L208",
           "excerpt": "circuit evaluateApplicant(userPubKeyHash: Field): [Uint<16>, LoanStatus] {\n    const [profile, signature, providerId] = getAttestedScoringWitness();\n\n    // The provider must be registered on-chain by the admin. Disclosing the id\n    // reveals WHICH provider attested, but nothing about the profile.\n    assert(providers.member(disclose(providerId)), \"Attestation provider not registered\");\n    const providerPk = providers.lookup(disclose(providerId));\n\n    // Signed message: [creditScore, monthlyIncome, monthsAsCustomer, userPubKeyHash].\n    // Must match, element for element, what the provider signed off-chain.\n    const msg: Vector<4, Field> = [\n        profile.creditScore as Field,\n        profile.monthlyIncome as Field,\n        profile.monthsAsCustomer as Field,\n        userPubKeyHash\n    ];\n\n    // Fails the whole transaction if the signature is not valid for this\n    // provider over this exact message — so a tampered profile cannot pass.\n    Schnorr_schnorrVerify<4>(msg, signature, providerPk);\n\n    // Tier 1: best applicants, max 10,000\n    if (profile.creditScore >= 700 && profile.monthlyIncome >= 2000 && profile.monthsAsCustomer >= 24) {\n        return [10000, LoanStatus.Approved];\n  // …"
         },
         {
@@ -492,10 +845,10 @@
           "symbol": "export circuit requestLoan",
           "about": "The entry point that uses the attestation",
           "lines": [
-            125,
-            142
+            126,
+            143
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/zk-loan/contract/zk-loan.compact#L125-L142",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/zk-loan/contract/zk-loan.compact#L126-L143",
           "excerpt": "export circuit requestLoan(amountRequested: Uint<16>, secretPin: Uint<16>): [] {\n    assert(amountRequested > 0, \"Loan amount must be greater than zero\");\n    const requesterPubKey = deriveUserPublicKey(getUserSecret(), secretPin);\n    // The derived key is the public loan-map key, so it must be disclosed. The\n    // PIN and secret stay private: only their hash is revealed.\n    const disclosedRequesterPubKey = disclose(requesterPubKey);\n    assert(!blacklist.member(disclosedRequesterPubKey), \"Requester is blacklisted\");\n    assert(!onGoingPinMigration.member(disclosedRequesterPubKey as Bytes<32>),\n           \"PIN migration is in progress for this user\");\n    // The attestation is signed over this hash, binding it to ONE identity:\n    // a signature issued to someone else fails verification (anti-replay).\n    const userPubKeyHash = transientHash<Bytes<32>>(disclosedRequesterPubKey as Bytes<32>);\n    const [topTierAmount, status] = evaluateApplicant(userPubKeyHash);\n    // Only the tier outcome is disclosed — never the score/income/tenure.\n    const disclosedTopTierAmount = disclose(topTierAmount);\n    const disclosedStatus = disclose(status);\n    createLoan(disclosedRequesterPubKey as Bytes<32>, amountRequested, disclosedTopTierAmount, disclosedStatus);\n}"
         },
         {
@@ -503,10 +856,10 @@
           "symbol": "export circuit rotateAdmin",
           "about": "Rotating an admin key",
           "lines": [
-            269,
-            272
+            270,
+            273
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/zk-loan/contract/zk-loan.compact#L269-L272",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/zk-loan/contract/zk-loan.compact#L270-L273",
           "excerpt": "export circuit rotateAdmin(newAdmin: AdminPublicKey): [] {\n    assert(contractAdmin == deriveAdminPublicKey(getUserSecret()), \"Only admin can rotate admin role\");\n    contractAdmin = disclose(newAdmin);\n}"
         }
       ]
@@ -525,7 +878,7 @@
         "mip-0011",
         "payout"
       ],
-      "url": "https://github.com/midnightntwrk/midnight-examples/tree/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/shielded-chips",
+      "url": "https://github.com/midnightntwrk/midnight-examples/tree/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/shielded-chips",
       "files": [
         {
           "path": "examples/shielded-chips/contract/chips.compact",
@@ -535,7 +888,7 @@
             235,
             252
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/shielded-chips/contract/chips.compact#L235-L252",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/shielded-chips/contract/chips.compact#L235-L252",
           "excerpt": "export circuit mint(\n    recipient: ZswapCoinPublicKey,\n    amount: Uint<64>,\n    nonce: Bytes<32>\n): ShieldedCoinInfo {\n    requireHouse();\n    assert(disclose(amount) > 0, \"Mint amount must be positive\");\n\n    const coin = _mint(\n        left<ZswapCoinPublicKey, ContractAddress>(recipient),\n        amount,\n        nonce\n    );\n    // MIP-0011: a consumer composing the supply extension MUST pair every\n    // successful mint with the minted counter.\n    _addMinted(disclose(amount) as Uint<128>);\n    return coin;\n}"
         },
         {
@@ -543,10 +896,10 @@
           "symbol": "export circuit burn",
           "about": "Burning a shielded token",
           "lines": [
-            267,
-            276
+            268,
+            277
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/shielded-chips/contract/chips.compact#L267-L276",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/shielded-chips/contract/chips.compact#L268-L277",
           "excerpt": "export circuit burn(coin: ShieldedCoinInfo, amount: Uint<128>): Maybe<ShieldedCoinInfo> {\n    requireHouse();\n    const refund = _burn(\n        coin,\n        amount,\n        left<ZswapCoinPublicKey, ContractAddress>(ownPublicKey())\n    );\n    _addBurned(disclose(amount));\n    return refund;\n}"
         },
         {
@@ -554,10 +907,10 @@
           "symbol": "export circuit mintToTreasury",
           "about": "Minting into a contract-held treasury",
           "lines": [
-            282,
-            299
+            283,
+            300
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/shielded-chips/contract/chips.compact#L282-L299",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/shielded-chips/contract/chips.compact#L283-L300",
           "excerpt": "export circuit mintToTreasury(amount: Uint<64>, nonce: Bytes<32>): [] {\n    requireHouse();\n    assert(disclose(amount) > 0, \"Mint amount must be positive\");\n\n    const coin = _mint(\n        right<ZswapCoinPublicKey, ContractAddress>(kernel.self()),\n        amount,\n        nonce\n    );\n    // insertCoin turns the fresh ShieldedCoinInfo into a spendable\n    // QualifiedShieldedCoinInfo, filling in the mt_index the ledger assigns.\n    _treasury.insertCoin(\n        disclose(coin.nonce),\n        disclose(coin),\n        right<ZswapCoinPublicKey, ContractAddress>(kernel.self())\n    );\n    _addMinted(disclose(amount) as Uint<128>);\n}"
         },
         {
@@ -565,21 +918,21 @@
           "symbol": "export circuit betColor",
           "about": "Taking a shielded coin into escrow",
           "lines": [
-            157,
-            183
+            152,
+            180
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/shielded-chips/contract/roulette.compact#L157-L183",
-          "excerpt": "export circuit betColor(coin: ShieldedCoinInfo, colorBet: Color): [] {\n    assert(betState == BetState.OPEN, \"Not ready to accept bets yet\");\n    assert(colorBet == Color.RED || colorBet == Color.BLACK, \"Only RED or BLACK bets are allowed\");\n\n    const _sk = localSecretKey();\n    const player = getDappPublicKey(_sk);\n    assert(player != theHouse, \"theHouse cannot make bets\");\n\n    const pubPlayer = disclose(player);\n    assert(!betCommits.member(pubPlayer), \"Already placed a bet this round\");\n    assert(disclose(coin.color) == chipColor, \"Bet must be made with roulette chips\");\n\n    receiveShielded(disclose(coin));\n\n    // The coin is now in the contract's custody, but nothing that identifies\n    // it reaches the chain — only a commitment the player can reopen later.\n    // Note there is no insertCoin call here: that is the fix.\n    const q = QualifiedShieldedCoinInfo {\n        nonce: coin.nonce,\n        color: coin.color,\n        value: coin.value,\n        mt_index: 0 as Uint<64>\n    };\n    betCommits.insert(pubPlayer, disclose(escrowCommit(q, escrowSalt())));\n  // …"
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/shielded-chips/contract/roulette.compact#L152-L180",
+          "excerpt": "export circuit betColor(coin: ShieldedCoinInfo, colorBet: Color): [] {\n    assert(betState == BetState.OPEN, \"Not ready to accept bets yet\");\n    assert(colorBet == Color.RED || colorBet == Color.BLACK, \"Only RED or BLACK bets are allowed\");\n\n    const _sk = localSecretKey();\n    const player = getDappPublicKey(_sk);\n    assert(player != theHouse, \"theHouse cannot make bets\");\n\n    const pubPlayer = disclose(player);\n    assert(!betCommits.member(pubPlayer), \"Already placed a bet this round\");\n    assert(disclose(coin.color) == chipColor, \"Bet must be made with roulette chips\");\n\n    receiveShielded(disclose(coin));\n\n    // The coin is now in the contract's custody, but nothing that identifies\n    // it reaches the chain — only a commitment the player can reopen later.\n    // Note there is no insertCoin call here. The payout in claimWinnings is\n    // derived from this coin's nonce, so publishing it, fresh or not, would\n    // let anyone confirm which wallet was paid.\n    const q = QualifiedShieldedCoinInfo {\n        nonce: coin.nonce,\n        color: coin.color,\n        value: coin.value,\n        mt_index: 0 as Uint<64>\n  // …"
         },
         {
           "path": "examples/shielded-chips/contract/roulette.compact",
           "symbol": "export circuit claimWinnings",
           "about": "Paying out shielded coins from the contract",
           "lines": [
-            203,
-            240
+            200,
+            237
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/shielded-chips/contract/roulette.compact#L203-L240",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/shielded-chips/contract/roulette.compact#L200-L237",
           "excerpt": "export circuit claimWinnings(matchKey: Bytes<32>): [] {\n    assert(betState == BetState.CLOSED, \"Winning number has not been revealed\");\n\n    const _sk = localSecretKey();\n    const player = disclose(getDappPublicKey(_sk));\n\n    assert(bets.member(player), \"You did not place a bet\");\n    assert(bets.lookup(player) == winningColor, \"You did not place a winning bet\");\n    assert(!paidWinners.member(player), \"Already claimed\");\n\n    // Reopen the escrow commitment from private state.\n    const coin = escrowedCoin();\n    assert(betCommits.lookup(player) == disclose(escrowCommit(coin, escrowSalt())),\n           \"Escrowed coin does not match your commitment\");\n\n    assert(houseCoins.member(disclose(matchKey)), \"Match coin not available\");\n    const matchCoin = houseCoins.lookup(disclose(matchKey));\n    assert(matchCoin.value == betValues.lookup(player) as Uint<128>,\n           \"Match coin must equal your bet value\");\n\n    const merged = mergeCoin(disclose(coin), matchCoin);\n    const mergedQ = QualifiedShieldedCoinInfo {\n        nonce: merged.nonce,\n        color: merged.color,\n  // …"
         }
       ]
@@ -596,7 +949,7 @@
         "reveal",
         "minimum"
       ],
-      "url": "https://github.com/midnightntwrk/midnight-examples/tree/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/private-bid",
+      "url": "https://github.com/midnightntwrk/midnight-examples/tree/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/private-bid",
       "files": [
         {
           "path": "examples/private-bid/contract/private-bid.compact",
@@ -606,7 +959,7 @@
             76,
             106
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/private-bid/contract/private-bid.compact#L76-L106",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/private-bid/contract/private-bid.compact#L76-L106",
           "excerpt": "export circuit placeBid(amount: Uint<64>): [] {\n  const secretKey = localSecretKey();\n\n  // The comparison runs inside the proof. The network learns only that it\n  // held, i.e. that amount >= minimumBid. A failing assert aborts the call on\n  // the bidder's machine, before any proof is generated or anything is sent.\n  assert(amount >= minimumBid, \"Bid is below the minimum\");\n\n  // The bidder key is used as a ledger Map key, so it must be disclosed. We\n  // disclose the hash, never the secret key. disclose() does not publish\n  // anything by itself; it records that this value is allowed to go public.\n  const bidder = disclose(derive(pad(32, \"private-bid:key:\"), secretKey));\n  assert(!bidCommitments.member(bidder), \"This bidder already placed a bid\");\n\n  // Store a commitment, not the amount. persistentCommit(value, rand) hashes\n  // the value together with a hiding randomness, and the compiler treats its\n  // result as safe to put on the ledger without disclose().\n  //\n  // Why not persistentHash(amount)? Bid amounts are guessable: anyone could\n  // hash 1, 2, 3, ... until one matches. The salt makes that impossible\n  // without the secret key.\n  //\n  // The salt is deterministic (derived from the secret key), which is only safe\n  // because each bidder commits exactly once (the member() check above): the\n  // …"
         },
         {
@@ -617,7 +970,7 @@
             108,
             125
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/private-bid/contract/private-bid.compact#L108-L125",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/private-bid/contract/private-bid.compact#L108-L125",
           "excerpt": "export circuit revealBid(amount: Uint<64>): [] {\n  const secretKey = localSecretKey();\n  // Recomputes the same bidder key and salt as placeBid. Only the holder of the\n  // secret key can do so, which is what authorizes the reveal.\n  const bidder = disclose(derive(pad(32, \"private-bid:key:\"), secretKey));\n  const salt = derive(pad(32, \"private-bid:salt:\"), secretKey);\n\n  assert(bidCommitments.member(bidder), \"This bidder has not placed a bid\");\n  // Opening the commitment: the claimed amount must be the one committed to.\n  assert(bidCommitments.lookup(bidder) == persistentCommit<Uint<64>>(amount, salt),\n    \"Amount does not match the committed bid\");\n\n  // The one place the amount becomes public. Removing this disclose() makes\n  // the compiler reject the program (\"potential witness-value disclosure must\n  // be declared but is not ... ledger operation might disclose the witness\n  // value\"), naming `amount` and the path to this insert.\n  revealedBids.insert(bidder, disclose(amount));\n}"
         },
         {
@@ -628,7 +981,7 @@
             72,
             74
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/private-bid/contract/private-bid.compact#L72-L74",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/private-bid/contract/private-bid.compact#L72-L74",
           "excerpt": "circuit derive(purpose: Bytes<32>, secretKey: Bytes<32>): Bytes<32> {\n  return persistentHash<Vector<3, Bytes<32>>>([purpose, kernel.self().bytes, secretKey]);\n}"
         }
       ]
@@ -645,7 +998,7 @@
         "turn-based",
         "two players"
       ],
-      "url": "https://github.com/midnightntwrk/midnight-examples/tree/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/battleship",
+      "url": "https://github.com/midnightntwrk/midnight-examples/tree/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/battleship",
       "files": [
         {
           "path": "examples/battleship/contract/battleship.compact",
@@ -655,7 +1008,7 @@
             80,
             112
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/battleship/contract/battleship.compact#L80-L112",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/battleship/contract/battleship.compact#L80-L112",
           "excerpt": "export circuit acceptGame(_x1: Uint<8>, _x2: Uint<8>): [] {\n    // caller verification checks\n    const _sk = localSk();\n    const pubKey = getDappPubKey(_sk);\n    assert(player1 != disclose(pubKey), \"You cannot play against yourself\");\n\n    // state verification check\n    assert(board2State == BoardState.UNSET, \"There is already a player2\");\n\n    // input verification checks\n    assert(_x1 != _x2, \"Cannot use the same number twice\");\n    assert(_x1 > 0 && _x2 > 0, \"No zero index, please keep ships on the board\");\n    assert(_x1 <= 20 && _x2 <= 20, \"Out of bounds, please keep ships on the board\");\n\n    // user assignment\n    player2 = disclose(pubKey);\n\n    // hash inputs and store them to the ledger for comparison later\n    const hash1 = commitBoardSpace(_x1 as Bytes<32>, _sk);\n    board2.insert(hash1);\n    const hash2 = commitBoardSpace(_x2 as Bytes<32>, _sk);\n    board2.insert(hash2);\n\n    // setting the state locally and verifying\n  // …"
         },
         {
@@ -666,7 +1019,7 @@
             114,
             135
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/battleship/contract/battleship.compact#L114-L135",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/battleship/contract/battleship.compact#L114-L135",
           "excerpt": "export circuit player1Shoot (x: Uint<8>): [] {\n    // caller verification check\n    const _sk = localSk();\n    const pubKey = getDappPubKey(_sk);\n    assert(player1 == disclose(pubKey), \"You are not player1\");\n\n    // state verification checks\n    assert(board2State == BoardState.SET, \"Player 2 has not yet set their board\");\n    assert(turn == TurnState.PLAYER_1_SHOOT, \"It is not player1 turn to shoot\");\n    assert(winState == WinState.CONTINUE_PLAY, \"A winner has already been declared\");\n\n    // input validation\n    assert(x > 0 && x <= 20, \"Shot out of bounds, please shoot on the board\");\n\n    // shots are public knowledge\n    const currentShot = disclose(x);\n    assert(!board2Hits.member(currentShot), \"Cheat Detected: Player1: Attempt to repeat a previous HIT\");\n\n    // on-chain state updates\n    player1Shot.pushFront(currentShot);\n    turn = TurnState.PLAYER_2_CHECK;\n}"
         },
         {
@@ -677,7 +1030,7 @@
             159,
             200
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/battleship/contract/battleship.compact#L159-L200",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/battleship/contract/battleship.compact#L159-L200",
           "excerpt": "export circuit checkBoard1(): [] {\n\n    // caller verification check\n    const _sk = localSk();\n    const pubKey = getDappPubKey(_sk);\n    assert(player1 == disclose(pubKey), \"You are not player1\");\n\n    // state verification checks\n    assert(winState == WinState.CONTINUE_PLAY, \"A winner has already been declared\");\n    assert(turn == TurnState.PLAYER_1_CHECK, \"It is not Player 1 turn to CHECK\");\n    assert(!player2Shot.isEmpty(), \"No shot to check\");\n\n    // shot processing\n    const currentShot = player2Shot.head().value;\n    assert(!board1Hits.member(currentShot), \"Cheat Detected: Player2: Attempt to repeat a previous HIT\");\n    player2Shot.popFront();\n\n    // hash for comparision with on-chain hash\n    const honestyCheckHash = commitBoardSpace(currentShot as Bytes<32>, _sk);\n\n    // currentShot has already been exposed, but we need to satisfy the compiler here too\n    const shotState = disclose(localCheckBoard(currentShot));\n    assert(shotState == ShotState.HIT || shotState == ShotState.MISS, \"Please provide a valid state\");\n\n  // …"
         },
         {
@@ -688,7 +1041,7 @@
             246,
             249
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/battleship/contract/battleship.compact#L246-L249",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/battleship/contract/battleship.compact#L246-L249",
           "excerpt": "circuit commitBoardSpace(_x: Bytes<32>, _sk: Bytes<32>): Bytes<32> {\n    const hash = persistentHash<Vector<2, Bytes<32>>>([_x, _sk]);\n    return disclose(hash);\n}"
         }
       ]
@@ -702,43 +1055,32 @@
         "anonymous payment",
         "donation",
         "contract-held pot",
-        "re-nonce a coin",
+        "fresh coin nonce",
         "owner-only withdrawal",
         "secret key witness"
       ],
-      "url": "https://github.com/midnightntwrk/midnight-examples/tree/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/private-tip-jar",
+      "url": "https://github.com/midnightntwrk/midnight-examples/tree/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/private-tip-jar",
       "files": [
         {
           "path": "examples/private-tip-jar/contract/private-tip-jar.compact",
           "symbol": "export circuit tip",
-          "about": "Taking a tipper's shielded coin without their identity",
+          "about": "Taking a tipper's shielded coin without their identity, under a fresh nonce the tipper's client picks",
           "lines": [
-            107,
-            127
+            91,
+            115
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/private-tip-jar/contract/private-tip-jar.compact#L107-L127",
-          "excerpt": "export circuit tip(coin: ShieldedCoinInfo): [] {\n    // Both guards run before any coin moves. A failing assert is rejected\n    // while the transaction is being built, so a bad tip costs nothing.\n    assert(coin.color == tipColor, \"Tips must be paid in the jar's token\");\n    assert(coin.value > 0, \"A tip must be worth something\");\n\n    // `disclose` here does not write the tipper's coin to the ledger. It\n    // acknowledges that the coin flows into a public effect (the Zswap offer\n    // that moves it into the contract), which only carries commitments and\n    // nullifiers. What reaches the ledger is the re-nonced coin below.\n    receiveShielded(disclose(coin));\n\n    // Never `insertCoin` the incoming coin itself: its nonce is the tipper's\n    // nonce, and a coin nonce is enough to test which wallet funded it.\n    const held = reNonceToSelf(coin);\n    pot.insertCoin(\n        disclose(held.nonce),\n        disclose(held),\n        right<ZswapCoinPublicKey, ContractAddress>(kernel.self())\n    );\n}"
-        },
-        {
-          "path": "examples/private-tip-jar/contract/private-tip-jar.compact",
-          "symbol": "circuit reNonceToSelf",
-          "about": "Re-sending a coin to the contract so its nonce doesn't point back at the tipper",
-          "lines": [
-            86,
-            99
-          ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/private-tip-jar/contract/private-tip-jar.compact#L86-L99",
-          "excerpt": "circuit reNonceToSelf(coin: ShieldedCoinInfo): ShieldedCoinInfo {\n    const qualified = QualifiedShieldedCoinInfo {\n        nonce: coin.nonce,\n        color: coin.color,\n        value: coin.value,\n        mt_index: 0 as Uint<64>\n    };\n    const result = sendShielded(\n        disclose(qualified),\n        right<ZswapCoinPublicKey, ContractAddress>(kernel.self()),\n        disclose(coin.value) as Uint<128>\n    );\n    return result.sent;\n}"
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/private-tip-jar/contract/private-tip-jar.compact#L91-L115",
+          "excerpt": "export circuit tip(coin: ShieldedCoinInfo): [] {\n    // The guards run before any coin moves. A failing assert is rejected\n    // while the transaction is being built, so a bad tip costs nothing.\n    assert(coin.color == tipColor, \"Tips must be paid in the jar's token\");\n    assert(coin.value > 0, \"A tip must be worth something\");\n    // Pot keys are public and the tipper picks the nonce, so without this a\n    // tip that reused a pot key with a different value (a different coin, so\n    // Zswap would accept it) would overwrite that entry and strand its coin\n    // in the contract for good.\n    assert(!pot.member(disclose(coin.nonce)), \"A tip with that nonce is already in the jar\");\n\n    // `disclose` here acknowledges that the coin flows into a public effect\n    // (the Zswap output to this contract, which carries only its commitment)\n    // and, below, into the ledger. Both are fine: the nonce is fresh.\n    receiveShielded(disclose(coin));\n\n    // insertCoin records the coin as a QualifiedShieldedCoinInfo, filling in\n    // the commitment-tree index the ledger assigns when this transaction\n    // lands, so `withdraw` can spend it later with sendShielded.\n    pot.insertCoin(\n        disclose(coin.nonce),\n        disclose(coin),\n        right<ZswapCoinPublicKey, ContractAddress>(kernel.self())\n    );\n  // …"
         },
         {
           "path": "examples/private-tip-jar/contract/private-tip-jar.compact",
           "symbol": "export circuit withdraw",
           "about": "Paying a pot coin to the owner, checked against a hash of their secret key",
           "lines": [
-            131,
-            153
+            119,
+            141
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/private-tip-jar/contract/private-tip-jar.compact#L131-L153",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/private-tip-jar/contract/private-tip-jar.compact#L119-L141",
           "excerpt": "export circuit withdraw(tipKey: Bytes<32>): [] {\n    // Ownership is proven by knowing the secret behind `owner`. The secret is\n    // only used inside the proof; the comparison result is all that matters.\n    assert(ownerKey(ownerSecretKey()) == owner, \"Only the owner can withdraw\");\n\n    // The key is public anyway (it is a pot key), so disclosing it is free.\n    const key = disclose(tipKey);\n    assert(pot.member(key), \"No such tip in the jar\");\n\n    // `pot` holds the coin with the mt_index the ledger assigned when the tip\n    // landed (insertCoin records it), so it can be spent with sendShielded.\n    const coin = pot.lookup(key);\n\n    // Pay the full coin to the caller's shielded wallet. `ownPublicKey()` is\n    // the key of whoever submits the transaction, which the owner check above\n    // has already restricted to the owner.\n    sendShielded(\n        coin,\n        left<ZswapCoinPublicKey, ContractAddress>(ownPublicKey()),\n        coin.value\n    );\n    pot.remove(key);\n}"
         },
         {
@@ -746,10 +1088,10 @@
           "symbol": "export pure circuit ownerKey",
           "about": "Deriving the owner's key from the secret a witness supplies",
           "lines": [
-            75,
-            77
+            81,
+            83
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/private-tip-jar/contract/private-tip-jar.compact#L75-L77",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/private-tip-jar/contract/private-tip-jar.compact#L81-L83",
           "excerpt": "export pure circuit ownerKey(sk: Bytes<32>): Bytes<32> {\n    return persistentHash<Vector<2, Bytes<32>>>([pad(32, \"private-tip-jar:owner:\"), sk]);\n}"
         },
         {
@@ -760,7 +1102,7 @@
             51,
             61
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/private-tip-jar/contract/witnesses.ts#L51-L61",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/private-tip-jar/contract/witnesses.ts#L51-L61",
           "excerpt": "export const witnesses = {\n  // Called by the constructor (to store `owner`) and by `withdraw` (to prove\n  // the caller is the owner). The private state is returned unchanged: reading\n  // the key does not consume or rotate it.\n  ownerSecretKey: ({\n    privateState,\n  }: WitnessContext<Ledger, PrivateTipJarPrivateState>): [\n    PrivateTipJarPrivateState,\n    Uint8Array,\n  ] => [privateState, privateState.ownerSecretKey],\n};"
         },
         {
@@ -768,10 +1110,10 @@
           "symbol": "export circuit mint",
           "about": "Minting a demo shielded token to tip with on a fresh devnet",
           "lines": [
-            26,
-            34
+            28,
+            36
           ],
-          "url": "https://github.com/midnightntwrk/midnight-examples/blob/95d4f5006f042db08cef301df68ca260a9e6be7b/examples/private-tip-jar/contract/tip-token.compact#L26-L34",
+          "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/private-tip-jar/contract/tip-token.compact#L28-L36",
           "excerpt": "export circuit mint(recipient: ZswapCoinPublicKey, amount: Uint<64>, nonce: Bytes<32>): [] {\n    mintShieldedToken(\n        pad(32, \"private-tip-jar:demo-token:\"),\n        disclose(amount),\n        disclose(nonce),\n        left<ZswapCoinPublicKey, ContractAddress>(disclose(recipient))\n    );\n    mintCount.increment(1);\n}"
         }
       ]

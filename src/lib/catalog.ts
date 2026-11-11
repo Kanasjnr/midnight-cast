@@ -1,6 +1,8 @@
 import type { Command, Option } from "commander";
 import type { NetworkErrorKind } from "./network-error.js";
 import { SCHEMA_VERSION } from "../output.js";
+import { READ_ONLY_RPC_METHODS } from "./rpc-methods.js";
+import { packageVersion } from "./data-path.js";
 
 export interface CatalogOption {
   flags: string;
@@ -15,6 +17,8 @@ export interface CatalogCommand {
   arguments: Array<{ name: string; required: boolean; variadic: boolean }>;
   options: CatalogOption[];
   readOnly: boolean;
+  /** rpc only: the methods it sends without --allow-write. */
+  readOnlyMethods?: string[];
   /** Absent for commands that don't print a JSON envelope, such as mcp. */
   outputSchema?: string;
 }
@@ -36,8 +40,9 @@ const EXIT_CODES = {
   "2": "Usage error: unknown command or option, or a missing argument",
 };
 
-const ERROR_KINDS: Record<NetworkErrorKind | "usage" | "rate_limited", string> = {
+const ERROR_KINDS: Record<NetworkErrorKind | "usage" | "rate_limited" | "not_read_only", string> = {
   usage: "The command line was invalid",
+  not_read_only: "rpc refused a method that isn't on its read-only list, without sending it; pass --allow-write to send it",
   rate_limited: "The MCP server's limit on network calls was reached; wait and retry",
   dns: "The host name doesn't resolve",
   refused: "Nothing is listening at the URL",
@@ -51,14 +56,16 @@ const ERROR_KINDS: Record<NetworkErrorKind | "usage" | "rate_limited", string> =
   invalid_response: "The response wasn't the JSON expected",
 };
 
-const SCHEMA_BASE = "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/main/schemas/";
+// The release tag, not main, so an installed release keeps linking to the schemas its output matches.
+export const schemaBase = (version: string) => `https://raw.githubusercontent.com/Kanasjnr/midnight-cast/v${version}/schemas/`;
 const WRITES_FILES = new Set(["config init", "agents init"]);
 const NO_ENVELOPE = new Set(["mcp"]);
+const EXTRAS: Record<string, Partial<CatalogCommand>> = { rpc: { readOnlyMethods: [...READ_ONLY_RPC_METHODS] } };
 
 export function outputSchemaFor(command: string): string {
   const [first = "", second] = command.split(" ");
   const file = first === "config" ? `config-${second}` : first === "matrix" ? "versions" : first;
-  return `${SCHEMA_BASE}${file}.schema.json`;
+  return `${schemaBase(packageVersion())}${file}.schema.json`;
 }
 
 function describeOption(option: Option): CatalogOption {
@@ -94,19 +101,21 @@ function walk(cmd: Command, prefix: string[]): CatalogCommand[] {
   return cmd.commands.flatMap((sub) => {
     const isDefault = isDefaultSubcommand(sub);
     const path = isDefault ? prefix : [...prefix, sub.name()];
+    const name = path.join(" ");
     const args = describeArguments(sub);
     const options = [...(isDefault ? cmd.options : []), ...sub.options].map(describeOption);
     const self: CatalogCommand[] =
       sub.commands.length === 0
         ? [
             {
-              name: path.join(" "),
+              name,
               usage: formatUsage(path, args, options.length > 0),
               description: sub.description(),
               arguments: args,
               options,
-              readOnly: !WRITES_FILES.has(path.join(" ")),
-              ...(NO_ENVELOPE.has(path.join(" ")) ? {} : { outputSchema: outputSchemaFor(path.join(" ")) }),
+              readOnly: !WRITES_FILES.has(name),
+              ...EXTRAS[name],
+              ...(NO_ENVELOPE.has(name) ? {} : { outputSchema: outputSchemaFor(name) }),
             },
           ]
         : [];
