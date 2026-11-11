@@ -52,16 +52,22 @@ const PATTERNS: Pattern[] = [
       const fromIndexer = match[2] !== undefined;
       const matrix = loadSupportMatrix().networks;
       const on = publicNetworks(matrix).filter((network) => matrix[network]?.runtimeSpec === spec);
+      // A runtime no network runs any more, but older than all of theirs, is still in each chain's history: a tool
+      // syncing from genesis reads those blocks, and the release each network runs today reads them too.
+      const withSpec = publicNetworks(matrix).filter((network) => matrix[network]?.runtimeSpec !== undefined);
+      const earlier = !on.length && withSpec.length > 0 && withSpec.every((network) => matrix[network]!.runtimeSpec! > spec);
       const component = fromIndexer ? "indexer" : "node and toolkit";
-      const advice = upgradeAdvice(component, on, (network) => (fromIndexer ? matrix[network]?.indexer : (matrix[network]?.minNode ?? matrix[network]?.node)));
+      const advice = upgradeAdvice(component, earlier ? withSpec : on, (network) => (fromIndexer ? matrix[network]?.indexer : (matrix[network]?.minNode ?? matrix[network]?.node)));
       const reader = fromIndexer ? "indexer" : "tool reading the chain";
       return {
         id: "unsupported-block-version",
         name: "UnsupportedBlockVersion",
         description: on.length
           ? `The ${reader} doesn't know runtime spec_version ${spec}, which ${runs(on)}. ${fromIndexer ? "An indexer" : "A node or toolkit"} built for an older runtime can't read its blocks.`
-          : `The ${reader} doesn't know runtime spec_version ${spec}.`,
-        fix: advice ?? "Upgrade the node, toolkit or indexer to a release that supports this runtime.",
+          : earlier
+            ? `The ${reader} doesn't know runtime spec_version ${spec}, an earlier runtime than the ${[...new Set(withSpec.map((n) => matrix[n]!.runtimeSpec))].join(" or ")} ${runs(withSpec)} now. Its blocks are still in the chain's history, so ${fromIndexer ? "an indexer" : "a node or toolkit"} syncing from genesis reads them and needs a release that knows both.`
+            : `The ${reader} doesn't know runtime spec_version ${spec}.`,
+        fix: (earlier ? advice?.replaceAll(" on this runtime", " now") : advice) ?? "Upgrade the node, toolkit or indexer to a release that supports this runtime.",
         next: [{ command: "midnight-cast versions <network>", reason: "See which versions the network expects" }],
       };
     },
