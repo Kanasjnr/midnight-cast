@@ -119,28 +119,28 @@ Network: preprod
 Healthy: yes
 
 Services:
-  rpc: OK (668ms)
-  indexer: OK (1215ms)
-  proof-server: OK (1053ms) (optional) — version=8.1.0 (matches matrix 8.1.0)
+  rpc: OK (1277ms)
+  indexer: OK (763ms)
+  proof-server: OK (1002ms) (optional) — version=9.0.0 (matches matrix 9.0.0)
 
 Sync:
-  RPC height:      2805470
-  Indexer height:  2805468
+  RPC height:      3374303
+  Indexer height:  3374301
   Delta:           2 (threshold 100)
   In sync:         yes
 
 Versions:
-  Matrix updated:  2026-10
-  node: OK (expected >=1.0.400, live 1.0.400)
-  runtimeSpec: OK (expected 1000300, live 1000300)
+  Matrix:          Midnight's published matrix (cached 13m ago)
+  node: OK (expected >=2.1.101, live 2.1.101)
+  runtimeSpec: OK (expected 2001100, live 2001100)
   indexer-api: OK (expected v4, live v4)
-  protocolVersion: OK (expected 1000300, live 1000300)
-  proof-server: OK (expected 8.1.0, live 8.1.0)
+  protocolVersion: OK (expected 2001100, live 2001100)
+  proof-server: OK (expected 9.0.0, live 9.0.0)
 
-Midnight's examples: 202 passed, 1 failed on node 1.0.400 (preprod, 30 Sep 2026).
-  Their verdict: No Node 1.0.400 regression found.
-  Report: https://github.com/midnightntwrk/midnight-examples/blob/main/reports/node-1.0.400-regression.json
+Midnight's examples: not verified for this network: no examples report for node 2.1.101 yet (cached 13m ago).
 ```
+
+When Midnight's examples have published a report for the node a network runs, that line gives their result instead, for example on preprod's node 1.0.400: "Midnight's examples: 202 passed, 1 failed on node 1.0.400 (preprod, 30 Sep 2026)", with their verdict and a link to the report.
 
 **Exit code:** `0` when RPC and indexer are up and optional CI flags pass. Version mismatches are **warnings** unless `--fail-on-mismatch` is set. Proof server failure does not fail health by itself.
 
@@ -182,12 +182,11 @@ Example output:
 Preflight: preprod
 
   OK   network      the RPC and indexer answer, and the indexer is 2 blocks from the node
-  OK   proof server answers at https://proof-server.preprod.midnight.network and runs 8.1.0
-  FAIL wallet       no NIGHT at this address. Fund it from the faucet (https://midnight-tmnight-preprod.nethermind.dev/)
-
-Expect, from Midnight's examples run on preprod (30 Sep 2026): a new wallet's first sync took about 67 minutes; restoring one from a pre-seed bundle took 105-123 seconds.
-  https://github.com/midnightntwrk/midnight-examples/blob/main/reports/node-1.0.400-regression.json
+  OK   proof server answers at https://proof-server.preprod.midnight.network and runs 9.0.0
+  FAIL wallet       no NIGHT at this address. Fund it from the network's faucet
 ```
+
+With a report for the node the network runs, an `Expect` line follows, for example from the examples' run on preprod's node 1.0.400 (30 Sep 2026): "a new wallet's first sync took about 67 minutes; restoring one from a pre-seed bundle took 105-123 seconds".
 
 It works on `local` and on networks from `config.toml` too; without a support matrix row it doesn't check the proof server's version.
 
@@ -286,11 +285,11 @@ Example output:
 
 ```text
 Checks:
-  node: expected=>=1.0.400 live=1.0.400 → OK (recommended 1.0.400)
-  runtimeSpec: expected=1000300 live=1000300 → OK (node runtime spec_version vs matrix)
+  node: expected=>=2.1.101 live=2.1.101 → OK (recommended 2.1.101)
+  runtimeSpec: expected=2001100 live=2001100 → OK (node runtime spec_version vs matrix)
   indexer-api: expected=v4 live=v4 → OK (from configured indexer URL path)
-  protocolVersion: expected=1000300 live=1000300 → OK (RPC specVersion vs indexer latest block)
-  proof-server: expected=8.1.0 live=8.1.0 → OK (GET /version on configured proof server URL)
+  protocolVersion: expected=2001100 live=2001100 → OK (RPC specVersion vs indexer latest block)
+  proof-server: expected=9.0.0 live=9.0.0 → OK (GET /version on configured proof server URL)
 
 Summary: live stack matches matrix checks ✓
 ```
@@ -428,7 +427,7 @@ Auto-detects and decodes everything it finds in one pasted error:
 - **DispatchError::Module** pallet index + error
 - **JSON-RPC** codes (e.g. `"code": -32602` or RPC error text)
 - **Known messages** from current tooling, decoded with `kind: "message"`:
-  - `UnsupportedBlockVersion(1000300)` from toolkit 1.0.0 or node 1.0.2 on runtime 1.0.300
+  - `UnsupportedBlockVersion(1000300)` from toolkit 1.0.0 or node 1.0.2 on runtime 1.0.300. Every network ran 1.0.300 before the Ledger 9 upgrade and its blocks are still in their history, so for a runtime older than all of theirs `decode` says so and gives the release each network runs now (node 2.1.101)
   - Blockfrost's "Missing project token" and "Invalid project token"
   - Anything mentioning the retired `rpc.mainnet.midnight.network` or `indexer.mainnet.midnight.network`
   - Output from Compact toolchain 0.35 or later or Compact runtime 0.20 or later (`--feature-zkir-v3`, ZKIR 3.1, `ContractModuleProvider`, `ledger-v9`), which target Ledger 9. The advice follows each network's ledger in the support matrix: with `--network` set to a network still on Ledger 8 it says to run `compact update 0.31`; on a network that runs Ledger 9 these are the normal packages, so `decode` doesn't claim the message and routes the real error instead; without `--network` it says which networks run which ledger
@@ -625,7 +624,6 @@ Example output (cut short):
 
 ```text
 Midnight's examples for "dust sponsorship" (midnightntwrk/midnight-examples at 377495c, Ledger 9, pinned to Compact language 0.28, Compact compiler 0.36.0, @midnight-ntwrk/midnight-js-* 5.0.0)
-This code targets Ledger 9, which Preview and Mainnet run; Preprod runs Ledger 8, so its APIs may not match there.
 
 private-party: Private on-chain data, access control, and DUST sponsorship: one wallet pays the fees for another's transaction
   Having a sponsor wallet pay the DUST fee and submit: examples/private-party/src/sponsor.ts:97-116
