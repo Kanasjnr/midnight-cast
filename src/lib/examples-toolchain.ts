@@ -92,7 +92,12 @@ function packageCheck(label: string, expected: string, specs: string[]): Version
   // satisfies() reads release versions only. A prerelease pin, such as 5.0.0-rc.5, matches only a spec that
   // names it, as npm's own ranges do: ^5.0.0 doesn't admit 5.0.0-rc.5.
   const prerelease = /-/.test(expected);
-  const verdicts = specs.map((spec) => (prerelease ? spec.trim().replace(/^(\^|~|=|v)+/, "") === expected : satisfies(spec, expected)));
+  // A spec that isn't a version, such as workspace:* or a git URL, can't be compared either way, so it's left out.
+  const prereleaseVerdict = (spec: string) => {
+    const version = spec.trim().replace(/^(\^|~|=|v)+/, "");
+    return /^\d+\.\d+\.\d+(-[\w.]+)?$/.test(version) ? version === expected : undefined;
+  };
+  const verdicts = specs.map((spec) => (prerelease ? prereleaseVerdict(spec) : satisfies(spec, expected)));
   if (!verdicts.length || verdicts.every((v) => v === undefined)) return undefined;
   const ok = verdicts.every((v) => v !== false);
   const live = [...new Set(specs)].join(", ");

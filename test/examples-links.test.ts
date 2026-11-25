@@ -102,6 +102,8 @@ describe("the examples' toolchain against a project", () => {
     ]);
     expect(verdicts({ "@midnight-ntwrk/midnight-js-network-id": "^5.0.0" })).toEqual([["midnight-js-network-id", "^5.0.0", false]]);
     expect(verdicts({ "@midnight-ntwrk/midnight-js-network-id": "^5.0.0-rc.5" })).toEqual([["midnight-js-network-id", "^5.0.0-rc.5", true]]);
+    // A spec that isn't a version can't be compared with the pin, so it's left out rather than called different.
+    expect(verdicts({ "@midnight-ntwrk/midnight-js-network-id": "workspace:*" })).toEqual([]);
   });
 
   it("points a project a major version behind at the examples' own move, in the example closest to it", () => {

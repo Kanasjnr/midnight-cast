@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/v0.2.2/schemas/decode.schema.json",
+  "$id": "https://raw.githubusercontent.com/Kanasjnr/midnight-cast/v0.3.0/schemas/decode.schema.json",
   "title": "decode data",
   "oneOf": [
     {
@@ -39,6 +39,75 @@
         },
         "mapMismatch": {
           "type": "string"
+        },
+        "retired": {
+          "type": "object",
+          "description": "When the network's ledger retired this code, such as 182 on Ledger 9: that ledger, the codes it returns instead, and a sentence saying so. The rest of the decoding is the code's meaning on the ledger that used it",
+          "required": [
+            "on",
+            "replacedBy",
+            "note"
+          ],
+          "properties": {
+            "on": {
+              "type": "string"
+            },
+            "replacedBy": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "note": {
+              "type": "string"
+            }
+          }
+        },
+        "notOnLedger": {
+          "type": "object",
+          "description": "When the network's ledger doesn't use this code and didn't retire it: that ledger, and a sentence saying the decoding is the code's meaning on another ledger",
+          "required": [
+            "ledger",
+            "note"
+          ],
+          "properties": {
+            "ledger": {
+              "type": "string"
+            },
+            "note": {
+              "type": "string"
+            }
+          }
+        },
+        "otherLedgers": {
+          "type": "array",
+          "description": "Without --network, or for a network whose ledger isn't known: the other ledgers where this code means something else or nothing",
+          "items": {
+            "type": "object",
+            "required": [
+              "ledger",
+              "name"
+            ],
+            "properties": {
+              "ledger": {
+                "type": "string"
+              },
+              "nodeTag": {
+                "type": "string"
+              },
+              "name": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "The code's name on that ledger, or null when it doesn't use the code"
+              }
+            }
+          }
+        },
+        "otherLedgersNote": {
+          "type": "string",
+          "description": "A sentence for otherLedgers, and for a name that is another code on the other ledger"
         },
         "examples": {
           "type": "array",
@@ -300,6 +369,75 @@
                   },
                   "mapMismatch": {
                     "type": "string"
+                  },
+                  "retired": {
+                    "type": "object",
+                    "description": "When the network's ledger retired this code, such as 182 on Ledger 9: that ledger, the codes it returns instead, and a sentence saying so. The rest of the decoding is the code's meaning on the ledger that used it",
+                    "required": [
+                      "on",
+                      "replacedBy",
+                      "note"
+                    ],
+                    "properties": {
+                      "on": {
+                        "type": "string"
+                      },
+                      "replacedBy": {
+                        "type": "array",
+                        "items": {
+                          "type": "integer"
+                        }
+                      },
+                      "note": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "notOnLedger": {
+                    "type": "object",
+                    "description": "When the network's ledger doesn't use this code and didn't retire it: that ledger, and a sentence saying the decoding is the code's meaning on another ledger",
+                    "required": [
+                      "ledger",
+                      "note"
+                    ],
+                    "properties": {
+                      "ledger": {
+                        "type": "string"
+                      },
+                      "note": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "otherLedgers": {
+                    "type": "array",
+                    "description": "Without --network, or for a network whose ledger isn't known: the other ledgers where this code means something else or nothing",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "ledger",
+                        "name"
+                      ],
+                      "properties": {
+                        "ledger": {
+                          "type": "string"
+                        },
+                        "nodeTag": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "description": "The code's name on that ledger, or null when it doesn't use the code"
+                        }
+                      }
+                    }
+                  },
+                  "otherLedgersNote": {
+                    "type": "string",
+                    "description": "A sentence for otherLedgers, and for a name that is another code on the other ledger"
                   }
                 }
               },

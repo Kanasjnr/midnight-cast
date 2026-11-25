@@ -4,7 +4,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "midnight-cast@0.2.2",
+        "midnight-cast@0.3.0",
         "mcp"
       ],
       "env": {
