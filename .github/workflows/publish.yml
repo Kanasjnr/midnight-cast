@@ -132,7 +132,8 @@ jobs:
             echo "::error::The tested tarball is $name@$version, but the release is midnight-cast $TAG."
             exit 1
           fi
-          echo "TARBALL=$tarball" >> "$GITHUB_ENV"
+          # ./ makes npm read it as a file: a bare package/x.tgz is taken as GitHub shorthand for a repository.
+          echo "TARBALL=./$tarball" >> "$GITHUB_ENV"
 
       - run: npm publish "$TARBALL" --access public --ignore-scripts
 
