@@ -69,7 +69,7 @@ Healthy: yes
 Services:
   rpc: OK (1277ms)
   indexer: OK (763ms)
-  proof-server: OK (1002ms) (optional) — version=9.0.0 (matches matrix 9.0.0)
+  proof-server: OK (1002ms) (optional) — version=9.0.2 (matches matrix 9.0.2)
 
 Sync:
   RPC height:      3374303
@@ -117,7 +117,7 @@ Checks:
   runtimeSpec: expected=2001100 live=2001100 → OK (node runtime spec_version vs matrix)
   indexer-api: expected=v4 live=v4 → OK (from configured indexer URL path)
   protocolVersion: expected=2001100 live=2001100 → OK (RPC specVersion vs indexer latest block)
-  proof-server: expected=9.0.0 live=9.0.0 → OK (GET /version on configured proof server URL)
+  proof-server: expected=9.0.2 live=9.0.2 → OK (GET /version on configured proof server URL)
 
 Summary: live stack matches matrix checks ✓
 ```

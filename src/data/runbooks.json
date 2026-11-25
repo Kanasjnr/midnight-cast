@@ -1,6 +1,6 @@
 {
   "repo": "midnightntwrk/servicedesk",
-  "commit": "df6adf840fd0562d7c52ca4174a6b8769a54c581",
+  "commit": "d5cd61c7e5aed72609e98ee243b253ddc749591b",
   "runbooks": {
     "cnight-dust-duplicate-registration-runbook": {
       "title": "cNIGHT→DUST duplicate registrations",
@@ -43,7 +43,7 @@
       "url": "https://github.com/midnightntwrk/servicedesk/blob/main/runbooks/sdk-ai-generated-code-errors-runbook/sdk-ai-generated-code-errors-runbook.md"
     },
     "wallet-preprod-sync-runbook": {
-      "title": "Wallet sync on Preprod: slow, repeated on every restart, or stuck",
+      "title": "Wallet sync on Preprod takes hours, starts over on every restart, or never settles",
       "url": "https://github.com/midnightntwrk/servicedesk/blob/main/runbooks/wallet-preprod-sync-runbook/wallet-preprod-sync-runbook.md"
     },
     "node-indexer-sync-halt-runbook": {
@@ -294,6 +294,28 @@
         "node-1010-custom-error-runbook"
       ],
       "advice": "Sync halt (a DApp's own transaction rejected with Custom error: 182: Node rejection codes)"
+    },
+    {
+      "match": [
+        [
+          "chain-indexer exited with ERROR"
+        ]
+      ],
+      "when": "chain-indexer exited with ERROR (after Intent TTL has expired or dust is outside of its validity window)",
+      "runbooks": [
+        "node-indexer-sync-halt-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "cannot apply regular transaction"
+        ]
+      ],
+      "when": "cannot apply regular transaction with malformed transaction (an indexer replaying the chain)",
+      "runbooks": [
+        "node-indexer-sync-halt-runbook"
+      ]
     },
     {
       "match": [
@@ -740,12 +762,17 @@
       "match": [
         [
           "Waiting to receive tokens..."
+        ],
+        [
+          "Wallet sync timeout after"
         ]
       ],
-      "when": "Waiting to receive tokens... for an hour or more on Preprod",
+      "when": "Waiting to receive tokens..., or testkit's Wallet sync timeout after …, for an hour or more on Preprod",
       "runbooks": [
-        "wallet-preprod-sync-runbook"
-      ]
+        "wallet-preprod-sync-runbook",
+        "indexer-blockfrost-migration-runbook"
+      ],
+      "advice": "Preprod wallet sync (with unshielded=false: Blockfrost)"
     },
     {
       "match": [
@@ -764,8 +791,37 @@
       "match": [
         [
           "Wallet.Sync: [object ErrorEvent]"
+        ],
+        [
+          "Wallet.Sync: [object Object]"
         ]
       ],
+      "when": "Wallet.Sync: [object ErrorEvent] / Wallet.Sync: [object Object], a few, while the sync keeps moving (harmless)",
+      "runbooks": [
+        "wallet-preprod-sync-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "skipLedgerV8DustHistory"
+        ],
+        [
+          "Could not read the dust event at"
+        ]
+      ],
+      "when": "skipLedgerV8DustHistory set and DUST still replays from the start, or Could not read the dust event at",
+      "runbooks": [
+        "wallet-preprod-sync-runbook"
+      ]
+    },
+    {
+      "match": [
+        [
+          "\"_tag\":\"Crossing\""
+        ]
+      ],
+      "when": "\"_tag\":\"Crossing\" in the facade's protocol after all three wallets report synced",
       "runbooks": [
         "wallet-preprod-sync-runbook"
       ]

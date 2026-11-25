@@ -19,7 +19,7 @@ error: true
       {
         "name": "proof-server",
         "ok": true,
-        "detail": "answers at https://proof-server.preprod.midnight.network and runs 9.0.0"
+        "detail": "answers at https://proof-server.preprod.midnight.network and runs 9.0.2"
       },
       {
         "name": "wallet",

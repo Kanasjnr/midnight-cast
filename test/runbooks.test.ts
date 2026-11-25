@@ -66,6 +66,12 @@ describe("the service desk's runbooks in decode", () => {
     expect(titles("Cannot find module '@midnight-ntwrk/ledger-v7'")).toEqual([index.runbooks["sdk-ai-generated-code-errors-runbook"]!.title]);
   });
 
+  it("doesn't put a row's conditional runbook first once its first runbook is listed", () => {
+    const matches = matchRunbooks("Wallet.Sync: [object ErrorEvent] then Waiting to receive tokens...");
+    expect(matches.map((m) => m.runbooks.map((r) => r.url))).toEqual([[index.runbooks["wallet-preprod-sync-runbook"]!.url]]);
+    expect(matchRunbooks("Error: Could not read the dust event at 1234")[0]?.runbooks[0]?.url).toBe(index.runbooks["wallet-preprod-sync-runbook"]!.url);
+  });
+
   it("names each runbook once across rows", () => {
     const matches = matchRunbooks("Transaction submission error, then 1000:: Normal Closure");
     const urls = matches.flatMap((m) => m.runbooks.map((r) => r.url));
@@ -80,6 +86,10 @@ describe("reading the runbooks index", () => {
     expect(parseErrorCell("`A` / `B`")).toEqual({ match: [["A"], ["B"]] });
     expect(parseErrorCell("`A` … `B` (from `tool`)")).toEqual({ match: [["A", "B"]], when: "A … B (from tool)" });
     expect(parseErrorCell("`A` with `B` or `C`")).toEqual({ match: [["A"]], when: "A with B or C" });
+    // A later ", or `X`", with or without a possessive before it, is another string; inside parentheses it isn't.
+    expect(parseErrorCell("`A`, or testkit's `B` …, for an hour").match).toEqual([["A"], ["B"]]);
+    expect(parseErrorCell("`A` set and it still fails, or `B`").match).toEqual([["A"], ["B"]]);
+    expect(parseErrorCell("`A` (for example, or `B`)").match).toEqual([["A"]]);
     expect(parseErrorCell("No error: `f` never returns")).toEqual({ match: [], when: "No error: f never returns" });
     expect(parseErrorCell("`Cannot find module 'x/wallet'` (or `ledger-v7`, `zswap`)").match).toEqual([
       ["Cannot find module 'x/wallet'"],
