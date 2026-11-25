@@ -762,6 +762,9 @@
       "match": [
         [
           "Waiting to receive tokens..."
+        ],
+        [
+          "Wallet sync timeout after"
         ]
       ],
       "when": "Waiting to receive tokens..., or testkit's Wallet sync timeout after …, for an hour or more on Preprod",
@@ -802,6 +805,9 @@
       "match": [
         [
           "skipLedgerV8DustHistory"
+        ],
+        [
+          "Could not read the dust event at"
         ]
       ],
       "when": "skipLedgerV8DustHistory set and DUST still replays from the start, or Could not read the dust event at",
