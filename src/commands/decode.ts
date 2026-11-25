@@ -134,9 +134,17 @@ function parseLedgerCodeInput(input: string): string | null {
 }
 
 /** A warning when the network runs a ledger none of the bundled maps covers, so the code may mean something else. */
-function ledgerMapMismatch(options: DecodeOptions, data: ErrorCodesFile): string | undefined {
-  if (!options.network || !noMapForNetwork(options.network)) return undefined;
+function ledgerMapMismatch(options: DecodeOptions, data: ErrorCodesFile, chosen = false): string | undefined {
+  if (!options.network || chosen) return undefined;
   const row = loadSupportMatrix().networks[options.network];
+  // A newer ledger of the same major reads with the same map, but its node can still renumber a code: say so.
+  if (!noMapForNetwork(options.network)) {
+    if (!row?.ledger || row.ledger === data.ledger) return undefined;
+    return (
+      `Warning: this map is ledger ${data.ledger}'s, and ${options.network} runs ledger ${row.ledger}. ` +
+      `Codes usually keep their meaning within a ledger, but check ${data.docUrl} if this one doesn't fit`
+    );
+  }
   return (
     `Warning: the bundled error maps cover ledgers ${ledgerMaps().map((m) => m.ledger).join(" and ")}, but ${options.network} ` +
     `runs ledger ${row?.ledger}. This uses ledger ${data.ledger}'s map, so code names and fixes may be wrong; ` +
@@ -175,7 +183,8 @@ function ledgerMapMeta(options: DecodeOptions, data: ErrorCodesFile, chosen = fa
   }
 
   if (options.network) {
-    return `Map:    ledger ${data.ledger} (the newest map; the support matrix doesn't say which ledger ${options.network} runs; updated ${data.updated})`;
+    const which = chosen ? "the map that has this code" : "the newest map";
+    return `Map:    ledger ${data.ledger} (${which}; the support matrix doesn't say which ledger ${options.network} runs; updated ${data.updated})`;
   }
 
   if (data.ledger) {
@@ -246,7 +255,7 @@ function decodeLedger(input: string, options: DecodeOptions): EmitResult {
     ? `${elsewhereNote.join(" ")}${options.network ? "" : " Pass --network for the ledger your network runs."}`
     : "";
   const ledgerMeta = ledgerMapMeta(options, data, fromOtherMap);
-  const mapMismatch = ledgerMapMismatch(options, data);
+  const mapMismatch = ledgerMapMismatch(options, data, fromOtherMap);
   const related = relatedNoteFor(code, options.network);
   const examples = examplesForLedgerCode(Number(code));
   const examplesNote = examples.length ? examplesLedgerNote(options.network) : undefined;
