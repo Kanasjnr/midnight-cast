@@ -625,11 +625,11 @@ midnight-cast examples "verify a signature in a circuit" --json
 Example output (cut short):
 
 ```text
-Midnight's examples for "dust sponsorship" (midnightntwrk/midnight-examples at 377495c, Ledger 9, pinned to Compact language 0.28, Compact compiler 0.36.0, @midnight-ntwrk/midnight-js-* 5.0.0)
+Midnight's examples for "dust sponsorship" (midnightntwrk/midnight-examples at c37451a, Ledger 9, pinned to Compact language 0.28, Compact compiler 0.36.1, @midnight-ntwrk/midnight-js-* 5.0.1)
 
 private-party: Private on-chain data, access control, and DUST sponsorship: one wallet pays the fees for another's transaction
   Having a sponsor wallet pay the DUST fee and submit: examples/private-party/src/sponsor.ts:97-116
-    https://github.com/midnightntwrk/midnight-examples/blob/377495c…/examples/private-party/src/sponsor.ts#L97-L116
+    https://github.com/midnightntwrk/midnight-examples/blob/c37451a…/examples/private-party/src/sponsor.ts#L97-L116
 
     export async function sponsorAndSubmit(
     …
@@ -641,8 +641,8 @@ The index covers all twelve examples:
 - private-party;
 - token-transfers;
 - silent-auction;
-- election;
-- secret-message;
+- voting;
+- leaderboard;
 - zk-loan;
 - shielded-chips;
 - private-bid;
