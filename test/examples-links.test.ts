@@ -121,6 +121,8 @@ describe("the examples' toolchain against a project", () => {
     const party = upgrade("party", { "@midnight-ntwrk/midnight-js-contracts": "4.1.1" }, { "contract/private-party.compact": "pragma language_version 0.23;\n" });
     expect(party).toMatchObject({ pr: 88, example: "private-party", files: expect.arrayContaining([expect.objectContaining({ path: "examples/private-party/src/sponsor.ts" })]) });
     expect(upgrade("other", { "@midnight-ntwrk/midnight-js-contracts": "^4.0.0" })?.example).toBe("hello-world");
+    // An example gone upstream since the migration still points its projects at their own changes.
+    expect(upgrade("election", { "@midnight-ntwrk/midnight-js-contracts": "4.1.1" }, { "contract/election.compact": "pragma language_version 0.23;\n" })?.example).toBe("election");
     // Current, or only a patch or minor behind: nothing to migrate.
     expect(upgrade("current", { "@midnight-ntwrk/midnight-js-contracts": "5.0.0" })).toBeUndefined();
     // Halfway through the move is still behind.
