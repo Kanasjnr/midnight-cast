@@ -82,6 +82,32 @@
           "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-8d54a5ecd0ed3a3a9d90ee9a87dae99a98d29fa3f0a0af0d33cd77a229c3f596"
         }
       ],
+      "election": [
+        {
+          "path": "examples/election/contract/election.compact",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-3fbc4709e0cad665d22ec1df7833d543b12fd782f3722f942ac573005fc8309f"
+        },
+        {
+          "path": "examples/election/contract/index.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-6f93932379a54f36cc594ffedcb0dcfdb59d25aa64ac027badc4b4d3b2064d11"
+        },
+        {
+          "path": "examples/election/package.json",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-71d597f40a54ba693cff64ed0a53676cc90a39862c8fb726cbb94302cfe0b446"
+        },
+        {
+          "path": "examples/election/src/config.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-329380d0aea11a9f2114b10f4697503fce71e04c49df1d32971200d1ee8b319c"
+        },
+        {
+          "path": "examples/election/src/providers.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-0ad3c5d09389ba5165cc69c2d64b8491df44c5f5f5646c78e84055006c4ce47c"
+        },
+        {
+          "path": "examples/election/src/wallet.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-063db05f0660e83081e0b60782b88e30b07fb1f2749eb06ed9027f12f09675bb"
+        }
+      ],
       "hello-world": [
         {
           "path": "examples/hello-world/contract/hello-world.compact",
@@ -196,6 +222,32 @@
         {
           "path": "examples/private-tip-jar/src/wallet.ts",
           "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-34d8e0f58ecd84bf05e797f13ced5ba5a4d4970e6cc517084ecc9ead2c8a7d2f"
+        }
+      ],
+      "secret-message": [
+        {
+          "path": "examples/secret-message/contract/index.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-a34b097fbf171550a2a65640ba1cb7f05b9df8da5f55c39bbd3e28d9342f1740"
+        },
+        {
+          "path": "examples/secret-message/contract/secret-message.compact",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-ebdea86e5a596841517dffe37a38a4bbba9aff8b8c32a4912f0ea30608198ce0"
+        },
+        {
+          "path": "examples/secret-message/package.json",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-bc0b603a433fe97db0ce6997e7a853580c156dd1b7046705a94939a59f17570f"
+        },
+        {
+          "path": "examples/secret-message/src/config.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-8e37aa21f3d58c8f301687d1e87dc39db5fd817344403639cc26348bc09112b2"
+        },
+        {
+          "path": "examples/secret-message/src/providers.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-2169f47fa8b609d926a0864321a755dd4de94b361d6aff5625cc1d4b6b922f95"
+        },
+        {
+          "path": "examples/secret-message/src/wallet.ts",
+          "url": "https://github.com/midnightntwrk/midnight-examples/pull/88/files#diff-1cdbaed8a3f243ef72e6dcef32462dd4b11d18c7404cf8b6dd53f70c4dff64e3"
         }
       ],
       "shielded-chips": [
@@ -743,6 +795,8 @@
         "ownership proof",
         "prove ownership",
         "hash commitment",
+        "persistent hash",
+        "public key from secret",
         "domain separator",
         "optional private input",
         "browser dapp",

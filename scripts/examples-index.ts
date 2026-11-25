@@ -111,7 +111,7 @@ const EXAMPLES: Source[] = [
   {
     name: "leaderboard",
     summary: "Structured on-chain data and ownership proofs in a browser DApp that uses Lace, deployed to Vercel",
-    topics: ["leaderboard", "struct in ledger", "map of structs", "ownership proof", "prove ownership", "hash commitment", "domain separator", "optional private input", "browser dapp", "lace"],
+    topics: ["leaderboard", "struct in ledger", "map of structs", "ownership proof", "prove ownership", "hash commitment", "persistent hash", "public key from secret", "domain separator", "optional private input", "browser dapp", "lace"],
     files: [
       { path: "contract/leaderboard.compact", symbol: "export circuit submitScore", about: "Storing a struct in a ledger Map, with a name a witness supplies only when asked" },
       { path: "contract/leaderboard.compact", symbol: "export circuit verifyOwnership", about: "Proving you own an entry without revealing the secret key" },
@@ -314,7 +314,9 @@ async function readMigration(pr: number): Promise<ExamplesMigration> {
   const examples: ExamplesMigration["examples"] = {};
   for (const path of paths.sort()) {
     const name = own.exec(path)?.[1];
-    if (!name || test.test(path) || !EXAMPLES.some((e) => e.name === name)) continue;
+    // Every example the pull request changed, including ones gone upstream since, such as election: a project built
+    // from one still needs its own example's changes, and the diff links stay valid.
+    if (!name || test.test(path)) continue;
     const anchor = createHash("sha256").update(path).digest("hex");
     (examples[name] ??= []).push({ path, url: `https://github.com/${REPO}/pull/${pr}/files#diff-${anchor}` });
   }
