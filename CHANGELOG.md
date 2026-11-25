@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 (25 November 2026)
+
+The Ledger 9 release. Every network now runs Ledger 9, preprod since its in-place upgrade on 9 November, and midnight-cast follows it everywhere: preprod's support-matrix row, proof server 9.0.2, a ledger error map per ledger with node 2.1.101's codes, Midnight's examples on Midnight.js 5.0.1, and `preflight` telling a wallet when the upgrade reset its DUST registration. `decode` also links Midnight's service desk runbooks. It breaks the JSON: `schemaVersion` is 2, `tx` drops `fees.estimatedFees`, the `mn` alias is gone, and `rpc` sends only read-only methods unless `--allow-write`. Releases now publish the tarball CI tested, from a job that installs nothing.
 
 ### Breaking changes
 - The JSON envelope's `schemaVersion` is now 2, because fields kept only for 0.2.x consumers are removed. Check `schemaVersion` before reading the rest, as the docs say. A consumer that doesn't read the fields removed below needs no other change. Each command's schema link in `explain --json` now points at the release's own tag instead of `main`, so it keeps matching that release's output; links from 0.2.x point at `main` and describe 0.3.0's output from now on
