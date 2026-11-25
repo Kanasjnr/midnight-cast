@@ -19,7 +19,7 @@ tDUST vs DUST
 Ledger 9 upgrade
   - The ledger 8 to 9 fork wipes DUST state. NIGHT UTXOs created before it lose their
     registration, and the indexer reports them as not registered: register them again,
-    even if they were registered before. Preview was reset with the upgrade instead.
+    even if they were registered before.
 
 Indexer vs node
   - The node applies ledger rules (Custom N errors on bad proofs).
