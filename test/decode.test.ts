@@ -44,6 +44,18 @@ describe("decodeCommand", () => {
       expect(data.mapMismatch).toContain("cover ledgers 9.1.0.0 and 8.1.3, but preview runs ledger 10.0.0");
     }));
 
+  it("warns in JSON when a network runs a newer ledger of the same major as the map", () =>
+    withSupportMatrix({ mainnet: { ledger: "9.2.0.0" } }, () => {
+      const data = decodeCommand(["230"], { json: true, network: "mainnet" }).data as { ledger: string; mapMismatch?: string };
+      expect(data.ledger).toBe("9.1.0.0");
+      expect(data.mapMismatch).toContain("this map is ledger 9.1.0.0's, and mainnet runs ledger 9.2.0.0");
+    }));
+
+  it("labels the map a retired code was read with when the network's ledger isn't known", () => {
+    const text = decodeCommand(["182"], { network: "local" }).data as string;
+    expect(text).toContain("Map:    ledger 8.1.3 (the map that has this code; the support matrix doesn't say which ledger local runs");
+  });
+
   it("explains a code Ledger 9 retired, with the codes that replaced it", () => {
     const data = decodeCommand(["182"], { json: true, network: "mainnet" }).data as { name: string; ledger: string; retired: { on: string; replacedBy: number[]; note: string } };
     expect(data).toMatchObject({ name: "TransactionApplicationError", ledger: "8.1.3", retired: { on: "9.1.0.0", replacedBy: [228, 229, 230] } });
