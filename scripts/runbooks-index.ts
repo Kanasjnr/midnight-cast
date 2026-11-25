@@ -47,7 +47,7 @@ const plain = (cell: string) => cell.replace(LINK, "$1").replace(/`/g, "").repla
  * parentheses. `/` or "or" between two starts another alternative, `…` continues the same one in order,
  * and anything else, such as "on Mainnet" or "with `unshielded=false`", ends them: the rest is context. A
  * variant list right after them, as in "`Cannot find module '@midnight-ntwrk/wallet'` (or `ledger-v7`, `zswap`)",
- * adds the last string with its final name swapped for each variant.
+ * adds the last string with its final name swapped for each variant, and a later ", or `X`" adds X.
  */
 export function parseErrorCell(cell: string): { match: string[][]; when?: string } {
   const match: string[][] = [];
@@ -65,6 +65,10 @@ export function parseErrorCell(cell: string): { match: string[][]; when?: string
     joiner = sep[1] === "…" ? "then" : "or";
     rest = rest.slice(sep[0].length);
   }
+  // A later ", or `X`" (or ", or testkit's `X`") outside parentheses is another string to search for; a bare "or" after
+  // "with" isn't, since "`A` with `B` or `C`" is context for A.
+  const topLevel = rest.replace(/\([^)]*\)/g, "");
+  const later = [...topLevel.matchAll(/,\s*or\s+(?:[A-Za-z-]+'s\s+)?`([^`]+)`/g)].map((m) => [m[1]!]);
   const variants = /^\s*\(or ((?:`[^`]+`(?:,\s*)?)+)\)/.exec(rest);
   const last = match.at(-1);
   if (variants && last?.length === 1) {
@@ -75,6 +79,7 @@ export function parseErrorCell(cell: string): { match: string[][]; when?: string
       }
     }
   }
+  match.push(...later);
   const shown = plain(cell);
   const matchedText = match.map((parts) => parts.join(" … ")).join(" / ");
   return { match, ...(shown !== matchedText ? { when: shown } : {}) };
@@ -121,7 +126,7 @@ async function main(): Promise<number> {
   }
   if (!check) {
     writeFileSync(indexPath, `${JSON.stringify(index, null, 2)}\n`);
-    console.log(`wrote src/data/runbooks.json (${Object.keys(index.runbooks).length} runbooks, ${index.lookups.length} error strings at ${index.commit.slice(0, 7)})`);
+    console.log(`wrote src/data/runbooks.json (${Object.keys(index.runbooks).length} runbooks, ${index.lookups.length} lookup rows at ${index.commit.slice(0, 7)})`);
     return 0;
   }
   const committed = JSON.parse(readFileSync(indexPath, "utf8")) as RunbooksIndex;
