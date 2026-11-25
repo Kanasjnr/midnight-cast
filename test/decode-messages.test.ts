@@ -24,15 +24,26 @@ describe("decode --raw recognises messages from current tooling", () => {
 
   it("says only the networks that forked in place hold the pre-fork runtime, and nothing about other old ones", () => {
     const [any] = decodeRaw("UnsupportedBlockVersion(1000300)").decodings;
-    expect(any).toMatchObject({ description: expect.stringContaining("which Preprod and Mainnet ran before their Ledger 9 upgrade"), fix: expect.stringContaining("which Preprod and Mainnet run now") });
+    expect(any).toMatchObject({ description: expect.stringContaining("which Preview, Preprod and Mainnet ran before their Ledger 9 upgrade"), fix: expect.stringContaining("which Preview, Preprod and Mainnet run now") });
+    // Preview crossed the fork in place too, at block 1572, so its history holds those blocks.
     const [preview] = decodeRaw("UnsupportedBlockVersion(1000300)", "preview").decodings;
-    expect(preview).toMatchObject({ description: expect.stringContaining("Preview was reset with the upgrade instead, so its chain has no blocks on that runtime") });
-    expect(preview!.description).not.toContain("still in the chain's history");
+    expect(preview).toMatchObject({ description: expect.stringContaining("which Preview ran before its Ledger 9 upgrade. Those blocks are still in the chain's history") });
+    // A network not known to have forked in place gets what the public networks did.
+    const [local] = decodeRaw("UnsupportedBlockVersion(1000300)", "local").decodings;
+    expect(local!.description).toContain("which Preview, Preprod and Mainnet ran before their Ledger 9 upgrade");
+    expect(local!.description).toContain("Those blocks are still in each of those chains' history, so a node or toolkit syncing one of them");
     expect(decodeRaw("UnsupportedBlockVersion(42)").decodings[0]).toMatchObject({
       description: "The tool reading the chain doesn't know runtime spec_version 42.",
       fix: "Upgrade the node, toolkit or indexer to a release that supports this runtime.",
     });
   });
+
+  it("gives the neutral message for the pre-fork runtime when the matrix has none of the public networks", () =>
+    withSupportMatrix({ local: { node: "2.1.101", runtimeSpec: 2001100, ledger: "9.1.0.0" } }, () => {
+      expect(decodeRaw("UnsupportedBlockVersion(1000300)", "local").decodings[0]).toMatchObject({
+        description: "The tool reading the chain doesn't know runtime spec_version 1000300.",
+      });
+    }, { only: true }));
 
   it("UnsupportedBlockVersion on the Ledger 9 runtime names the networks that run it", () => {
     expect(decodeRaw("Error: UnsupportedBlockVersion(2001100)").decodings).toEqual([

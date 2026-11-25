@@ -67,19 +67,15 @@ const PATTERNS: Pattern[] = [
       };
       // The runtime before the Ledger 9 fork, which no network runs now but whose blocks the networks that forked in
       // place still hold: a tool syncing from genesis reads them, and the release each runs today reads them too.
-      if (!on.length && spec === LEDGER_8_LAST_SPEC) {
-        const forked = FORKED_IN_PLACE.filter((name) => name in matrix);
-        if (network && !forked.includes(network)) {
-          return {
-            ...base,
-            description: `The ${reader} doesn't know runtime spec_version ${spec}, which ${names(forked)} ran before their Ledger 9 upgrade. ${title(network)} was reset with the upgrade instead, so its chain has no blocks on that runtime: check the ${reader} is reading the network you mean.`,
-            fix: upgradeAdvice(component, [network], versionOf, "now") ?? "Upgrade it to the release the network runs now.",
-          };
-        }
-        const history = network ? [network] : forked;
+      const forked = FORKED_IN_PLACE.filter((name) => name in matrix);
+      if (!on.length && spec === LEDGER_8_LAST_SPEC && forked.length) {
+        const own = network !== undefined && forked.includes(network);
+        // A network not known to have forked in place, such as a local devnet, hears about the public networks' chains.
+        const history = own ? [network] : forked;
+        const chain = own || forked.length === 1 ? "the chain's history" : "each of those chains' history";
         return {
           ...base,
-          description: `The ${reader} doesn't know runtime spec_version ${spec}, which ${names(history)} ran before ${history.length > 1 ? "their" : "its"} Ledger 9 upgrade. Those blocks are still in the chain's history, so ${fromIndexer ? "an indexer" : "a node or toolkit"} syncing from genesis reads them and needs a release that knows both runtimes.`,
+          description: `The ${reader} doesn't know runtime spec_version ${spec}, which ${names(history)} ran before ${history.length > 1 ? "their" : "its"} Ledger 9 upgrade. Those blocks are still in ${chain}, so ${fromIndexer ? "an indexer" : "a node or toolkit"} syncing ${own || forked.length === 1 ? "it" : "one of them"} from genesis reads them and needs a release that knows both runtimes.`,
           fix: upgradeAdvice(component, history, versionOf, "now") ?? "Upgrade it to the release the network runs now.",
         };
       }
