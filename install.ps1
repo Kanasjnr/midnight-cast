@@ -49,7 +49,8 @@
     Copy-Item -Force (Join-Path $tmp 'out\midnight-cast.exe') (Join-Path $dir 'midnight-cast.exe')
     # Before 0.3.0 this wrote an mn alias, which clashed with other tools' mn. Remove ours; leave any other.
     $mn = Join-Path $dir 'mn.cmd'
-    if ((Test-Path $mn) -and (Get-Content $mn -Raw).Trim() -eq '@"%~dp0midnight-cast.exe" %*') {
+    # [string] turns an empty file's $null into '', so Trim can't throw after the binary is already copied.
+    if ((Test-Path $mn) -and ([string](Get-Content $mn -Raw)).Trim() -eq '@"%~dp0midnight-cast.exe" %*') {
       Remove-Item -Force $mn
       Write-Host "Removed the old mn alias: run midnight-cast instead."
     }
