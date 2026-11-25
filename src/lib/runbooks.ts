@@ -61,7 +61,7 @@ function inOrder(text: string, parts: string[]): boolean {
 
 /**
  * The runbook rows whose error strings appear in the text, longest match first, each runbook once: a shorter
- * row lists only the runbooks a longer one didn't, so "Invalid Transaction" adds nothing to
+ * row lists only the runbooks a longer one didn't, and none once its first runbook is listed, so "Invalid Transaction" adds nothing to
  * "1010: Invalid Transaction: Custom error:". With a network, a row whose context names only other networks,
  * such as "on Mainnet" on preview, is left out.
  */
@@ -78,6 +78,9 @@ export function matchRunbooks(
     .sort((a, b) => b.matched.length - a.matched.length || a.order - b.order);
   const named = new Set<string>();
   return hits.flatMap(({ row, matched }) => {
+    // A row's other runbooks apply only alongside its first, such as Blockfrost "with unshielded=false", so a row whose
+    // first runbook a longer match already named adds nothing rather than putting a fallback first.
+    if (named.has(row.runbooks[0]!)) return [];
     const keys = row.runbooks.filter((key) => !named.has(key));
     if (!keys.length) return [];
     for (const key of keys) named.add(key);
