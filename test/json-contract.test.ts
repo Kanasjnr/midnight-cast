@@ -4,6 +4,7 @@ import { promisify } from "node:util";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { schemaErrors } from "./schema.js";
+import { SCHEMA_VERSION } from "../src/output.js";
 
 const execFileAsync = promisify(execFile);
 const cli = join(process.cwd(), "dist", "cli.js");
@@ -28,7 +29,7 @@ describe("--json envelope", () => {
     const { envelope, code } = await runJson(["decode", "ledger", "170"]);
     expect(code).toBe(0);
     expect(envelope).toMatchObject({
-      schemaVersion: 1,
+      schemaVersion: SCHEMA_VERSION,
       ok: true,
       command: "decode ledger",
       error: null,

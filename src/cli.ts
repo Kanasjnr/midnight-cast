@@ -223,13 +223,14 @@ decode
 
 program
   .command("rpc <method> [params] [network]")
-  .description("Call a JSON-RPC method on the node (params as JSON array)")
+  .description("Call a read-only JSON-RPC method on the node (params as JSON array)")
+  .option("--allow-write", "Also send methods that aren't known to be read-only, which may submit or change node state")
   .action(
     async (
       method: string,
       params: string | undefined,
       network: string | undefined,
-      _opts,
+      opts: { allowWrite?: boolean },
       cmd,
     ) => {
       const split = splitRpcPositionalArgs(params, network);
@@ -241,6 +242,7 @@ program
             split.network,
             resolveFlags(cmd),
             globalOpts(cmd),
+            { allowWrite: opts.allowWrite === true },
           ),
         cmd,
       );
@@ -493,14 +495,14 @@ program
   .command("explain [topic]")
   .description("Static help (e.g. explain dust); with --json and no topic, a catalog of every command")
   .action(async (topic: string | undefined, _opts, cmd) => {
-    await run(async () => explainCommand(topic, globalOpts(cmd), () => buildCatalog(program, TOPICS)), cmd);
+    await run(async () => explainCommand(topic, { ...globalOpts(cmd), network: resolveFlags(cmd).network }, () => buildCatalog(program, TOPICS)), cmd);
   });
 
 program
   .command("examples [topic...]")
   .description("Midnight's official examples: list them, or find the code that shows a topic (e.g. examples dust sponsorship)")
   .action(async (topic: string[], _opts, cmd) => {
-    await run(async () => examplesCommand(topic.join(" "), globalOpts(cmd)), cmd);
+    await run(async () => examplesCommand(topic.join(" "), { ...globalOpts(cmd), network: resolveFlags(cmd).network }), cmd);
   });
 
 program

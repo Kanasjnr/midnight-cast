@@ -12,6 +12,8 @@ jobs:
     # Only publish when the GitHub release targets main (not next-release).
     if: github.event.release.target_commitish == 'main'
     uses: ./.github/workflows/tarball.yml
+    with:
+      keep: true
 
   binaries:
     if: github.event.release.target_commitish == 'main'
@@ -86,14 +88,14 @@ jobs:
     # npm doesn't wait for the binaries: they're additive, and a failed binary job can be re-run after.
     needs: [tarball, live-recent]
     runs-on: ubuntu-latest
+    environment: npm-publish
     # npm trusted publishing: npm accepts this workflow through GitHub's OIDC token, so there's no npm token
     # to expire, and it adds provenance itself. It's set up on npmjs.com (see docs/RELEASING.md).
+    # This job can get that token, so it checks out and installs nothing: it publishes the tarball the
+    # tarball job packed and tested, and no dependency's install script runs while the token is available.
     permissions:
       id-token: write
-      contents: read
     steps:
-      - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: "24"
@@ -107,9 +109,32 @@ jobs:
             exit 1
           fi
 
-      - run: npm ci
-      - run: npm run build
-      - run: npm publish --access public
+      - uses: actions/download-artifact@v4
+        with:
+          name: npm-tarball
+          path: package
+
+      - name: The tarball is this release's version
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          tarballs=(package/*.tgz)
+          if [ "${#tarballs[@]}" -ne 1 ]; then
+            echo "::error::Expected one tested tarball, found ${#tarballs[@]}: ${tarballs[*]}"
+            exit 1
+          fi
+          tarball=${tarballs[0]}
+          manifest=$(tar -xOzf "$tarball" package/package.json)
+          name=$(jq -r .name <<<"$manifest")
+          version=$(jq -r .version <<<"$manifest")
+          if [ "$name" != midnight-cast ] || [ "v$version" != "$TAG" ]; then
+            echo "::error::The tested tarball is $name@$version, but the release is midnight-cast $TAG."
+            exit 1
+          fi
+          echo "TARBALL=$tarball" >> "$GITHUB_ENV"
+
+      - run: npm publish "$TARBALL" --access public --ignore-scripts
 
   mcp-registry:
     name: List in the MCP Registry

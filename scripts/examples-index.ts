@@ -8,16 +8,22 @@
 // its symbol at the pinned commit and fills in the lines, link and excerpt. --check exits 1 if
 // the committed index differs from what the pinned commit renders, and notes when the
 // repository's main branch has moved past the pin, so the pin gets reviewed. To move the pin,
-// change COMMIT, run the script, and review the diff.
+// change COMMIT (and LEDGER and MIGRATION_PR, if the examples moved ledger), run the script, and review the diff.
 
+import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import type { ExampleFile, ExamplesIndex } from "../src/lib/examples-index.js";
+import type { ExampleFile, ExamplesIndex, ExamplesMigration } from "../src/lib/examples-index.js";
 import { fetchGitHub, notice } from "./github.js";
 
 const REPO = "midnightntwrk/midnight-examples";
-export const COMMIT = "95d4f5006f042db08cef301df68ca260a9e6be7b";
+export const COMMIT = "c37451a810313bb22015ded286c3718db95cee19";
+// The ledger the code at COMMIT targets. Set it with COMMIT: midnight-examples#88 moved the examples to Ledger 9.
+export const LEDGER = "9";
+// The pull request that moved the examples onto LEDGER: a worked migration for each example. Keep it when COMMIT
+// moves within the same ledger, since projects on the ledger before are still behind; change it with LEDGER.
+export const MIGRATION_PR: number | undefined = 88;
 const MAX_EXCERPT_LINES = 24;
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -91,23 +97,25 @@ const EXAMPLES: Source[] = [
     ],
   },
   {
-    name: "election",
-    summary: "A vote with registration, votes committed in secret and revealed later, and counting",
-    topics: ["voting", "election", "commit-reveal", "register voters", "counter", "secret ballot"],
+    name: "voting",
+    summary: "Anonymous allow-listed voting: Merkle membership, nullifiers so no one votes twice, and ballots encrypted to the admins, who count them",
+    topics: ["voting", "election", "anonymous voting", "allow list", "merkle membership", "merkle tree path", "nullifier", "double voting", "encrypted ballot", "secret ballot", "commitment"],
     files: [
-      { path: "contract/election.compact", symbol: "export circuit commitVote", about: "Committing to a vote without revealing it" },
-      { path: "contract/election.compact", symbol: "export circuit revealVote", about: "Revealing a committed vote and counting it" },
-      { path: "contract/election.compact", symbol: "circuit commitWithSk", about: "A commitment keyed by the voter's secret" },
+      { path: "contract/voting.compact", symbol: "export circuit enrol", about: "Adding a voter's key to the Merkle allow list" },
+      { path: "contract/voting.compact", symbol: "export circuit cast", about: "Casting a ballot anonymously: proving allow-list membership and spending a nullifier" },
+      { path: "contract/voting.compact", symbol: "witness voterPath", about: "The witness that supplies the voter's Merkle path" },
+      { path: "contract/voting.compact", symbol: "export pure circuit ballotNullifier", about: "A nullifier bound to the proposal and the contract instance, so ballots can't be linked across deployments" },
+      { path: "contract/voting.compact", symbol: "export circuit count", about: "Counting a decrypted ballot against the commitment cast stored" },
     ],
   },
   {
-    name: "secret-message",
-    summary: "Publishing a hash commitment of a private message instead of the message itself",
-    topics: ["hash commitment", "persistent hash", "domain separator", "private message", "ownership", "public key from secret"],
+    name: "leaderboard",
+    summary: "Structured on-chain data and ownership proofs in a browser DApp that uses Lace, deployed to Vercel",
+    topics: ["leaderboard", "struct in ledger", "map of structs", "ownership proof", "prove ownership", "hash commitment", "persistent hash", "public key from secret", "domain separator", "optional private input", "browser dapp", "lace"],
     files: [
-      { path: "contract/secret-message.compact", symbol: "export circuit hashMessageWithSeparator", about: "Hashing with a domain separator" },
-      { path: "contract/secret-message.compact", symbol: "export circuit publishMessageHashWithOwner", about: "Publishing a hash and recording its owner" },
-      { path: "contract/secret-message.compact", symbol: "export circuit getDappPubKey", about: "Deriving a public key from a secret inside a circuit" },
+      { path: "contract/leaderboard.compact", symbol: "export circuit submitScore", about: "Storing a struct in a ledger Map, with a name a witness supplies only when asked" },
+      { path: "contract/leaderboard.compact", symbol: "export circuit verifyOwnership", about: "Proving you own an entry without revealing the secret key" },
+      { path: "contract/leaderboard.compact", symbol: "export circuit ownerCommitment", about: "Committing to the owner's secret key with a domain separator" },
     ],
   },
   {
@@ -157,10 +165,9 @@ const EXAMPLES: Source[] = [
   {
     name: "private-tip-jar",
     summary: "An anonymous tip jar: anyone drops a shielded coin into a contract-held pot without saying who they are, and only the owner can withdraw",
-    topics: ["anonymous tip", "anonymous payment", "donation", "contract-held pot", "re-nonce a coin", "owner-only withdrawal", "secret key witness"],
+    topics: ["anonymous tip", "anonymous payment", "donation", "contract-held pot", "fresh coin nonce", "owner-only withdrawal", "secret key witness"],
     files: [
-      { path: "contract/private-tip-jar.compact", symbol: "export circuit tip", about: "Taking a tipper's shielded coin without their identity" },
-      { path: "contract/private-tip-jar.compact", symbol: "circuit reNonceToSelf", about: "Re-sending a coin to the contract so its nonce doesn't point back at the tipper" },
+      { path: "contract/private-tip-jar.compact", symbol: "export circuit tip", about: "Taking a tipper's shielded coin without their identity, under a fresh nonce the tipper's client picks" },
       { path: "contract/private-tip-jar.compact", symbol: "export circuit withdraw", about: "Paying a pot coin to the owner, checked against a hash of their secret key" },
       { path: "contract/private-tip-jar.compact", symbol: "export pure circuit ownerKey", about: "Deriving the owner's key from the secret a witness supplies" },
       { path: "contract/witnesses.ts", symbol: "export const witnesses", about: "The witness that supplies the owner's secret key" },
@@ -284,7 +291,36 @@ export async function buildIndex(): Promise<ExamplesIndex> {
       files,
     });
   }
-  return { repo: REPO, commit: COMMIT, toolchain: readToolchain(readme), examples };
+  const migration = MIGRATION_PR === undefined ? undefined : await readMigration(MIGRATION_PR);
+  return { repo: REPO, commit: COMMIT, ledger: LEDGER, toolchain: readToolchain(readme), ...(migration ? { migration } : {}), examples };
+}
+
+/**
+ * What the migration pull request changed in each example's own code: package.json and the source under
+ * contract/ and src/, each linked to its diff. UI code, tests, docs and lockfiles are left out. Only what a merged
+ * pull request can't change is kept, so its title, which anyone can edit, isn't.
+ */
+async function readMigration(pr: number): Promise<ExamplesMigration> {
+  const meta = JSON.parse(await fetchGitHub(`https://api.github.com/repos/${REPO}/pulls/${pr}`)) as { merged_at: string | null };
+  if (!meta.merged_at) throw new Error(`${REPO}#${pr} isn't merged`);
+  const paths: string[] = [];
+  for (let page = 1; ; page++) {
+    const files = JSON.parse(await fetchGitHub(`https://api.github.com/repos/${REPO}/pulls/${pr}/files?per_page=100&page=${page}`)) as Array<{ filename: string }>;
+    paths.push(...files.map((f) => f.filename));
+    if (files.length < 100) break;
+  }
+  const own = /^examples\/([^/]+)\/(?:package\.json|(?:contract|src)\/(?:[^/]+\/)*[^/]+\.(?:compact|ts))$/;
+  const test = /\/(?:test|tests|__tests__)\/|\.(?:test|spec)\.ts$/;
+  const examples: ExamplesMigration["examples"] = {};
+  for (const path of paths.sort()) {
+    const name = own.exec(path)?.[1];
+    // Every example the pull request changed, including ones gone upstream since, such as election: a project built
+    // from one still needs its own example's changes, and the diff links stay valid.
+    if (!name || test.test(path)) continue;
+    const anchor = createHash("sha256").update(path).digest("hex");
+    (examples[name] ??= []).push({ path, url: `https://github.com/${REPO}/pull/${pr}/files#diff-${anchor}` });
+  }
+  return { pr, url: `https://github.com/${REPO}/pull/${pr}`, examples };
 }
 
 async function main(): Promise<number> {

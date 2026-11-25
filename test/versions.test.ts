@@ -215,10 +215,10 @@ describe("minimum node and runtime spec", () => {
     expect(buildVersionChecks(strict, live("1.0.400")).find((c) => c.label === "node")).toMatchObject({ ok: true, note: `recommended ${row.node}` });
   });
 
-  it("needs node 1.0.400 and ledger 8.1.3 on preprod, and node 2.1.101 and ledger 9 where Ledger 9 is live, and says why", () => {
+  it("needs node 2.1.101 and ledger 9 on every network, and says why", () => {
     const bundled = loadSupportMatrix();
-    expect(bundled.networks.preprod).toMatchObject({ minNode: "1.0.400", ledger: "8.1.3", minNodeReason: expect.stringContaining("GHSA-wr7g-rr4v-jmj8") });
-    for (const network of ["preview", "mainnet"]) {
+    expect(bundled.networks.preprod!.minNodeReason).toContain("9 November 2026");
+    for (const network of ["preview", "preprod", "mainnet"]) {
       expect(bundled.networks[network], network).toMatchObject({
         minNode: "2.1.101",
         runtimeSpec: 2001100,

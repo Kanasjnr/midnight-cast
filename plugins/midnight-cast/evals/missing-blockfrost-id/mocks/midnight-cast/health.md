@@ -3,7 +3,7 @@ error: true
 ---
 
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "ok": false,
   "command": "health",
   "network": null,

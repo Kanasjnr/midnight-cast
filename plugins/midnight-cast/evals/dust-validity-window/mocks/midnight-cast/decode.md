@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "ok": true,
   "command": "decode",
   "network": null,
@@ -37,11 +37,34 @@
         "fix": "Use fresher DUST",
         "docUrl": "https://docs.midnight.network/nodes/error-codes",
         "network": "preprod",
-        "ledger": "8.1.3",
-        "mapLedger": "8.1.3",
-        "networkLedger": "8.1.3",
-        "mapUpdated": "2026-10",
-        "relatedHint": "Indexers before 4.3.5 could also reject the first transaction of a block with this error (fixed in 4.3.4 and 4.3.5). If only first-in-block transactions fail, check the indexer version."
+        "ledger": "9.1.0.0",
+        "mapLedger": "9.1.0.0",
+        "networkLedger": "9.1.0.0",
+        "mapUpdated": "2026-11",
+        "relatedHint": "Indexers before 4.3.5 could also reject the first transaction of a block with this error (fixed in 4.3.4 and 4.3.5). If only first-in-block transactions fail, check the indexer version.",
+        "examples": [
+          {
+            "example": "hello-world",
+            "about": "Syncing a wallet and reporting its progress",
+            "path": "examples/hello-world/src/wallet.ts",
+            "lines": [
+              67,
+              73
+            ],
+            "url": "https://github.com/midnightntwrk/midnight-examples/blob/c37451a810313bb22015ded286c3718db95cee19/examples/hello-world/src/wallet.ts#L67-L73"
+          }
+        ]
+      }
+    ],
+    "runbooks": [
+      {
+        "matched": "1010: Invalid Transaction: Custom error:",
+        "runbooks": [
+          {
+            "title": "Node rejects a transaction (1010, Custom error: N)",
+            "url": "https://github.com/midnightntwrk/servicedesk/blob/main/runbooks/node-1010-custom-error-runbook/node-1010-custom-error-runbook.md"
+          }
+        ]
       }
     ]
   },

@@ -4,7 +4,8 @@ name: Binaries
 # architecture. A release PR into main must pass it, and publish.yml runs it again before
 # publishing, then attaches the archives. PRs into next-release smoke offline, like the other
 # checks there. The macOS binaries are built on macOS, where codesign can sign them, and the
-# Windows one on Windows.
+# Windows one on Windows. Dependencies install without their scripts, since these jobs build
+# what the release attests; esbuild, the only one with an install script, works without it.
 
 on:
   pull_request:
@@ -36,7 +37,7 @@ jobs:
           node-version: "22"
           cache: npm
 
-      - run: npm ci
+      - run: npm ci --ignore-scripts
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -76,7 +77,7 @@ jobs:
           node-version: "22"
           cache: npm
 
-      - run: npm ci
+      - run: npm ci --ignore-scripts
 
       - uses: actions/download-artifact@v4
         with:
@@ -103,7 +104,7 @@ jobs:
           node-version: "22"
           cache: npm
 
-      - run: npm ci
+      - run: npm ci --ignore-scripts
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -134,7 +135,7 @@ jobs:
           node-version: "22"
           cache: npm
 
-      - run: npm ci
+      - run: npm ci --ignore-scripts
 
       - uses: actions/download-artifact@v4
         with:
@@ -156,7 +157,7 @@ jobs:
           node-version: "22"
           cache: npm
 
-      - run: npm ci
+      - run: npm ci --ignore-scripts
 
       - name: Bun version
         id: bun
@@ -181,14 +182,10 @@ jobs:
           if-no-files-found: error
 
   release:
-    name: Checksums and provenance
+    name: Checksums
     needs: [linux, linux-arm64, macos, macos-intel, windows]
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    permissions:
-      contents: read
-      id-token: write
-      attestations: write
     steps:
       - uses: actions/checkout@v4
 
@@ -197,7 +194,7 @@ jobs:
           node-version: "22"
           cache: npm
 
-      - run: npm ci
+      - run: npm ci --ignore-scripts
 
       - uses: actions/download-artifact@v4
         with:
@@ -208,8 +205,29 @@ jobs:
       - name: One SHA256SUMS for every archive, beside the installers
         run: npm run binaries -- --checksums && cat build/release/SHA256SUMS
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: midnight-cast-binaries
+          path: build/release/
+          if-no-files-found: error
+
+  attest:
+    name: Provenance
+    # Signs with an OIDC token, so it installs nothing: it only attests the archives the release job uploaded.
+    if: inputs.attest
+    needs: release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: midnight-cast-binaries
+          path: build/release
+
       - name: Record build provenance
-        if: inputs.attest
         uses: actions/attest-build-provenance@v2
         with:
           subject-path: |
@@ -218,9 +236,3 @@ jobs:
             build/release/SHA256SUMS
             build/release/install.sh
             build/release/install.ps1
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: midnight-cast-binaries
-          path: build/release/
-          if-no-files-found: error

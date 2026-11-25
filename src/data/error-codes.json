@@ -604,5 +604,6 @@
       "description": "Error in host API processing",
       "fix": "Internal runtime error; check node logs"
     }
-  }
+  },
+  "nodeTag": "node-1.0.400"
 }

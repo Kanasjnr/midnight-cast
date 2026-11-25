@@ -4,7 +4,7 @@ import type { ResolveFlags } from "./config.js";
 import { checkEndpoints, toolCallFor } from "./lib/next-steps.js";
 import { sanitizeDeep, sanitizeForOutput } from "./lib/sanitize.js";
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export interface ToolCall {
   name: string;

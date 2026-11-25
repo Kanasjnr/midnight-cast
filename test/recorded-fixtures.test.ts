@@ -114,7 +114,7 @@ for (const network of FIXTURE_NETWORKS) {
       expect(tx.next?.map((s) => s.command)).toContain(`midnight-cast dust-event ${inputs.dustEventId} ${network}`);
       const recorded = JSON.parse(fixture.exchanges.find((e) => e.key.includes("TransactionLookup"))!.body).data.transactions[0];
       expect(tx.data).toMatchObject({
-        fees: { paidFees: recorded.fee, estimatedFees: recorded.fee },
+        fees: { paidFees: recorded.fee },
         startIndex: recorded.zswapStartIndex,
         endIndex: recorded.zswapEndIndex,
       });

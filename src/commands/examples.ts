@@ -1,9 +1,14 @@
 import { findExamples, loadExamplesIndex, words, type ExampleMatch, type ExamplesIndex } from "../lib/examples-index.js";
+import { examplesLedgerNote } from "../lib/example-links.js";
 import type { EmitResult, GlobalOptions } from "../output.js";
 
 export interface ExamplesReport {
   repo: string;
   commit: string;
+  /** The ledger the examples' code targets. */
+  ledger: string;
+  /** Which public networks run another ledger, when any do. */
+  ledgerNote?: string;
   toolchain: Record<string, string>;
   /** The question asked, when there was one. */
   topic?: string;
@@ -13,8 +18,13 @@ export interface ExamplesReport {
 }
 
 /** Midnight's official examples: all of them, or the ones that show a topic, with the code that does. */
-export function examplesCommand(topic: string | undefined, options: GlobalOptions, index: ExamplesIndex = loadExamplesIndex()): EmitResult {
-  const base = { repo: index.repo, commit: index.commit, toolchain: index.toolchain };
+export function examplesCommand(
+  topic: string | undefined,
+  options: GlobalOptions & { network?: string },
+  index: ExamplesIndex = loadExamplesIndex(),
+): EmitResult {
+  const ledgerNote = examplesLedgerNote(options.network);
+  const base = { repo: index.repo, commit: index.commit, ledger: index.ledger, ...(ledgerNote ? { ledgerNote } : {}), toolchain: index.toolchain };
   const query = topic?.trim();
   // A topic of only filler words ("show me code") asks for the list.
   if (!query || !words(query).length) {
@@ -39,13 +49,13 @@ export function examplesCommand(topic: string | undefined, options: GlobalOption
 }
 
 const pin = (report: ExamplesReport) =>
-  `${report.repo} at ${report.commit.slice(0, 7)}, pinned to ${Object.entries(report.toolchain)
-    .filter(([k]) => /pragma|compiler|midnight-js/.test(k))
+  `${report.repo} at ${report.commit.slice(0, 7)}, Ledger ${report.ledger}, pinned to ${Object.entries(report.toolchain)
+    .filter(([k]) => /pragma|compiler|midnight-js-\*/.test(k))
     .map(([k, v]) => `${k.replace(/ \(.*\)$/, "")} ${v}`)
     .join(", ")}`;
 
 function formatList(report: ExamplesReport): string {
-  const lines = [`Midnight's examples (${pin(report)})`, ""];
+  const lines = [`Midnight's examples (${pin(report)})`, ...(report.ledgerNote ? [report.ledgerNote] : []), ""];
   for (const e of report.examples ?? []) lines.push(`  ${e.name.padEnd(16)} ${e.summary}`, `  ${"".padEnd(16)} topics: ${e.topics.join(", ")}`);
   lines.push("", "Find the code for a topic: midnight-cast examples \"<topic>\"");
   return lines.join("\n");
@@ -54,7 +64,7 @@ function formatList(report: ExamplesReport): string {
 function formatMatches(report: ExamplesReport): string {
   const matches = report.matches ?? [];
   if (!matches.length) return "Try other words, or list every example and its topics: midnight-cast examples";
-  const lines = [`Midnight's examples for "${report.topic}" (${pin(report)})`];
+  const lines = [`Midnight's examples for "${report.topic}" (${pin(report)})`, ...(report.ledgerNote ? [report.ledgerNote] : [])];
   matches.forEach((match, i) => {
     lines.push("", `${match.name}: ${match.summary}`);
     for (const file of match.files) lines.push(`  ${file.about}: ${file.path}:${file.lines[0]}-${file.lines[1]}`, `    ${file.url}`);

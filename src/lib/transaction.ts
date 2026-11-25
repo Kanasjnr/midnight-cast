@@ -7,7 +7,6 @@ export interface TransactionSegment {
 
 export interface TransactionFees {
   paidFees: string;
-  estimatedFees: string;
 }
 
 export interface DustEventSummary {
@@ -119,8 +118,7 @@ function mapTransaction(tx: GqlTransaction): TransactionSummary {
     status: tx.transactionResult?.status,
     // The indexer returns null rather than an empty list when a transaction has no segment results.
     ...(tx.transactionResult?.segments ? { segments: tx.transactionResult.segments } : {}),
-    // The indexer deprecates estimatedFees for the fee paid, so it repeats that fee until schemaVersion 2.
-    ...(tx.fee != null ? { fees: { paidFees: tx.fee, estimatedFees: tx.fee } } : {}),
+    ...(tx.fee != null ? { fees: { paidFees: tx.fee } } : {}),
     dustLedgerEvents: tx.dustLedgerEvents.map((e) => ({
       id: e.id,
       typename: e.__typename,

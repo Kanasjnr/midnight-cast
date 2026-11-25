@@ -26,9 +26,20 @@ export interface Example {
 export interface ExamplesIndex {
   repo: string;
   commit: string;
+  /** The ledger the code at that commit targets, e.g. "9". */
+  ledger: string;
   /** The toolchain the examples are pinned to at that commit, from their README. */
   toolchain: Record<string, string>;
+  /** The pull request that moved the examples to this ledger, when the pin is past one. */
+  migration?: ExamplesMigration;
   examples: Example[];
+}
+
+export interface ExamplesMigration {
+  pr: number;
+  url: string;
+  /** Each example's own changed code, linked to its diff in the pull request. */
+  examples: Record<string, Array<{ path: string; url: string }>>;
 }
 
 export interface ExampleMatch {

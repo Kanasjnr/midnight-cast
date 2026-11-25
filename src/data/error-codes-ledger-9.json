@@ -1,0 +1,902 @@
+{
+  "ledger": "9.1.0.0",
+  "nodeTag": "node-2.1.101",
+  "updated": "2026-11",
+  "docUrl": "https://docs.midnight.network/nodes/error-codes",
+  "source": "https://docs.midnight.network/nodes/error-codes, its Node 2.1.x codes section; codes 141 to 146 and 251 to 254 from the error messages in midnight-ledger-v9 1.0.1, the ledger node 2.1.101 builds with",
+  "retired": {
+    "168": {
+      "name": "FeeCalculation",
+      "replacedBy": [
+        231,
+        232
+      ]
+    },
+    "182": {
+      "name": "TransactionApplicationError",
+      "replacedBy": [
+        228,
+        229,
+        230
+      ]
+    },
+    "186": {
+      "name": "EffectsCheckFailure",
+      "replacedBy": [
+        212,
+        213,
+        214,
+        215,
+        216,
+        217,
+        218
+      ]
+    },
+    "187": {
+      "name": "DisjointCheckFailure",
+      "replacedBy": [
+        225,
+        226,
+        227
+      ]
+    },
+    "188": {
+      "name": "SequencingCheckFailure",
+      "replacedBy": [
+        219,
+        220,
+        221,
+        222,
+        223,
+        224
+      ]
+    },
+    "193": {
+      "name": "ReplayProtectionViolation",
+      "replacedBy": [
+        242,
+        243,
+        244
+      ]
+    },
+    "205": {
+      "name": "ReplayProtectionFailure",
+      "replacedBy": [
+        245,
+        246,
+        247
+      ]
+    }
+  },
+  "codes": {
+    "0": {
+      "name": "NetworkId",
+      "description": "Failed to deserialize the network ID",
+      "fix": "Check SDK version compatibility, verify network ID encoding"
+    },
+    "1": {
+      "name": "Transaction",
+      "description": "Failed to deserialize transaction payload",
+      "fix": "Verify transaction was built with a compatible SDK version"
+    },
+    "2": {
+      "name": "LedgerState",
+      "description": "Failed to deserialize ledger state",
+      "fix": "Internal node error"
+    },
+    "3": {
+      "name": "ContractAddress",
+      "description": "Failed to deserialize contract address",
+      "fix": "Verify the contract address format"
+    },
+    "4": {
+      "name": "PublicKey",
+      "description": "Failed to deserialize public key",
+      "fix": "Check key format and encoding"
+    },
+    "5": {
+      "name": "VersionedArenaKey",
+      "description": "Failed to deserialize versioned arena key",
+      "fix": "Internal"
+    },
+    "6": {
+      "name": "UserAddress",
+      "description": "Failed to deserialize user address",
+      "fix": "Verify address format"
+    },
+    "7": {
+      "name": "TypedArenaKey",
+      "description": "Failed to deserialize typed arena key",
+      "fix": "Internal"
+    },
+    "8": {
+      "name": "SystemTransaction",
+      "description": "Failed to deserialize system transaction",
+      "fix": "Governance/bridge transaction format error"
+    },
+    "9": {
+      "name": "DustPublicKey",
+      "description": "Failed to deserialize DUST public key",
+      "fix": "Check DUST key format"
+    },
+    "10": {
+      "name": "CNightGeneratesDustActionType",
+      "description": "Failed to deserialize cNIGHT-generates-DUST action type",
+      "fix": "Internal bridge/observation error"
+    },
+    "11": {
+      "name": "CNightGeneratesDustEvent",
+      "description": "Failed to deserialize cNIGHT-generates-DUST event",
+      "fix": "Internal bridge/observation error"
+    },
+    "50": {
+      "name": "TransactionIdentifier",
+      "description": "Failed to serialize transaction identifier",
+      "fix": "Internal"
+    },
+    "51": {
+      "name": "LedgerState",
+      "description": "Failed to serialize ledger state",
+      "fix": "Internal node error"
+    },
+    "52": {
+      "name": "LedgerParameters",
+      "description": "Failed to serialize ledger parameters",
+      "fix": "Internal node error"
+    },
+    "53": {
+      "name": "ContractAddress",
+      "description": "Failed to serialize contract address",
+      "fix": "Internal"
+    },
+    "54": {
+      "name": "ContractState",
+      "description": "Failed to serialize contract state",
+      "fix": "The contract state might be corrupt"
+    },
+    "55": {
+      "name": "ContractStateToJson",
+      "description": "Failed to serialize contract state to JSON",
+      "fix": "Contract state format incompatible with JSON serialization"
+    },
+    "56": {
+      "name": "ZswapState",
+      "description": "Failed to serialize Zswap state",
+      "fix": "Internal Zswap error"
+    },
+    "57": {
+      "name": "UnknownType",
+      "description": "Failed to serialize an unknown type",
+      "fix": "Internal"
+    },
+    "58": {
+      "name": "MerkleTreeDigest",
+      "description": "Failed to serialize Merkle tree digest",
+      "fix": "Internal Merkle tree error"
+    },
+    "59": {
+      "name": "VersionedArenaKey",
+      "description": "Failed to serialize versioned arena key",
+      "fix": "Internal"
+    },
+    "60": {
+      "name": "TypedArenaKey",
+      "description": "Failed to serialize typed arena key",
+      "fix": "Internal"
+    },
+    "61": {
+      "name": "CNightGeneratesDustEvent",
+      "description": "Failed to serialize cNIGHT-generates-DUST event",
+      "fix": "Internal bridge error"
+    },
+    "62": {
+      "name": "SystemTransaction",
+      "description": "Failed to serialize system transaction",
+      "fix": "Internal governance error"
+    },
+    "63": {
+      "name": "ArenaHash",
+      "description": "Failed to serialize arena hash",
+      "fix": "Internal"
+    },
+    "100": {
+      "name": "EffectsMismatch",
+      "description": "Declared transaction effects do not match computed effects",
+      "fix": "Rebuild the transaction"
+    },
+    "101": {
+      "name": "ContractAlreadyDeployed",
+      "description": "A contract already exists at the target address",
+      "fix": "Use a different contract address"
+    },
+    "102": {
+      "name": "ContractNotPresent",
+      "description": "Called a contract that does not exist",
+      "fix": "Verify the contract address; deploy first"
+    },
+    "103": {
+      "name": "Zswap",
+      "description": "Zswap-level transaction error. Node 2.1.x returns it only when none of the specific codes 239, 240, 241 and 250 matches.",
+      "fix": "Check for nullifier reuse, verify coin tree root",
+      "nodeName": "Unknown"
+    },
+    "104": {
+      "name": "Transcript",
+      "description": "On-chain transcript execution rejected",
+      "fix": "Check contract logic"
+    },
+    "105": {
+      "name": "InsufficientClaimable",
+      "description": "Not enough NIGHT tokens to claim",
+      "fix": "Ensure sufficient NIGHT balance"
+    },
+    "106": {
+      "name": "VerifierKeyNotFound",
+      "description": "Verifier key missing",
+      "fix": "Deploy the verifier key before calling"
+    },
+    "107": {
+      "name": "VerifierKeyAlreadyPresent",
+      "description": "Verifier key already exists",
+      "fix": "No action needed"
+    },
+    "108": {
+      "name": "ReplayCounterMismatch",
+      "description": "Signed counter does not match",
+      "fix": "Rebuild with current replay counter"
+    },
+    "109": {
+      "name": "UnknownError",
+      "description": "Unclassified transaction invalid error",
+      "fix": "Check node logs"
+    },
+    "110": {
+      "name": "VerifierKeyNotSet",
+      "description": "Contract deployed without verifier key",
+      "fix": "Include verifier keys when deploying"
+    },
+    "111": {
+      "name": "TransactionTooLarge",
+      "description": "Transaction exceeds maximum size",
+      "fix": "Reduce payload or split transactions"
+    },
+    "112": {
+      "name": "VerifierKeyTooLarge",
+      "description": "Verifier key exceeds limit",
+      "fix": "Use a smaller circuit"
+    },
+    "113": {
+      "name": "VerifierKeyNotPresent",
+      "description": "Referenced verifier key not found",
+      "fix": "Deploy contract with verifier key first"
+    },
+    "114": {
+      "name": "ContractNotPresent",
+      "description": "References non-existent contract",
+      "fix": "Verify contract address"
+    },
+    "115": {
+      "name": "InvalidProof",
+      "description": "Zero-knowledge proof verification failed",
+      "fix": "Regenerate proof; check proof server version"
+    },
+    "116": {
+      "name": "BindingCommitmentOpeningInvalid",
+      "description": "Binding commitment incorrectly opened",
+      "fix": "Rebuild the transaction"
+    },
+    "117": {
+      "name": "NotNormalized",
+      "description": "The transaction is not in normal form. The most common cause on a local devnet is a zero fee: when feesWithMargin evaluates to 0 and no additionalFeeOverhead is set, the wallet builds an empty DustActions, which DustActions::well_formed rejects. A ContractDeploy is accepted but the first contract call fails; there is no special minimum-cost floor on ContractDeploy.",
+      "fix": "Set a small positive additionalFeeOverhead (e.g. 1_000_000n) in the wallet's costParameters so a real DUST fee is spent. Any positive amount the wallet can cover in DUST works (the basic-start tutorial and compact-cli-dev template use 300_000_000_000_000n). Build the transaction with the SDK so it is normalized."
+    },
+    "118": {
+      "name": "FallibleWithoutCheckpoint",
+      "description": "Fallible transcript missing checkpoint",
+      "fix": "Add kernel.checkpoint() at start of fallible sections"
+    },
+    "119": {
+      "name": "ClaimReceiveFailed",
+      "description": "Failed to claim coin commitment receive",
+      "fix": "Rebuild the transaction"
+    },
+    "120": {
+      "name": "ClaimSpendFailed",
+      "description": "Failed to claim coin commitment spend",
+      "fix": "Rebuild the transaction"
+    },
+    "121": {
+      "name": "ClaimNullifierFailed",
+      "description": "Failed to claim nullifier",
+      "fix": "Rebuild the transaction"
+    },
+    "122": {
+      "name": "ClaimCallFailed",
+      "description": "Failed to claim contract call",
+      "fix": "Rebuild the transaction"
+    },
+    "123": {
+      "name": "InvalidSchnorrProof",
+      "description": "Schnorr proof verification failed",
+      "fix": "Regenerate transaction signature"
+    },
+    "124": {
+      "name": "UnclaimedCoinCom",
+      "description": "Contract-owned output left unclaimed",
+      "fix": "Claim all contract outputs"
+    },
+    "125": {
+      "name": "UnclaimedNullifier",
+      "description": "Contract-owned input left unauthorized",
+      "fix": "Authorize all contract inputs"
+    },
+    "126": {
+      "name": "Unbalanced",
+      "description": "Negative balance in a token type",
+      "fix": "Check token amounts"
+    },
+    "127": {
+      "name": "Zswap",
+      "description": "Zswap offer structurally malformed. Node 2.1.x returns it only when none of the specific codes 235, 236, 237 and 238 matches.",
+      "fix": "Rebuild Zswap offer",
+      "nodeName": "Unknown"
+    },
+    "128": {
+      "name": "BuiltinDecode",
+      "description": "FAB decode error",
+      "fix": "Verify data formats"
+    },
+    "129": {
+      "name": "GuaranteedLimit",
+      "description": "Exceeded guaranteed section limits",
+      "fix": "Reduce guaranteed section size"
+    },
+    "130": {
+      "name": "MergingContracts",
+      "description": "Error merging contract intents",
+      "fix": "Check configuration"
+    },
+    "131": {
+      "name": "CantMergeTypes",
+      "description": "Incompatible transaction types for merge",
+      "fix": "Use compatible types"
+    },
+    "132": {
+      "name": "ClaimOverflow",
+      "description": "Claimed coin value overflows deltas",
+      "fix": "Check token amounts"
+    },
+    "133": {
+      "name": "ClaimCoinMismatch",
+      "description": "ClaimRewards coin mismatch",
+      "fix": "Rebuild claim with correct coin data"
+    },
+    "134": {
+      "name": "KeyNotInCommittee",
+      "description": "Signing key not a committee member",
+      "fix": "Only committee members can sign"
+    },
+    "135": {
+      "name": "InvalidCommitteeSignature",
+      "description": "Committee signature verification failed",
+      "fix": "Verify signing key and signature"
+    },
+    "136": {
+      "name": "ThresholdMissed",
+      "description": "Committee threshold not met",
+      "fix": "Gather more signatures"
+    },
+    "137": {
+      "name": "TooManyZswapEntries",
+      "description": "Too many Zswap entries",
+      "fix": "Reduce shielded operations"
+    },
+    "138": {
+      "name": "BalanceCheckOverspend",
+      "description": "A token balance went negative after fees were applied (balancing_check, midnight-ledger ledger/src/verify.rs). The transaction or one of its segments spends more of a token than it has once fees are applied. Because fees are paid in DUST, a DUST-side 138 means the DUST fee exceeded available DUST — not a NIGHT funding-level problem. DUST registration does NOT cause this: registration is self-funding (its fee is paid by the DUST the registered NIGHT UTXOs generate, not the wallet's existing DUST balance), so it succeeds even at a 0 DUST balance — verified on a local devnet, including with additionalFeeOverhead set.",
+      "fix": "Reduce the transaction outputs or add more inputs of the overspent token. For a DUST-side overspend, ensure the wallet holds enough DUST for the fee. Do not raise NIGHT funding to fix this — fees are denominated in DUST, not NIGHT."
+    },
+    "139": {
+      "name": "UnknownError",
+      "description": "Unclassified malformed error",
+      "fix": "Check node logs"
+    },
+    "140": {
+      "name": "SystemTransaction::NotAllowedForCaller",
+      "description": "The node doesn't allow this system transaction type from this caller",
+      "fix": "System transaction error; check node logs"
+    },
+    "141": {
+      "name": "MalformedTransaction::ContractDustTransfer",
+      "description": "A contract call tried to receive or send DUST",
+      "fix": "Don't move DUST in a contract call: DUST only pays fees, from a wallet"
+    },
+    "142": {
+      "name": "MalformedTransaction::RepeatedCommitteeSignature",
+      "description": "A committee signature is used more than once in the transaction",
+      "fix": "System transaction error; check node logs"
+    },
+    "143": {
+      "name": "MalformedTransaction::RepeatedDustRegistration",
+      "description": "A DUST registration is used more than once in the transaction",
+      "fix": "Include each DUST registration once, then rebuild the transaction"
+    },
+    "144": {
+      "name": "FeeCalculation::RepeatedEntries",
+      "description": "The transaction repeats an entry that no valid transaction repeats, so it has no fee",
+      "fix": "Rebuild the transaction with the SDK"
+    },
+    "145": {
+      "name": "FeeCalculation",
+      "nodeName": "Unknown",
+      "description": "Fee calculation failed for a reason none of the specific codes 144, 231 and 232 covers",
+      "fix": "Rebuild the transaction with the SDK; if it fails again, check node logs"
+    },
+    "146": {
+      "name": "MalformedContractDeploy::TooManyOperations",
+      "description": "The contract deploy has more operations than the limit",
+      "fix": "Deploy a subset of the circuits, then add the rest with maintenance updates"
+    },
+    "150": {
+      "name": "LedgerCacheError",
+      "description": "Ledger cache poisoned",
+      "fix": "Restart the node"
+    },
+    "151": {
+      "name": "NoLedgerState",
+      "description": "No ledger state present",
+      "fix": "Wait for sync to complete"
+    },
+    "152": {
+      "name": "LedgerStateScaleDecodingError",
+      "description": "SCALE decoding of ledger state failed",
+      "fix": "Try a resync"
+    },
+    "153": {
+      "name": "ContractCallCostError",
+      "description": "Failed to calculate contract call cost",
+      "fix": "Internal cost model error"
+    },
+    "154": {
+      "name": "BlockLimitExceededError",
+      "description": "Transaction exceeds block limits",
+      "fix": "Reduce size or wait for less congestion"
+    },
+    "155": {
+      "name": "FeeCalculationError",
+      "description": "Fee calculation failed",
+      "fix": "Internal fee model error"
+    },
+    "156": {
+      "name": "ContractNotPresent",
+      "description": "A contract state query found no contract at the address",
+      "fix": "Verify the contract address and the network"
+    },
+    "157": {
+      "name": "BeneficiaryNotFound",
+      "description": "A balance query for a NIGHT address found no entry",
+      "fix": "Verify the address"
+    },
+    "165": {
+      "name": "GetTransactionContextError",
+      "description": "Failed to retrieve transaction context",
+      "fix": "Internal node error"
+    },
+    "166": {
+      "name": "InvalidNetworkId",
+      "description": "Network ID does not match node",
+      "fix": "Verify networkId matches target network"
+    },
+    "167": {
+      "name": "IllegallyDeclaredGuaranteed",
+      "description": "Guaranteed segment 0 used where forbidden",
+      "fix": "Do not use segment_id 0 for intents"
+    },
+    "169": {
+      "name": "InvalidDustRegistrationSignature",
+      "description": "DUST registration signature failed",
+      "fix": "Regenerate DUST registration with correct keys"
+    },
+    "170": {
+      "name": "InvalidDustSpendProof",
+      "description": "The DUST fee spend proof failed node verification: it was proven against a DUST state the chain has already advanced past, so it no longer validates at the current tip. This is the fee leg, not a fault in the contract or its ZK proof.",
+      "fix": "Sync the wallet's DUST state to the current chain tip before submitting. A stale wallet checkpoint or a public indexer running behind the node yields a spend proof the node rejects. On 170, rebuild and re-balance the transaction rather than resubmitting the same finalized tx: the stale dust proof is baked into that tx, so resubmitting or re-proving the identical transaction cannot clear it. Diagnostic: an instant failure with \"could not balance dust\" (no proving delay) means the DUST state is too stale to balance at all - resync first; a failure after proving with 170 is the block-advance race, which rebuilding the tx on each retry rides through."
+    },
+    "171": {
+      "name": "OutOfDustValidityWindow",
+      "description": "DUST outside validity time window",
+      "fix": "Use fresher DUST"
+    },
+    "172": {
+      "name": "MultipleDustRegistrationsForKey",
+      "description": "Multiple DUST registrations for same key",
+      "fix": "One registration per key per intent"
+    },
+    "173": {
+      "name": "InsufficientDustForRegistrationFee",
+      "description": "Not enough DUST for registration fee",
+      "fix": "Acquire more DUST"
+    },
+    "174": {
+      "name": "MalformedContractDeploy",
+      "description": "Contract deployment structurally invalid. Node 2.1.x returns it only when none of the specific codes 146, 233 and 234 matches.",
+      "fix": "Check deploy balance and charged state",
+      "nodeName": "Unknown"
+    },
+    "175": {
+      "name": "IntentSignatureVerificationFailure",
+      "description": "Intent signature verification failed",
+      "fix": "Regenerate intent signatures"
+    },
+    "176": {
+      "name": "IntentSignatureKeyMismatch",
+      "description": "Signing key does not match verifying key",
+      "fix": "Use correct signing key"
+    },
+    "177": {
+      "name": "IntentSegmentIdCollision",
+      "description": "Duplicate segment_id in intent merge",
+      "fix": "Use unique segment_id per intent"
+    },
+    "178": {
+      "name": "IntentAtGuaranteedSegmentId",
+      "description": "Intent at segment_id 0",
+      "fix": "Use segment_id >= 1"
+    },
+    "179": {
+      "name": "UnsupportedProofVersion",
+      "description": "Proof version not supported",
+      "fix": "Update SDK/proof server"
+    },
+    "180": {
+      "name": "GuaranteedTranscriptVersion",
+      "description": "Guaranteed transcript version not supported",
+      "fix": "Update ledger/SDK version"
+    },
+    "181": {
+      "name": "FallibleTranscriptVersion",
+      "description": "Fallible transcript version not supported",
+      "fix": "Update ledger/SDK version"
+    },
+    "183": {
+      "name": "BalanceCheckOutOfBounds",
+      "description": "Balance overflow/underflow in segment",
+      "fix": "Check segment token amounts"
+    },
+    "184": {
+      "name": "BalanceCheckConversionFailure",
+      "description": "Failed to convert balance to i128",
+      "fix": "Token amount too large"
+    },
+    "185": {
+      "name": "PedersenCheckFailure",
+      "description": "Binding commitment mismatch",
+      "fix": "Rebuild the transaction"
+    },
+    "189": {
+      "name": "InputsNotSorted",
+      "description": "Unshielded inputs not sorted",
+      "fix": "Sort inputs before submission"
+    },
+    "190": {
+      "name": "OutputsNotSorted",
+      "description": "Unshielded outputs not sorted",
+      "fix": "Sort outputs before submission"
+    },
+    "191": {
+      "name": "DuplicateInputs",
+      "description": "Duplicate unshielded inputs",
+      "fix": "Remove duplicates"
+    },
+    "192": {
+      "name": "InputsSignaturesLengthMismatch",
+      "description": "Input count does not match signature count",
+      "fix": "Match signatures to inputs"
+    },
+    "194": {
+      "name": "BalanceCheckOutOfBounds",
+      "description": "Token balance would overflow or underflow",
+      "fix": "Verify token amounts"
+    },
+    "195": {
+      "name": "InputNotInUtxos",
+      "description": "Input references a UTXO not in the set",
+      "fix": "Coin may be spent; resync wallet"
+    },
+    "196": {
+      "name": "DustDoubleSpend",
+      "description": "Attempt to spend the same DUST twice",
+      "fix": "Resync DUST wallet"
+    },
+    "197": {
+      "name": "DustDeregistrationNotRegistered",
+      "description": "Deregistering unregistered DUST address",
+      "fix": "Verify DUST address is registered"
+    },
+    "198": {
+      "name": "GenerationInfoAlreadyPresent",
+      "description": "DUST generation info already exists",
+      "fix": "Duplicate submission"
+    },
+    "199": {
+      "name": "InvariantViolation",
+      "description": "Protocol-level invariant violated",
+      "fix": "Transaction breaks protocol rules"
+    },
+    "200": {
+      "name": "RewardTooSmall",
+      "description": "Claimed reward below minimum threshold",
+      "fix": "Accumulate more rewards"
+    },
+    "201": {
+      "name": "IllegalPayout",
+      "description": "Payout exceeds supply or bridge pool",
+      "fix": "Reduce payout amount"
+    },
+    "202": {
+      "name": "InsufficientTreasuryFunds",
+      "description": "Treasury insufficient funds",
+      "fix": "Amount exceeds treasury balance"
+    },
+    "203": {
+      "name": "CommitmentAlreadyPresent",
+      "description": "Faerie-gold double-commitment",
+      "fix": "Commitment already exists"
+    },
+    "204": {
+      "name": "UnknownError",
+      "description": "Unclassified system transaction error",
+      "fix": "Check node logs"
+    },
+    "206": {
+      "name": "IllegalReserveDistribution",
+      "description": "Reserve distribution exceeds supply",
+      "fix": "Reduce distribution"
+    },
+    "207": {
+      "name": "GenerationInfoAlreadyPresent",
+      "description": "DUST generation info already inserted",
+      "fix": "Duplicate generation info"
+    },
+    "208": {
+      "name": "InvalidBasisPoints",
+      "description": "Bridge fee basis points above 10000 in an OverwriteParameters system transaction",
+      "fix": "Use 0-10000 basis points"
+    },
+    "209": {
+      "name": "InvariantViolation",
+      "description": "Protocol invariant violated",
+      "fix": "Breaks protocol rules"
+    },
+    "210": {
+      "name": "TreasuryDisabled",
+      "description": "Treasury disabled",
+      "fix": "Treasury feature not enabled"
+    },
+    "211": {
+      "name": "MerkleTreeError",
+      "description": "System transaction made an invalid Merkle tree update",
+      "fix": "Raised by system transactions, not user-submitted ones; check node logs and report it if it persists"
+    },
+    "212": {
+      "name": "EffectsCheck::RealCallsSubsetCheckFailure",
+      "description": "The effects check found a contract call that the transaction's effects don't account for",
+      "fix": "Rebuild the transaction with the SDK"
+    },
+    "213": {
+      "name": "EffectsCheck::AllCommitmentsSubsetCheckFailure",
+      "description": "The effects check found a coin commitment that the transaction's effects don't account for",
+      "fix": "Rebuild the transaction with the SDK"
+    },
+    "214": {
+      "name": "EffectsCheck::RealUnshieldedSpendsSubsetCheckFailure",
+      "description": "The effects check found an unshielded spend that the transaction's effects don't account for",
+      "fix": "Rebuild the transaction with the SDK"
+    },
+    "215": {
+      "name": "EffectsCheck::ClaimedUnshieldedSpendsUniquenessFailure",
+      "description": "The effects claim the same unshielded spend more than once",
+      "fix": "Rebuild the transaction with the SDK"
+    },
+    "216": {
+      "name": "EffectsCheck::ClaimedCallsUniquenessFailure",
+      "description": "The effects claim the same contract call more than once",
+      "fix": "Rebuild the transaction with the SDK"
+    },
+    "217": {
+      "name": "EffectsCheck::NullifiersNeqClaimedNullifiers",
+      "description": "The transaction's nullifiers don't match the nullifiers its effects claim",
+      "fix": "Rebuild the transaction with the SDK"
+    },
+    "218": {
+      "name": "EffectsCheck::CommitmentsNeqClaimedShieldedReceives",
+      "description": "The transaction's coin commitments don't match the shielded receives its effects claim",
+      "fix": "Rebuild the transaction with the SDK"
+    },
+    "219": {
+      "name": "SequencingCheck::CallSequencingViolation",
+      "description": "Contract calls are out of order",
+      "fix": "Contract calls must respect ordering constraints"
+    },
+    "220": {
+      "name": "SequencingCheck::SequencingCorrelationViolation",
+      "description": "The sequencing check found a correlation violation between contract calls",
+      "fix": "Contract calls must respect ordering constraints"
+    },
+    "221": {
+      "name": "SequencingCheck::GuaranteedInFallibleContextViolation",
+      "description": "A guaranteed call appears in a fallible context",
+      "fix": "Check which section each call belongs to"
+    },
+    "222": {
+      "name": "SequencingCheck::FallibleInGuaranteedContextViolation",
+      "description": "A fallible call appears in a guaranteed context",
+      "fix": "Check which section each call belongs to"
+    },
+    "223": {
+      "name": "SequencingCheck::CausalityConstraintViolation",
+      "description": "Contract calls break a causality constraint",
+      "fix": "Contract calls must respect ordering constraints"
+    },
+    "224": {
+      "name": "SequencingCheck::CallHasEmptyTranscripts",
+      "description": "A contract call has no transcripts",
+      "fix": "Rebuild the transaction with the SDK"
+    },
+    "225": {
+      "name": "DisjointCheck::ShieldedInputsDisjointFailure",
+      "description": "Shielded inputs overlap",
+      "fix": "Remove the duplicate shielded input"
+    },
+    "226": {
+      "name": "DisjointCheck::ShieldedOutputsDisjointFailure",
+      "description": "Shielded outputs overlap",
+      "fix": "Remove the duplicate shielded output"
+    },
+    "227": {
+      "name": "DisjointCheck::UnshieldedInputsDisjointFailure",
+      "description": "Unshielded inputs overlap",
+      "fix": "Remove the duplicate unshielded input"
+    },
+    "228": {
+      "name": "TransactionApplication::IntentTtlExpired",
+      "description": "The intent's TTL has passed",
+      "fix": "Rebuild the transaction with a new TTL and submit it before the TTL passes"
+    },
+    "229": {
+      "name": "TransactionApplication::IntentTtlTooFarInFuture",
+      "description": "The intent's TTL is too far in the future",
+      "fix": "Rebuild the transaction with a shorter TTL"
+    },
+    "230": {
+      "name": "TransactionApplication::IntentAlreadyExists",
+      "description": "The ledger has already applied this intent",
+      "fix": "Don't resubmit a transaction that might already be in a block"
+    },
+    "231": {
+      "name": "FeeCalculation::OutsideTimeToDismiss",
+      "description": "Validating the transaction and applying its guaranteed part would take longer than the ledger allows for a transaction of that size",
+      "fix": "Split the work across smaller transactions"
+    },
+    "232": {
+      "name": "FeeCalculation::BlockLimitExceeded",
+      "description": "One cost dimension of the transaction is above its block limit",
+      "fix": "Split the work across smaller transactions"
+    },
+    "233": {
+      "name": "MalformedContractDeploy::NonZeroBalance",
+      "description": "The contract deploy has a non-zero balance",
+      "fix": "Deploy the contract with a zero balance"
+    },
+    "234": {
+      "name": "MalformedContractDeploy::IncorrectChargedState",
+      "description": "The contract deploy has an incorrect charged state",
+      "fix": "Rebuild the deploy with the SDK"
+    },
+    "235": {
+      "name": "MalformedZswap::InvalidProof",
+      "description": "A Zswap offer proof failed to verify",
+      "fix": "Regenerate the proof. Check that the proof server matches the network"
+    },
+    "236": {
+      "name": "MalformedZswap::ContractSentCiphertext",
+      "description": "A contract sent a Zswap output with a ciphertext",
+      "fix": "Rebuild the Zswap offer"
+    },
+    "237": {
+      "name": "MalformedZswap::NonDisjointCoinMerge",
+      "description": "A Zswap offer merge has overlapping coins",
+      "fix": "Rebuild the Zswap offer"
+    },
+    "238": {
+      "name": "MalformedZswap::NotNormalized",
+      "description": "The Zswap offer isn't in normal form",
+      "fix": "Rebuild the Zswap offer with the SDK"
+    },
+    "239": {
+      "name": "ZswapInvalid::NullifierAlreadyPresent",
+      "description": "A coin's nullifier is already spent",
+      "fix": "Let the wallet sync, then rebuild the transaction"
+    },
+    "240": {
+      "name": "ZswapInvalid::CommitmentAlreadyPresent",
+      "description": "A new coin commitment already exists",
+      "fix": "Let the wallet sync, then rebuild the transaction"
+    },
+    "241": {
+      "name": "ZswapInvalid::UnknownMerkleRoot",
+      "description": "The proof refers to a coin tree root that the node doesn't recognize",
+      "fix": "Let the wallet sync, then rebuild and prove the transaction again"
+    },
+    "242": {
+      "name": "ReplayProtectionViolation::IntentTtlExpired",
+      "description": "Replay protection rejected the intent because its TTL has passed",
+      "fix": "Rebuild the transaction with a new TTL"
+    },
+    "243": {
+      "name": "ReplayProtectionViolation::IntentTtlTooFarInFuture",
+      "description": "Replay protection rejected the intent because its TTL is too far in the future",
+      "fix": "Rebuild the transaction with a shorter TTL"
+    },
+    "244": {
+      "name": "ReplayProtectionViolation::IntentAlreadyExists",
+      "description": "The ledger has already applied this intent",
+      "fix": "Don't resubmit a transaction that might already be in a block"
+    },
+    "245": {
+      "name": "SystemTransaction::ReplayProtectionFailure::IntentTtlExpired",
+      "description": "A system transaction's TTL has passed",
+      "fix": "System transaction error; check node logs"
+    },
+    "246": {
+      "name": "SystemTransaction::ReplayProtectionFailure::IntentTtlTooFarInFuture",
+      "description": "A system transaction's TTL is too far in the future",
+      "fix": "System transaction error; check node logs"
+    },
+    "247": {
+      "name": "SystemTransaction::ReplayProtectionFailure::IntentAlreadyExists",
+      "description": "The ledger has already applied this system transaction",
+      "fix": "Duplicate system transaction"
+    },
+    "248": {
+      "name": "DivideByZero",
+      "description": "A division by zero happened while the ledger applied the transaction",
+      "fix": "Check contract logic; check node logs"
+    },
+    "249": {
+      "name": "MerkleTreeError",
+      "description": "A Merkle tree update failed while the ledger applied the transaction",
+      "fix": "Internal ledger error; check node logs"
+    },
+    "250": {
+      "name": "ZswapInvalid::MerkleTreeError",
+      "description": "A Merkle tree update failed in the shielded (Zswap) part of the transaction",
+      "fix": "Internal ledger error; check node logs"
+    },
+    "251": {
+      "name": "TransactionInvalid::BridgeClaimTooSmall",
+      "description": "A bridge claim is below the payout threshold, and a claim below it must withdraw the whole claimable balance",
+      "fix": "Claim at least the payout threshold, or the whole claimable balance"
+    },
+    "252": {
+      "name": "TransactionInvalid::ContractTooManyOperations",
+      "description": "The contract would have more operations than the limit",
+      "fix": "Keep the contract's operations under the limit, for example by splitting its circuits across contracts"
+    },
+    "253": {
+      "name": "MalformedTransaction::TooManyPublicInputs",
+      "description": "A contract call declares more public inputs than the limit",
+      "fix": "Reduce the public inputs the circuit declares"
+    },
+    "254": {
+      "name": "MalformedTransaction::TranscriptGasExceedsBlockLimits",
+      "description": "A contract call's transcript declares compute or read time above the block limits",
+      "fix": "Split the work across smaller transactions"
+    },
+    "255": {
+      "name": "HostApiError",
+      "description": "Error in host API processing",
+      "fix": "Internal runtime error; check node logs"
+    }
+  }
+}

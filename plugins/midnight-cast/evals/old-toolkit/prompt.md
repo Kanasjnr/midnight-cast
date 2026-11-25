@@ -1,6 +1,6 @@
 ---
-description: An old toolkit or node can't read runtime 1.0.300 blocks
-expected_outcome: Decodes the message and says to upgrade the node and toolkit to 1.0.400, which preprod runs on runtime 1.0.300
+description: An old toolkit or node can't read runtime 1.0.300 blocks from before the Ledger 9 upgrade
+expected_outcome: Decodes the message, says runtime 1.0.300 is the one from before the Ledger 9 upgrade, still in the chain's history, and says to upgrade the node and toolkit to 2.1.101, which preprod runs now
 max_turns: 12
 allowed_tools: [Skill]
 ---
