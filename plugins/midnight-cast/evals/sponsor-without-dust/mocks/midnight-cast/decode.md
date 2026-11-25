@@ -28,7 +28,7 @@
               48,
               53
             ],
-            "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/hello-world/ui/src/lib/errors.ts#L48-L53"
+            "url": "https://github.com/midnightntwrk/midnight-examples/blob/c37451a810313bb22015ded286c3718db95cee19/examples/hello-world/ui/src/lib/errors.ts#L48-L53"
           },
           {
             "example": "private-party",
@@ -38,7 +38,7 @@
               97,
               116
             ],
-            "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/private-party/src/sponsor.ts#L97-L116"
+            "url": "https://github.com/midnightntwrk/midnight-examples/blob/c37451a810313bb22015ded286c3718db95cee19/examples/private-party/src/sponsor.ts#L97-L116"
           },
           {
             "example": "hello-world",
@@ -48,7 +48,7 @@
               67,
               73
             ],
-            "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/hello-world/src/wallet.ts#L67-L73"
+            "url": "https://github.com/midnightntwrk/midnight-examples/blob/c37451a810313bb22015ded286c3718db95cee19/examples/hello-world/src/wallet.ts#L67-L73"
           }
         ]
       }
