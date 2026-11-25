@@ -13,7 +13,7 @@
       "proofServer": "9.0.2",
       "onChainRuntime": "4.0.2",
       "packages": {
-        "@midnight-ntwrk/ledger-v9": "1.0.0",
+        "@midnight-ntwrk/ledger-v9": "1.0.2",
         "@midnight-ntwrk/compact-runtime": "0.21.0",
         "@midnight-ntwrk/onchain-runtime-v4": "4.0.2",
         "@midnight-ntwrk/midnight-js-indexer-public-data-provider": "5.0.1"
@@ -30,7 +30,7 @@
       "proofServer": "9.0.2",
       "onChainRuntime": "4.0.2",
       "packages": {
-        "@midnight-ntwrk/ledger-v9": "1.0.0",
+        "@midnight-ntwrk/ledger-v9": "1.0.2",
         "@midnight-ntwrk/compact-runtime": "0.21.0",
         "@midnight-ntwrk/onchain-runtime-v4": "4.0.2",
         "@midnight-ntwrk/midnight-js-indexer-public-data-provider": "5.0.1"
@@ -47,7 +47,7 @@
       "proofServer": "9.0.2",
       "onChainRuntime": "4.0.2",
       "packages": {
-        "@midnight-ntwrk/ledger-v9": "1.0.0",
+        "@midnight-ntwrk/ledger-v9": "1.0.2",
         "@midnight-ntwrk/compact-runtime": "0.21.0",
         "@midnight-ntwrk/onchain-runtime-v4": "4.0.2",
         "@midnight-ntwrk/midnight-js-indexer-public-data-provider": "5.0.1"
