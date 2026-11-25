@@ -69,14 +69,8 @@ const PATTERNS: Pattern[] = [
       // place still hold: a tool syncing from genesis reads them, and the release each runs today reads them too.
       if (!on.length && spec === LEDGER_8_LAST_SPEC) {
         const forked = FORKED_IN_PLACE.filter((name) => name in matrix);
-        if (network && !forked.includes(network)) {
-          return {
-            ...base,
-            description: `The ${reader} doesn't know runtime spec_version ${spec}, which ${names(forked)} ran before their Ledger 9 upgrade. ${title(network)} was reset with the upgrade instead, so its chain has no blocks on that runtime: check the ${reader} is reading the network you mean.`,
-            fix: upgradeAdvice(component, [network], versionOf, "now") ?? "Upgrade it to the release the network runs now.",
-          };
-        }
-        const history = network ? [network] : forked;
+        // A network not known to have forked in place, such as a local devnet, gets what the public networks did.
+        const history = network && forked.includes(network) ? [network] : forked;
         return {
           ...base,
           description: `The ${reader} doesn't know runtime spec_version ${spec}, which ${names(history)} ran before ${history.length > 1 ? "their" : "its"} Ledger 9 upgrade. Those blocks are still in the chain's history, so ${fromIndexer ? "an indexer" : "a node or toolkit"} syncing from genesis reads them and needs a release that knows both runtimes.`,
