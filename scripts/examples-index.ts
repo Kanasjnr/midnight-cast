@@ -18,7 +18,7 @@ import type { ExampleFile, ExamplesIndex, ExamplesMigration } from "../src/lib/e
 import { fetchGitHub, notice } from "./github.js";
 
 const REPO = "midnightntwrk/midnight-examples";
-export const COMMIT = "377495c5efbd5b1f3123f5aee2776c3694b05eda";
+export const COMMIT = "c37451a810313bb22015ded286c3718db95cee19";
 // The ledger the code at COMMIT targets. Set it with COMMIT: midnight-examples#88 moved the examples to Ledger 9.
 export const LEDGER = "9";
 // The pull request that moved the examples onto LEDGER: a worked migration for each example. Keep it when COMMIT
@@ -97,23 +97,25 @@ const EXAMPLES: Source[] = [
     ],
   },
   {
-    name: "election",
-    summary: "A vote with registration, votes committed in secret and revealed later, and counting",
-    topics: ["voting", "election", "commit-reveal", "register voters", "counter", "secret ballot"],
+    name: "voting",
+    summary: "Anonymous allow-listed voting: Merkle membership, nullifiers so no one votes twice, and ballots encrypted to the admins, who count them",
+    topics: ["voting", "election", "anonymous voting", "allow list", "merkle membership", "merkle tree path", "nullifier", "double voting", "encrypted ballot", "secret ballot", "commitment"],
     files: [
-      { path: "contract/election.compact", symbol: "export circuit commitVote", about: "Committing to a vote without revealing it" },
-      { path: "contract/election.compact", symbol: "export circuit revealVote", about: "Revealing a committed vote and counting it" },
-      { path: "contract/election.compact", symbol: "circuit commitWithSk", about: "A commitment keyed by the voter's secret" },
+      { path: "contract/voting.compact", symbol: "export circuit enrol", about: "Adding a voter's key to the Merkle allow list" },
+      { path: "contract/voting.compact", symbol: "export circuit cast", about: "Casting a ballot anonymously: proving allow-list membership and spending a nullifier" },
+      { path: "contract/voting.compact", symbol: "witness voterPath", about: "The witness that supplies the voter's Merkle path" },
+      { path: "contract/voting.compact", symbol: "export pure circuit ballotNullifier", about: "A nullifier bound to the proposal and the contract instance, so ballots can't be linked across deployments" },
+      { path: "contract/voting.compact", symbol: "export circuit count", about: "Counting a decrypted ballot against the commitment cast stored" },
     ],
   },
   {
-    name: "secret-message",
-    summary: "Publishing a hash commitment of a private message instead of the message itself",
-    topics: ["hash commitment", "persistent hash", "domain separator", "private message", "ownership", "public key from secret"],
+    name: "leaderboard",
+    summary: "Structured on-chain data and ownership proofs in a browser DApp that uses Lace, deployed to Vercel",
+    topics: ["leaderboard", "struct in ledger", "map of structs", "ownership proof", "prove ownership", "hash commitment", "persistent hash", "public key from secret", "domain separator", "optional private input", "browser dapp", "lace"],
     files: [
-      { path: "contract/secret-message.compact", symbol: "export circuit hashMessageWithSeparator", about: "Hashing with a domain separator" },
-      { path: "contract/secret-message.compact", symbol: "export circuit publishMessageHashWithOwner", about: "Publishing a hash and recording its owner" },
-      { path: "contract/secret-message.compact", symbol: "export circuit getDappPubKey", about: "Deriving a public key from a secret inside a circuit" },
+      { path: "contract/leaderboard.compact", symbol: "export circuit submitScore", about: "Storing a struct in a ledger Map, with a name a witness supplies only when asked" },
+      { path: "contract/leaderboard.compact", symbol: "export circuit verifyOwnership", about: "Proving you own an entry without revealing the secret key" },
+      { path: "contract/leaderboard.compact", symbol: "export circuit ownerCommitment", about: "Committing to the owner's secret key with a domain separator" },
     ],
   },
   {
@@ -312,7 +314,9 @@ async function readMigration(pr: number): Promise<ExamplesMigration> {
   const examples: ExamplesMigration["examples"] = {};
   for (const path of paths.sort()) {
     const name = own.exec(path)?.[1];
-    if (!name || test.test(path) || !EXAMPLES.some((e) => e.name === name)) continue;
+    // Every example the pull request changed, including ones gone upstream since, such as election: a project built
+    // from one still needs its own example's changes, and the diff links stay valid.
+    if (!name || test.test(path)) continue;
     const anchor = createHash("sha256").update(path).digest("hex");
     (examples[name] ??= []).push({ path, url: `https://github.com/${REPO}/pull/${pr}/files#diff-${anchor}` });
   }

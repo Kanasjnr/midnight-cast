@@ -37,11 +37,10 @@
         "fix": "Use fresher DUST",
         "docUrl": "https://docs.midnight.network/nodes/error-codes",
         "network": "preprod",
-        "ledger": "8.1.3",
-        "mapLedger": "8.1.3",
+        "ledger": "9.1.0.0",
+        "mapLedger": "9.1.0.0",
         "networkLedger": "9.1.0.0",
-        "mapUpdated": "2026-10",
-        "mapMismatch": "Warning: bundled error map is ledger 8.1.3, but preprod matrix expects ledger 9.1.0.0. Code names/fixes may be wrong — refresh from https://docs.midnight.network/nodes/error-codes",
+        "mapUpdated": "2026-11",
         "relatedHint": "Indexers before 4.3.5 could also reject the first transaction of a block with this error (fixed in 4.3.4 and 4.3.5). If only first-in-block transactions fail, check the indexer version.",
         "examples": [
           {
@@ -52,7 +51,7 @@
               67,
               73
             ],
-            "url": "https://github.com/midnightntwrk/midnight-examples/blob/377495c5efbd5b1f3123f5aee2776c3694b05eda/examples/hello-world/src/wallet.ts#L67-L73"
+            "url": "https://github.com/midnightntwrk/midnight-examples/blob/c37451a810313bb22015ded286c3718db95cee19/examples/hello-world/src/wallet.ts#L67-L73"
           }
         ]
       }

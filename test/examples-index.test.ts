@@ -36,7 +36,7 @@ describe("Midnight's examples", () => {
       }
     }
     expect(index.ledger).toBe("9");
-    expect(index.toolchain).toMatchObject({ "Compact language (pragma)": "0.28", "@midnight-ntwrk/midnight-js-*": "5.0.0" });
+    expect(index.toolchain).toMatchObject({ "Compact language (pragma)": "0.28", "@midnight-ntwrk/midnight-js-*": "5.0.1", "wallet SDK": "2.0.1" });
   });
 
   it("finds the example that shows a topic, asked in a person's words", () => {
@@ -48,7 +48,9 @@ describe("Midnight's examples", () => {
     expect(top("how do I use a witness")?.name).toBe("calculator");
     expect(top("send NIGHT to a user")?.files[0]?.symbol).toBe("export circuit sendNightTokensToUser");
     expect(top("prove my bid is above a minimum")?.name).toBe("private-bid");
-    expect(findExamples(index, "commit-reveal").map((m) => m.name)).toEqual(expect.arrayContaining(["silent-auction", "election", "private-bid"]));
+    expect(findExamples(index, "commit-reveal").map((m) => m.name)).toEqual(expect.arrayContaining(["silent-auction", "private-bid"]));
+    expect(top("anonymous voting with a merkle allow list")?.name).toBe("voting");
+    expect(top("prove ownership of an entry")?.name).toBe("leaderboard");
     expect(findExamples(index, "kubernetes")).toEqual([]);
     expect(findExamples(index, "the a of")).toEqual([]);
   });

@@ -92,9 +92,10 @@ describe("the examples' toolchain against a project", () => {
   });
 
   it("checks a midnight-js package the examples pin on their own against that pin, prereleases exactly", () => {
-    expect(toolchain["@midnight-ntwrk/midnight-js-network-id"]).toBe("5.0.0-rc.5");
+    // The examples pinned midnight-js-network-id to an rc this way until 5.0.1; a made-up toolchain keeps the path tested.
+    const pinned = { "@midnight-ntwrk/midnight-js-*": "5.0.0", "@midnight-ntwrk/midnight-js-network-id": "5.0.0-rc.5" };
     const verdicts = (packages: Record<string, string>) =>
-      examplesToolchainChecks(toolchain, { dir: join(root, "none"), packages }).map((c) => [c.label, c.live, c.ok]);
+      examplesToolchainChecks(pinned, { dir: join(root, "none"), packages }).map((c) => [c.label, c.live, c.ok]);
     expect(verdicts({ "@midnight-ntwrk/midnight-js-network-id": "5.0.0-rc.5", "@midnight-ntwrk/midnight-js-contracts": "5.0.0" })).toEqual([
       ["midnight-js", "5.0.0", true],
       ["midnight-js-network-id", "5.0.0-rc.5", true],
@@ -120,6 +121,8 @@ describe("the examples' toolchain against a project", () => {
     const party = upgrade("party", { "@midnight-ntwrk/midnight-js-contracts": "4.1.1" }, { "contract/private-party.compact": "pragma language_version 0.23;\n" });
     expect(party).toMatchObject({ pr: 88, example: "private-party", files: expect.arrayContaining([expect.objectContaining({ path: "examples/private-party/src/sponsor.ts" })]) });
     expect(upgrade("other", { "@midnight-ntwrk/midnight-js-contracts": "^4.0.0" })?.example).toBe("hello-world");
+    // An example gone upstream since the migration still points its projects at their own changes.
+    expect(upgrade("election", { "@midnight-ntwrk/midnight-js-contracts": "4.1.1" }, { "contract/election.compact": "pragma language_version 0.23;\n" })?.example).toBe("election");
     // Current, or only a patch or minor behind: nothing to migrate.
     expect(upgrade("current", { "@midnight-ntwrk/midnight-js-contracts": "5.0.0" })).toBeUndefined();
     // Halfway through the move is still behind.
