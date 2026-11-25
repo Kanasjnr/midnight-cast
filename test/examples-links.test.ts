@@ -92,9 +92,10 @@ describe("the examples' toolchain against a project", () => {
   });
 
   it("checks a midnight-js package the examples pin on their own against that pin, prereleases exactly", () => {
-    expect(toolchain["@midnight-ntwrk/midnight-js-network-id"]).toBe("5.0.0-rc.5");
+    // The examples pinned midnight-js-network-id to an rc this way until 5.0.1; a made-up toolchain keeps the path tested.
+    const pinned = { "@midnight-ntwrk/midnight-js-*": "5.0.0", "@midnight-ntwrk/midnight-js-network-id": "5.0.0-rc.5" };
     const verdicts = (packages: Record<string, string>) =>
-      examplesToolchainChecks(toolchain, { dir: join(root, "none"), packages }).map((c) => [c.label, c.live, c.ok]);
+      examplesToolchainChecks(pinned, { dir: join(root, "none"), packages }).map((c) => [c.label, c.live, c.ok]);
     expect(verdicts({ "@midnight-ntwrk/midnight-js-network-id": "5.0.0-rc.5", "@midnight-ntwrk/midnight-js-contracts": "5.0.0" })).toEqual([
       ["midnight-js", "5.0.0", true],
       ["midnight-js-network-id", "5.0.0-rc.5", true],
